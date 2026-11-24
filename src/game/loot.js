@@ -1,0 +1,41 @@
+// Tabelas de loot por tipo de recipiente (caixas, móveis, carros, contêineres militares...)
+import { GUNS } from './weapons.js';
+
+const PISTOLS = ['pistol35', 'pistol', 'pistol65'], RIFLES = ['rifle540', 'rifle', 'rifle577'], SNIPERS = ['sniper745', 'sniper', 'sniper790'], PILLS = ['pill_green', 'pill_orange', 'pill_yellow', 'pill_blue'];
+const pick = (a, r) => a[Math.floor(r() * a.length)];
+// devolve [[id, qtd], ...]; ctx = { toxic, military }
+export function rollLoot(kind, r = Math.random, ctx = {}) {
+  const out = []; const g = (id, a = 1, b = a) => out.push([id, a + Math.floor(r() * (b - a + 1))]); const p = (prob, ...args) => { if (r() < prob) g(...args); };
+  const pills = (prob) => { if (r() < prob) g(pick(PILLS, r), 1, 8); }; // cartela com quantidade aleatória
+  const packs = (prob) => { if (r() < prob) out.push([r() < 0.45 ? 'pack_small' : r() < 0.75 ? 'pack_medium' : 'pack_large', 1]); };
+  switch (kind) {
+    case 'fridge': p(0.55, 'water', 1, 2); p(0.45, 'canned', 1, 2); p(0.25, 'meat', 1, 2); p(0.2, 'berry', 2, 4); break;
+    case 'kcab': p(0.14, 'nvcell', 1, 2); p(0.55, 'canned', 1, 2); p(0.3, 'water', 1, 1); p(0.35, 'soap', 1, 1); p(0.25, 'cloth', 1, 2); p(0.15, 'honey', 1, 1); p(0.08, 'filament', 1, 1); break;
+    case 'wardrobe': p(0.2, 'shirt', 1, 1); p(0.18, 'pants', 1, 1); p(0.08, 'leathergloves', 1, 1); p(0.08, 'leatherboots', 1, 1); p(0.1, 'hat', 1, 1); p(0.6, 'cloth', 1, 3); p(0.14, 'parka', 1, 1); packs(0.18); break;
+    case 'night': p(0.14, 'nvcell', 1, 2); pills(0.4); p(0.25, 'bandage', 1, 2); p(0.22, GUNS[pick(PISTOLS, r)].ammo, 3, 9); p(0.05, pick(PISTOLS, r), 1, 1); p(0.15, 'cloth', 1, 1); break;
+    case 'medcab': pills(0.65); pills(0.3); p(0.35, 'bandage', 1, 2); p(0.3, 'soap', 1, 1); p(0.1, 'medkit', 1, 1); break;
+    case 'shelf': p(0.14, 'nvcell', 1, 2); p(0.35, 'cloth', 1, 2); p(0.25, 'scrap', 1, 2); p(0.15, 'circuit', 1, 1); p(0.12, 'soap', 1, 1); p(0.12, 'shells', 2, 4); p(0.22, 'filament', 1, 2); break;
+    case 'hospital': pills(0.85); pills(0.6); pills(0.3); p(0.55, 'bandage', 1, 3); p(0.3, 'medkit', 1, 1); p(0.2, 'antidote', 1, 1); break;
+    case 'pharmacy': pills(0.9); pills(0.7); pills(0.45); p(0.45, 'bandage', 1, 3); p(0.2, 'medkit', 1, 1); p(0.35, 'soap', 1, 2); p(0.15, 'antidote', 1, 1); break;
+    case 'lab': p(0.45, 'radpills', 1, 3); p(0.4, 'circuit', 1, 2); p(0.3, 'soap', 1, 2); pills(0.4); p(0.1, 'ratsuit', 1, 1); p(0.2, 'core', 1, 1); p(0.35, 'filament', 1, 3); p(0.2, 'copperwire', 2, 5); p(0.3, 'geiger', 1, 1); break;
+    case 'milcrate': if (ctx.toxic) p(0.22, 'rpg', 1, 1); p(0.3, 'gren_he', 1, 3); p(0.18, 'gren_gas', 1, 2); p(0.18, 'gren_smoke', 1, 2); p(0.08, 'vest', 1, 1); p(0.08, 'milhelmet', 1, 1); p(0.06, 'nvg', 1, 1); g(GUNS[pick(RIFLES, r)].ammo, 15, 40); p(0.6, GUNS[pick(PISTOLS, r)].ammo, 8, 16); p(0.35, pick(RIFLES, r), 1, 1); p(0.15, pick(SNIPERS, r), 1, 1); p(0.4, GUNS[pick(SNIPERS, r)].ammo, 5, 12);
+      p(0.2, 'scope4', 1, 1); p(0.08, 'scope8', 1, 1); p(0.25, 'vest', 1, 1); p(0.35, 'radpills', 1, 2); p(0.4, 'medkit', 1, 1); p(0.12, 'pack_climb', 1, 1); p(0.15, 'pack_large', 1, 1); p(0.3, 'shells', 4, 10); p(0.25, 'gunparts', 1, 2); p(0.3, 'iron', 1, 3); p(0.08, 'geiger', 1, 1); break;
+    case 'milcontainer': p(0.35, 'gren_he', 1, 3); p(0.2, 'gren_gas', 1, 2); p(0.2, 'gren_smoke', 1, 2); p(0.1, 'nvg', 1, 1); g(GUNS[pick(RIFLES, r)].ammo, 20, 50); p(0.5, pick(RIFLES, r), 1, 1); p(0.25, pick(SNIPERS, r), 1, 1); p(0.5, GUNS[pick(SNIPERS, r)].ammo, 8, 16); p(0.3, 'scope4', 1, 1); p(0.15, 'scope8', 1, 1);
+      p(0.4, 'vest', 1, 1); p(0.2, 'pack_climb', 1, 1); p(0.45, 'radpills', 1, 3); p(0.5, 'canned', 2, 4); p(0.5, 'water', 2, 3); p(0.3, 'gunparts', 1, 2); p(0.4, 'iron', 2, 4); p(0.12, 'geiger', 1, 1); break;
+    case 'locker': case 'tentbox': p(0.15, 'gren_he', 1, 2); p(0.08, 'gren_smoke', 1, 1); p(0.2, 'milshirt', 1, 1); p(0.2, 'milpants', 1, 1); p(0.12, 'milgloves', 1, 1); p(0.12, 'milboots', 1, 1); p(0.1, 'milhelmet', 1, 1); p(0.6, GUNS[pick(RIFLES, r)].ammo, 6, 20); p(0.5, GUNS[pick(PISTOLS, r)].ammo, 6, 12); p(0.35, 'bandage', 1, 3); p(0.3, 'canned', 1, 2); p(0.2, 'cloth', 1, 3); p(0.12, pick(PISTOLS, r), 1, 1); p(0.08, 'pack_small', 1, 1); p(0.1, 'gunparts', 1, 1); p(0.15, 'nvg', 1, 1); break;
+    case 'military': g(GUNS[pick(RIFLES, r)].ammo, 10, 30); p(0.5, GUNS[pick(PISTOLS, r)].ammo, 6, 15); p(0.25, pick(RIFLES, r), 1, 1); p(0.1, pick(SNIPERS, r), 1, 1); p(0.35, GUNS[pick(SNIPERS, r)].ammo, 4, 12);
+      p(0.12, 'scope4', 1, 1); p(0.05, 'scope8', 1, 1); p(0.2, 'vest', 1, 1); p(0.12, 'pack_large', 1, 1); p(0.06, 'pack_climb', 1, 1); p(0.25, 'radpills', 1, 1); p(0.4, 'medkit', 1, 1); p(0.3, 'shells', 4, 10); p(0.5, 'canned', 1, 1); break;
+    case 'industry': g('scrap', 3, 6); p(0.5, 'circuit', 1, 2); p(0.2, 'core', 1, 1); p(0.3, 'cloth', 2, 2); p(0.15, 'scrapaxe', 1, 1); p(0.15, 'soap', 1, 1); p(0.45, 'iron', 1, 3); p(0.35, 'filament', 1, 3); p(0.35, 'copperwire', 2, 6); break;
+    case 'village': p(0.7, 'canned', 1, 2); p(0.6, 'water', 1, 1); g('cloth', 1, 3); p(0.35, 'bandage', 1, 2); packs(0.12); p(0.12, 'parka', 1, 1); p(0.25, GUNS[pick(PISTOLS, r)].ammo, 4, 9); p(0.06, pick(PISTOLS, r), 1, 1); p(0.12, 'shells', 3, 3); pills(0.2); break;
+    case 'car': p(0.35, 'water', 1, 1); p(0.4, 'canned', 1, 2); p(0.35, 'cloth', 1, 3); p(0.6, 'scrap', 1, 4); p(0.25, 'bandage', 1, 2); p(0.18, 'circuit', 1, 1); p(0.3, 'copperwire', 1, 4); p(0.2, 'iron', 1, 2); p(0.2, GUNS[pick(PISTOLS, r)].ammo, 4, 10); p(0.1, 'shells', 2, 5);
+      p(0.04, pick(PISTOLS, r), 1, 1); p(0.02, 'scope4', 1, 1); packs(0.05); pills(0.15); break;
+    case 'lab_crate': p(0.5, 'radpills', 1, 2); p(0.5, 'circuit', 1, 2); p(0.3, 'soap', 1, 1); p(0.12, 'ratsuit', 1, 1); p(0.3, 'filament', 1, 2); p(0.25, 'geiger', 1, 1); break;
+    default: g('scrap', 1, 3); p(0.6, 'cloth', 1, 2); p(0.45, 'canned', 1, 1); p(0.5, 'water', 1, 1); p(0.3, 'bandage', 1, 1); p(0.35, GUNS[pick(PISTOLS, r)].ammo, 4, 12); p(0.12, 'shells', 2, 5);
+      p(0.08, r() < 0.6 ? pick(PISTOLS, r) : 'shotgun', 1, 1); p(0.04, pick(RIFLES, r), 1, 1); p(0.03, 'scope4', 1, 1); packs(0.08); pills(0.2); p(0.1, 'soap', 1, 1); p(0.15, 'iron', 1, 2); p(0.12, 'filament', 1, 1); p(0.12, 'copperwire', 1, 3);
+  }
+  // zona tóxica: loot mais rico, mochila de escalada só aqui e em bases militares
+  if (ctx.toxic) { p(0.12, 'pack_climb', 1, 1); p(0.25, 'radpills', 1, 2); p(0.2, pick(RIFLES, r), 1, 1); p(0.3, GUNS[pick(RIFLES, r)].ammo, 10, 30); p(0.1, 'scope4', 1, 1); }
+  return out;
+}
+export const FURN_NAMES = { fridge: 'Abrir geladeira', kcab: 'Revistar armário da cozinha', wardrobe: 'Revistar guarda-roupa', night: 'Abrir criado-mudo', medcab: 'Abrir armário de remédios', shelf: 'Revistar estante',
+  hospital: 'Revistar armário do hospital', pharmacy: 'Revistar prateleira da farmácia', lab: 'Revistar armário do laboratório', milcontainer: 'Abrir contêiner militar', milcrate: 'Abrir caixa militar', locker: 'Revistar armário militar', tentbox: 'Abrir baú da tenda' };

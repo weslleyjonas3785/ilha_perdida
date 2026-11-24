@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Ilha Perdida — Sobrevivência 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="gl"></canvas>
+  <div id="touchZone"></div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div id="pname"></div><div id="compass"><div id="compassStrip"></div><div class="needle"></div></div>
+    <div id="clock"><span id="clockDay">Dia 1</span><span id="clockTime">07:00</span><span id="clockWeather">Céu limpo</span></div>
+    <div id="bars">
+      <div id="radHud" class="hidden"><div class="rh"><b>☢ RADIAÇÃO</b><span id="radPct">0%</span></div><div class="rtrack"><div class="rfill"></div><i class="r50"></i></div><div id="radInfo"></div></div>
+      <div id="conds"></div>
+      <div class="bar" data-k="hp"><i>❤</i><div class="track"><div class="fill"></div></div><b>100</b></div>
+      <div class="bar" data-k="hunger"><i>🍖</i><div class="track"><div class="fill"></div></div><b>100</b></div>
+      <div class="bar" data-k="thirst"><i>💧</i><div class="track"><div class="fill"></div></div><b>100</b></div>
+      <div class="bar" data-k="energy"><i>☾</i><div class="track"><div class="fill"></div></div><b>100</b></div>
+      <div class="bar" data-k="stamina"><i>⚡</i><div class="track"><div class="fill"></div></div><b>100</b></div>
+    </div>
+    <div id="hand"><span id="handIcon">✊</span><span id="handName">Mãos</span><span id="ammo" class="hidden"><b id="ammoMag">0</b><span>/</span><em id="ammoRes">0</em></span></div>
+    <div id="geigerHud" class="hidden"><div class="gh-top"><b>📟 CONTADOR GEIGER</b><span id="ghLabel">Seguro</span></div><div class="gh-dial"><div class="gh-arc"></div><i id="ghNeedle"></i></div><div class="gh-bar"><div id="ghFill"></div></div><div class="gh-val"><span id="ghVal">0,00 mSv/h</span></div><div id="ghSrc" class="gh-src">Aponte para as coisas</div></div>
+    <div id="hotbar"></div>
+    <div id="prompt" class="hidden"></div>
+    <div id="readRing" class="hidden"><div class="rr"><div class="rrin">📖</div></div><div class="rrtx">Lendo…</div></div>
+    <div id="toasts"></div>
+    <div id="crosshair"></div>
+    <div id="dmgDir"></div>
+    <div id="status"></div>
+    <div id="grapDist" class="hidden"></div>
+    <div id="reticle" class="hidden"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i></div>
+    <div id="scope" class="hidden s4"><div class="lens">
+      <div class="r4"><i class="sh l"></i><i class="sh r"></i><i class="sh t"></i><i class="chev"></i><b style="top:var(--m1)"><em>1</em></b><b style="top:var(--m2)"><em>2</em></b><b style="top:var(--m3)"><em>3</em></b><b style="top:var(--m4)"><em>4</em></b></div>
+      <div class="r8"><i class="h"></i><i class="v"></i><i class="post l"></i><i class="post r"></i><i class="post b"></i><i class="post t"></i><u style="left:-6vmin"></u><u style="left:-12vmin"></u><u style="left:6vmin"></u><u style="left:12vmin"></u><u style="top:-6vmin" class="y"></u><u style="top:-12vmin" class="y"></u><b style="top:var(--m1)"></b><b style="top:var(--m2)"></b><b style="top:var(--m3)"></b><b style="top:var(--m4)"></b></div>
+      <span class="cap"><span id="scopeMag">4x</span> · marcas 100/200/300/400 m · roda: zoom</span></div></div>
+    <div id="hitmark" class="hidden"><i></i><i></i><i></i><i></i></div>
+    <div id="buildHint" class="hidden"></div>
+    <div id="caveTag" class="hidden">Caverna</div>
+  </div>
+  <div id="vignette"></div>
+  <div id="hurt"></div>
+  <div id="fade"></div>
+
+  <!-- Controles de toque -->
+  <div id="mobile">
+    <div id="joy"><div id="joyKnob"></div></div>
+    <div class="tcol right">
+      <button class="tbtn big" data-act="attack">⚔<small>Atacar</small></button>
+      <button class="tbtn" data-act="jump">⤒<small>Pular</small></button>
+      <button class="tbtn" data-act="interact">✋<small>Interagir</small></button>
+      <button class="tbtn" data-act="block">🛡<small>Defender/Mirar</small></button>
+      <button class="tbtn" data-act="reload">↻<small>Recarregar</small></button>
+      <button class="tbtn s" data-act="shoulder">⇄<small>Ombro</small></button>
+      <button class="tbtn" data-act="sprint">»<small>Correr</small></button>
+      <button class="tbtn" data-act="crouch">⤓<small>Agachar</small></button>
+    </div>
+    <div class="ttop">
+      <button class="tbtn s" data-act="inventory">🎒</button>
+      <button class="tbtn s" data-act="build">🔨</button>
+      <button class="tbtn s" data-act="pause">⏸</button>
+    </div>
+    <div class="tbuild">
+      <button class="tbtn s" data-act="rotate">⟳<small>Girar</small></button>
+      <button class="tbtn s" data-act="cancel">✕<small>Sair</small></button>
+    </div>
+  </div>
+
+  <!-- Inventário / fabricação / equipamento -->
+  <div id="invPanel" class="panel hidden">
+    <div class="phead"><div class="tabs"><button data-tab="inv" class="on">Inventário</button><button data-tab="craft">Fabricação</button><button data-tab="equip">Equipamento</button><button data-tab="skills">Habilidades</button></div><button class="close" data-close>✕</button></div>
+    <div class="pbody">
+      <div data-pane="inv" class="pane on">
+        <div class="invwrap3"><div id="equipCol" class="equipCol"></div>
+          <div><h3 class="hbtitle">Barra rápida (teclas 1–6) <span class="muted">— arraste um item até aqui</span></h3><div id="invHotbar" class="hbgrid2"></div><div id="invGrids"></div><div class="cap" id="invCap"></div></div>
+          <div id="invDetail" class="detail"><p class="muted">Selecione um item.</p></div></div>
+      </div>
+      <div data-pane="craft" class="pane"><div id="craftStation" class="muted"></div><div id="craftList" class="list"></div></div>
+      <div data-pane="skills" class="pane"><p class="muted">Cada habilidade só é liberada lendo o livro dela (botão direito no livro → <b>Ler</b>). Os livros são raros: um de cada no mapa, no lugar de origem, e reaparecem em outro lugar 15 dias depois de pegos.</p><div id="skillList" class="skillgrid"></div></div>
+      <div data-pane="equip" class="pane"><div id="equipSlots" class="equip"></div><p class="muted">Equipe ferramentas pela barra rápida (1–6) ou pelo inventário. Armaduras reduzem o dano recebido.</p></div>
+    </div>
+  </div>
+  <div id="buildPanel" class="panel hidden"><div class="phead"><h2>Construção</h2><button class="close" data-close>✕</button></div><div class="pbody"><div id="buildList" class="list cards"></div></div></div>
+  <div id="powerPanel" class="panel hidden"><div class="phead"><h2 id="powerTitle">Aparelho</h2><button class="close" data-close>✕</button></div><div class="pbody" id="powerBody"></div></div>
+  <div id="chestPanel" class="panel hidden"><div class="phead"><h2>Baú</h2><button class="close" data-close>✕</button></div>
+    <div class="pbody chest"><div><h3>Baú</h3><div id="chestGrid" class="grid"></div></div><div><h3>Mochila</h3><div id="chestInv" class="grid"></div></div></div><p class="muted pad">Clique em um item para transferir a pilha inteira.</p></div>
+
+  <!-- Menus -->
+  <div id="createPanel" class="hidden">
+    <div class="ccard">
+      <h2>Criar personagem</h2>
+      <label class="crow">Nome<input id="ccName" maxlength="18" value="Sobrevivente"></label>
+      <div class="crow">Cabelo<div id="ccHairStyle" class="opts"></div></div>
+      <div class="crow">Cor do cabelo<div id="ccHair" class="sw"></div></div>
+      <div class="crow">Jaqueta<div id="ccJacket" class="sw"></div></div>
+      <div class="crow">Camiseta<div id="ccShirt" class="sw"></div></div>
+      <div class="crow">Calça<div id="ccPants" class="sw"></div></div>
+      <div class="crow">Tênis<div id="ccShoes" class="sw"></div></div>
+      <div class="cbtns"><button id="btnCreateBack">Voltar</button><button id="btnCreateStart" class="pri">Começar</button></div>
+      <p class="muted small">Arraste na tela para girar o personagem.</p>
+    </div>
+  </div>
+  <div id="mainMenu" class="menu hidden">
+    <div class="title"><h1>ILHA PERDIDA</h1><p>Sobreviva. Explore. Construa.</p></div>
+    <div class="mbtns">
+      <button id="btnNew">Novo jogo</button>
+      <button id="btnContinue">Continuar</button>
+      <button id="btnSettings">Configurações</button>
+      <button id="btnControls">Controles</button>
+      <button id="btnQuit">Sair</button>
+    </div>
+    <div id="saveInfo" class="muted"></div>
+  </div>
+  <div id="pauseMenu" class="menu hidden dim">
+    <h2>Pausado</h2>
+    <div class="mbtns">
+      <button id="btnResume">Continuar</button>
+      <button id="btnSave">Salvar jogo</button>
+      <button id="btnSettings2">Configurações</button>
+      <button id="btnControls2">Controles</button>
+      <button id="btnUnstuck">Destravar personagem</button>
+      <button id="btnToMenu">Menu principal</button>
+    </div>
+    <div id="pauseInfo" class="muted"></div>
+  </div>
+  <div id="settingsPanel" class="menu hidden dim"><div class="box"><h2>Configurações</h2>
+    <label>Volume geral <input type="range" id="setMaster" min="0" max="1" step="0.05"></label>
+    <label>Efeitos <input type="range" id="setSfx" min="0" max="1" step="0.05"></label>
+    <label>Ambiente <input type="range" id="setAmb" min="0" max="1" step="0.05"></label>
+    <label>Música ambiente <input type="range" id="setMusic" min="0" max="1" step="0.05"></label>
+    <label>Sensibilidade da câmera <input type="range" id="setSens" min="0.3" max="2.5" step="0.05"></label>
+    <label class="row">Inverter eixo Y <input type="checkbox" id="setInvert"></label>
+    <label>Qualidade gráfica <select id="setQuality"><option value="baixa">Baixa (desempenho)</option><option value="media">Média</option><option value="alta">Alta</option><option value="ultra">Ultra</option><option value="custom">Personalizada</option></select></label>
+    <label class="row">Sombras <input type="checkbox" id="setShadows"></label>
+    <label class="row">Oclusão de ambiente (SSAO) <input type="checkbox" id="setSsao"></label>
+    <label class="row">Brilho/bloom <input type="checkbox" id="setBloom"></label>
+    <label class="row">Anti-serrilhado (FXAA) <input type="checkbox" id="setFxaa"></label>
+    <label>Detalhe de superfície <select id="setDetail"><option value="0">Desligado</option><option value="0.6">Médio</option><option value="1">Alto</option></select></label>
+    <label>Densidade da grama <select id="setGrass"><option value="0">Desligada</option><option value="0.5">Baixa</option><option value="1">Média</option><option value="1.6">Alta</option></select></label>
+    <label>Distância de visão <select id="setView"><option value="curta">Curta (desempenho)</option><option value="normal">Normal</option></select></label>
+    <label>Resolução <select id="setRes"><option value="0.6">60%</option><option value="0.8">80%</option><option value="1">100%</option><option value="1.5">150%</option></select></label>
+    <label>Dificuldade <select id="setDiff"><option value="0.6">Fácil</option><option value="1">Normal</option><option value="1.5">Difícil</option></select></label>
+    <button data-back>Voltar</button></div></div>
+  <div id="controlsPanel" class="menu hidden dim"><div class="box wide"><h2>Controles</h2>
+    <div class="cols"><div><h3>Computador</h3><table>
+      <tr><td>W A S D</td><td>Mover (correr leve)</td></tr><tr><td>Mouse</td><td>Câmera (clique para capturar)</td></tr><tr><td>Roda do mouse</td><td>Zoom / girar peça</td></tr>
+      <tr><td>Shift</td><td>Correr rápido (sprint)</td></tr><tr><td>Alt / Caps Lock</td><td>Caminhar devagar</td></tr><tr><td>Espaço</td><td>Pular / escalar obstáculo</td></tr><tr><td>Ctrl ou C</td><td>Agachar</td></tr>
+      <tr><td>E</td><td>Interagir / coletar / beber</td></tr><tr><td>F ou clique esq.</td><td>Usar ferramenta / atacar / atirar</td></tr><tr><td>Clique dir.</td><td>Defender (corpo a corpo) · Mirar (arma de fogo, arco; luneta no fuzil de precisão)</td></tr><tr><td>Q</td><td>Trocar a câmera de ombro (direito / esquerdo)</td></tr><tr><td>R</td><td>Recarregar arma</td></tr>
+      <tr><td>Tab</td><td>Inventário e fabricação</td></tr><tr><td>M</td><td>Mapa (clique para marcar um ponto)</td></tr><tr><td>I</td><td>Equipamentos</td></tr><tr><td>B</td><td>Construção</td></tr><tr><td>1–6 / 0</td><td>Barra rápida / guardar ferramenta</td></tr>
+      <tr><td>R / X</td><td>Girar / desmontar (construção)</td></tr><tr><td>Esc</td><td>Pausa / cancelar</td></tr></table></div>
+      <div><h3>Celular</h3><table><tr><td>Lado esquerdo</td><td>Joystick de movimento</td></tr><tr><td>Lado direito</td><td>Arrastar para girar a câmera</td></tr>
+      <tr><td>⚔</td><td>Atacar / usar ferramenta</td></tr><tr><td>⤒ ⤓</td><td>Pular / agachar</td></tr><tr><td>✋</td><td>Interagir</td></tr><tr><td>↻</td><td>Recarregar</td></tr><tr><td>🛡 »</td><td>Defender ou mirar / correr</td></tr><tr><td>🎒 🔨 ⏸</td><td>Inventário, construção, pausa</td></tr></table></div></div>
+    <button data-back>Voltar</button></div></div>
+  <div id="deathScreen" class="menu hidden red"><h2>Você morreu</h2><p id="deathCause" class="muted"></p>
+    <div class="mbtns"><button id="btnRespawn">Renascer</button><button id="btnLoadLast">Carregar último salvamento</button><button id="btnDeathMenu">Menu principal</button></div></div>
+  <div id="quitScreen" class="menu hidden"><h2>Jogo encerrado</h2><p class="muted">Seu progresso foi salvo neste navegador. Você já pode fechar esta aba.</p><div class="mbtns"><button id="btnBackFromQuit">Voltar ao menu</button></div></div>
+  <div id="loading" class="menu"><h1>ILHA PERDIDA</h1><div class="lbar"><div id="lfill"></div></div><p id="ltext" class="muted">Carregando…</p></div>
+  <div id="errorBox" class="menu hidden red"><h2>Erro</h2><pre id="errorText"></pre></div>
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
