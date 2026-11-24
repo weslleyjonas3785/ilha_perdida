@@ -1,0 +1,4 @@
+{
+  "_info": "Para usar um personagem definitivo, coloque o arquivo GLB nesta pasta e informe o nome em 'player' (ex.: \"player.glb\"). null = modelo procedural provisório.",
+  "player": null
+}
