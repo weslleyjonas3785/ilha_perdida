@@ -146,6 +146,8 @@ Otimizações:
 
 ## Versão em um único arquivo (sites que aceitam só um .html)
 `node tools/build_single.mjs` gera `dist/ilha_perdida.html` (~5 MB) com o código, o estilo, os ícones e os sons embutidos. É esse arquivo que vai para lojas/sites que pedem "um único arquivo .html".
+- **Atualiza sozinho:** ao abrir, o arquivo confere o `version.json` publicado no GitHub (Pages e, se falhar, o raw do repositório). Se houver versão mais nova, baixa e abre a nova; sem internet, roda a cópia que está dentro dele. Para abrir sem atualizar: `?noupdate`.
+- **Mouse:** clicar no jogo trava o mouse (a setinha some e o mouse gira a câmera). Se o site não deixar travar, o jogo entra sozinho no modo "mouse livre", que funciona igual. Esc solta.
 
 ## Painel do dono do mundo (Ctrl + Shift + F1)
 Só aparece para quem criou o mundo (no jogo solo sempre; no multiplayer só para o dono que hospeda — os amigos não abrem).

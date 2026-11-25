@@ -12,12 +12,12 @@ export class Input {
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => { this.keys.clear(); this.mouse.left = this.mouse.right = false; });
     canvas.addEventListener('mousedown', (e) => {
-      if (!this.locked && !this.touchActive && this.wantLock) { this.requestLock(); }
+      if (!this.locked && !this.touchActive && this.wantLock) { if (this.noLock) this._freeOn(); else this.requestLock(); }
       if (e.button === 0) { this.mouse.left = true; this.mouse.leftPressed = true; } if (e.button === 2) { this.mouse.right = true; this.mouse.rightPressed = true; }
     });
     window.addEventListener('mouseup', (e) => { if (e.button === 0) this.mouse.left = false; if (e.button === 2) this.mouse.right = false; });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-    window.addEventListener('mousemove', (e) => { if (this.locked || this.dragCam) { this.mouse.dx += e.movementX; this.mouse.dy += e.movementY; } });
+    window.addEventListener('mousemove', (e) => { if (this.locked || this.dragCam || this.free) { this.mouse.dx += e.movementX; this.mouse.dy += e.movementY; } });
     canvas.addEventListener('wheel', (e) => { this.mouse.wheel += Math.sign(e.deltaY); e.preventDefault(); }, { passive: false });
     document.addEventListener('pointerlockchange', () => { this.locked = document.pointerLockElement === canvas; if (!this.locked && this.onUnlock) this.onUnlock(); });
     // Sem pointer lock (iframe restrito): arrastar com o botão direito/esquerdo gira a câmera
@@ -25,10 +25,17 @@ export class Input {
     window.addEventListener('mouseup', () => { this.dragCam = false; });
     this._initTouch(ui);
   }
+  // trava o mouse no jogo (a setinha some e o mouse gira a câmera). Se o navegador/site não deixar (alguns sites
+  // abrem o jogo numa moldura restrita), entra no modo "mouse livre": a setinha some do mesmo jeito e o movimento
+  // do mouse gira a câmera; Esc solta.
   requestLock() {
-    try { const p = this.canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* fallback: arrastar */ }
+    const fail = () => { if (this.locked) return; this.noLock = true; this._freeOn(); };
+    try { const p = this.canvas.requestPointerLock(); if (p && p.catch) p.catch(fail); } catch (e) { fail(); return; }
+    if (!this._plErr) { this._plErr = true; document.addEventListener('pointerlockerror', fail); }
+    clearTimeout(this._plT); this._plT = setTimeout(() => { if (!this.locked && !document.pointerLockElement && this.wantLock) fail(); }, 700);
   }
-  exitLock() { if (document.pointerLockElement) document.exitPointerLock(); }
+  _freeOn() { if (this.touchActive || !this.wantLock) return; this.free = true; this.locked = true; this.canvas.style.cursor = 'none'; }
+  exitLock() { if (document.pointerLockElement) document.exitPointerLock(); if (this.free) { this.free = false; this.locked = false; this.canvas.style.cursor = ''; if (this.onUnlock) this.onUnlock(); } }
   _initTouch(ui) {
     const zone = ui.touchZone, joy = ui.joy, knob = ui.joyKnob; const T = this.touch;
     const start = (e) => {
