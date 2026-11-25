@@ -262,7 +262,7 @@ export class Game {
     this.drops = (s.drops || []).map((d) => ({ ...d, items: d.items.filter((it) => ITEMS[it[0]]) }));
     this.logs = (s.logs || []).map(([x, y, z, rot]) => ({ x, y, z, rot }));
     const AL = { backpack: 'pack_small', milpack: 'pack_large' }; const back0 = AL[s.equip?.back] || s.equip?.back;
-    { const E = this.freshEquip(), se = s.equip || {}; E.back = ITEMS[back0] ? back0 : null; E.suit = se.suit === 'ratsuit' ? 'ratsuit' : null; for (const k of [...CLOTH_SLOTS, 'backA', 'backB']) if (se[k] !== undefined) E[k] = ITEMS[se[k]] ? se[k] : null; if (se.body && ITEMS[se.body] && ITEMS[se.body].slot) E[ITEMS[se.body].slot] = se.body; E.dur = se.dur || {}; if (!E.shoes && !se._shoesGiven) E.shoes = 'rags_shoes'; E._shoesGiven = true; this.equip = E; } this._noBack = true; this._applyBack(); this.inv.load(s.inv); this._noBack = false;
+    { const E = this.freshEquip(), se = s.equip || {}; E.back = ITEMS[back0] ? back0 : null; E.suit = se.suit === 'ratsuit' ? 'ratsuit' : null; for (const k of [...CLOTH_SLOTS, 'backA', 'backB']) if (se[k] !== undefined) E[k] = ITEMS[se[k]] ? se[k] : null; if (se.body && ITEMS[se.body] && ITEMS[se.body].slot) E[ITEMS[se.body].slot] = se.body; E.dur = se.dur || {}; if (!E.shoes && !se._shoesGiven) E.shoes = 'tenis'; if (E.shoes === 'rags_shoes' && !se._tenis) { E.shoes = 'tenis'; delete E.dur.shoes; } E._shoesGiven = true; E._tenis = true; this.equip = E; } this._noBack = true; this._applyBack(); this.inv.load(s.inv); this._noBack = false;
     if (s.equip?.hand && ITEMS[s.equip.hand]) { if (this.countAll(s.equip.hand) <= 0) this.inv.add(s.equip.hand, 1); this.equip.hand = s.equip.hand; }
     this.quick = Array(8).fill(null); if (Array.isArray(s.quick)) { if (s.quick.length === 8) s.quick.forEach((q, k) => { if (ITEMS[q] && quickClass(q) === slotClass(k)) this.quick[k] = q; }); else for (const q of s.quick) if (ITEMS[q]) this.bindQuick(q); } else for (const e of this.inv.slots) this._autoQuick(e.id);
     this.syncHand(); if (this.vehicles.driving) this.vehicles.exit(); this.vehicles.load(s.veh); this.jerryFuel = s.jerryFuel || 0;
@@ -537,7 +537,7 @@ export class Game {
   // ---------- Itens ----------
   // A mão usa o item que está no espaço selecionado da barra rápida (1–6); o item continua no espaço.
   syncHand() { const e = this.equip; if (e.hand && !e.debugHand && this.countAll(e.hand) <= 0) e.hand = null; }
-  freshEquip() { return { hand: null, back: null, suit: null, backA: null, backB: null, hat: null, shirt: 'rags_shirt', vest: null, gloves: null, pants: 'rags_pants', shoes: 'rags_shoes', dur: {}, _shoesGiven: true }; }
+  freshEquip() { return { hand: null, back: null, suit: null, backA: null, backB: null, hat: null, shirt: 'rags_shirt', vest: null, gloves: null, pants: 'rags_pants', shoes: 'tenis', dur: {}, _shoesGiven: true, _tenis: true }; }
   // quantidade de um item contando as armas nas costas
   countAll(id) { return this.inv.count(id) + (this.equip.backA === id ? 1 : 0) + (this.equip.backB === id ? 1 : 0); }
   // armas grandes (arco, fuzis, escopeta, sniper, machado, picareta, lança) vão direto para os 2 espaços das costas
@@ -687,7 +687,20 @@ export class Game {
   // tudo que é pego dentro da zona tóxica fica contaminado por radiação
   giveLoot(list, at) { let got = 0; for (const [id, q] of list) if (q > 0) { this.give(id, q, undefined, at); got++; } return got; }
   // mochila achada sem nenhuma nas costas: veste direto (não precisa caber nos bolsos)
-  _autoWear(id) { if (ITEMS[id].type !== 'backpack' || this.equip.back || this.equip.suit) return false; this.equip.back = id; this._applyBack(); this.audio.play('cloth'); this.ui.toast(`🎒 ${ITEMS[id].name} vestida: +${ITEMS[id].slots} espaços`, 'ok'); return true; }
+  // mochila coletada: veste sozinha se não tiver nenhuma ou se ela for maior que a atual (a antiga vai para o inventário/chão)
+  _autoWear(id) { const it = ITEMS[id]; if (it.type !== 'backpack' || this.equip.suit) return false; const cur = this.equip.back; if (cur && (ITEMS[cur].slots || 0) >= (it.slots || 0)) return false;
+    this.equip.back = id; this._applyBack(); if (cur) { this._noBack = true; if (this.inv.add(cur, 1) < 1) this.dropNear([[cur, 1]], `${ITEMS[cur].name} ficou no chão (sem espaço)`); this._noBack = false; }
+    this.audio.play('cloth'); this.ui.toast(`🎒 ${it.name} vestida: ${it.slots} espaços${cur ? ` (era ${ITEMS[cur].name}, ${ITEMS[cur].slots})` : ''}`, 'ok'); return true; }
+  betterPack(id) { const it = ITEMS[id]; if (!it || it.type !== 'backpack' || this.equip.suit) return false; const cur = this.equip.back; return !cur || (ITEMS[cur].slots || 0) < (it.slots || 0); }
+  // objeto cortante (faca, machado, lança): na mão, nas costas ou no inventário
+  blade() { for (const id of ['knife', 'scrapknife', 'axe', 'scrapaxe', 'shockspear', 'spear', 'scrapspear']) if (this.countAll(id) > 0) return id; return null; }
+  // retalhos que uma roupa rende (menos se estiver gasta)
+  ragsOf(id) { const it = ITEMS[id]; if (!it || it.type !== 'clothing' || /armor|helmet|boots|nvg|rat/.test(id) || it.slot === 'shoes' && id !== 'fibershoes') return 0; const base = { shirt: 3, pants: 3, vest: 2, hat: 1, gloves: 1, shoes: 1 }[it.slot] || 2; return base + (/^mil|parka/.test(id) ? 1 : 0); }
+  // corta a roupa do espaço i da mochila em retalhos (pano)
+  cutCloth(i) { const s = this.inv.slots[i]; if (!s) return false; const n = this.ragsOf(s.id), b = this.blade(); if (!n) { this.ui.toast('Isso não dá para cortar em retalhos', 'warn'); return false; } if (!b) { this.ui.toast('Precisa de um objeto cortante (faca ou machado)', 'warn'); return false; }
+    const name = ITEMS[s.id].name; this.inv.takeSlot(i, 1); const k = this.inv.add('cloth', n); if (k < n) this.dropNear([['cloth', n - k]]); this.audio.play('cloth'); this.audio.play('swing', { vol: 0.5 }); this.ui.toast(`✂ ${name} cortada com ${ITEMS[b].name}: +${n} 🧵 Pano (retalhos)`, 'ok'); return true; }
+  // aparelhos que aceitam a bateria (célula): hoje o óculos de visão noturna (na cabeça ou na mochila)
+  cellTargets() { const out = []; if (this.equip.hat === 'nvg') out.push({ label: '🥽 Óculos de visão noturna (na cabeça)', id: 'nvg', on: true, has: this.equip.nvgCell != null }); else if (this.countAll('nvg') > 0) out.push({ label: '🥽 Óculos de visão noturna (na mochila)', id: 'nvg', on: false, has: this.equip.nvgCell != null }); return out; }
   give(id, qty, label, at) {
     const p = at ? [at.x ?? at[0], 0, at.z ?? at[2]] : this.player.pos; const rad = this.world.toxicAt(p[0], p[2]) > 0.15 || (at && at.toxic);
     if (this._autoWear(id)) { qty--; if (!qty) return 1; }
@@ -1068,7 +1081,7 @@ export class Game {
     for (const a of this.arrows) if (a.stuck && Math.hypot(a.p[0] - P[0], a.p[2] - P[2]) < R) out.push({ src: 'arrow', a, id: 'arrow', n: 1, rad: false });
     return out; }
   takeNear(e, quiet) { const it = ITEMS[e.id]; if (!it) return 0;
-    if (e.src === 'drop') { const d = e.d, i = d.items.indexOf(e.ref); if (i < 0 || !this.drops.includes(d)) return 0; const kb = this._backFirst(e.id, e.n); if (kb) { if (kb >= e.n) { d.items.splice(i, 1); if (!d.items.length) { this.drops.splice(this.drops.indexOf(d), 1); if (d.death) this.deathPos = null; } return kb; } e.ref[1] = e.n -= kb; } const k = this.inv.add(e.id, e.n, { rad: e.rad || this.world.toxicAt(d.x, d.z) > 0.2 }); if (!k) { if (!quiet) this.ui.toast('Inventário cheio', 'warn'); return 0; }
+    if (e.src === 'drop') { const d = e.d, i = d.items.indexOf(e.ref); if (i < 0 || !this.drops.includes(d)) return 0; if (this._autoWear(e.id)) { if (e.n <= 1) { d.items.splice(i, 1); if (!d.items.length) { this.drops.splice(this.drops.indexOf(d), 1); if (d.death) this.deathPos = null; } return 1; } e.ref[1] = e.n -= 1; } const kb = this._backFirst(e.id, e.n); if (kb) { if (kb >= e.n) { d.items.splice(i, 1); if (!d.items.length) { this.drops.splice(this.drops.indexOf(d), 1); if (d.death) this.deathPos = null; } return kb; } e.ref[1] = e.n -= kb; } const k = this.inv.add(e.id, e.n, { rad: e.rad || this.world.toxicAt(d.x, d.z) > 0.2 }); if (!k) { if (!quiet) this.ui.toast('Inventário cheio', 'warn'); return 0; }
       if (k < e.n) e.ref[1] = e.n - k; else d.items.splice(i, 1); if (!d.items.length) { this.drops.splice(this.drops.indexOf(d), 1); if (d.death) this.deathPos = null; } if (!quiet) { this.ui.toast(`+${k} ${it.icon} ${it.name}${e.rad ? ' ☢' : ''}`, 'ok'); this.audio.play('pickup'); } this._autoQuick && this._autoQuick(e.id); return k; }
     if (e.src === 'pick') { const o = e.o; if (o.taken) return 0; if (this.inv.room(e.id) < 1) { if (!quiet) this.ui.toast('Inventário cheio', 'warn'); return 0; } const n = e.id === 'stick' ? 1 + (Math.random() < 0.4) : e.n; this.give(e.id, n, quiet); if (o.kind === 'fiber' && Math.random() < 0.4) this.give('leaf', 1, true);
       o.taken = true; o.regrowAt = this.env.day + (o.kind === 'crystal' ? 4 : 1); if (o._grp) o._grp.dirty(o); if (!quiet) this.audio.play('pickup'); return n; }

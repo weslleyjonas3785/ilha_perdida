@@ -557,3 +557,5 @@ body.tedit #mobile .tctl { z-index: 2; }
 .mapHelp .hmob { display: none; } body.mobile .mapHelp .hmob { display: inline; } body.mobile .mapHelp .hpc { display: none; }
 #mapCanvas { touch-action: none; }
 body.mobile [data-id=slide] i { color: #7fe3ff; }
+.askbox.choose .acts.col { flex-direction: column; align-items: stretch; } .askbox.choose .acts.col button { text-align: left; } .askbox.choose button:disabled { opacity: 0.45; }
+.askbox.choose .acts.col button.n { text-align: center; }

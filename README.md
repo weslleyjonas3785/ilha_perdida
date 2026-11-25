@@ -270,6 +270,12 @@ Todos entram na mesma VPN (Radmin VPN, Hamachi, ZeroTier…) ou na mesma rede de
 - ⚙ Engrenagem → **Modificar controles**: o jogo para e abre a tela com todos os botões (inclusive Girar/Sair da construção). Toque num botão para escolher, arraste para mudar de lugar, use − / + (ou a barra) para o tamanho dele, e ajuste o tamanho de todos e a transparência. **Salvar** grava do jeito que ficou (no aparelho); **Cancelar** desfaz; **Restaurar padrão** volta ao original. O painel pode ser arrastado pelo título.
 - **PAUSA** abre o menu de pausa, igual ao ESC do computador (no celular deitado o menu fica em 2 colunas para caber na tela).
 
+## Roupas, mochilas e baterias (clique no inventário)
+- O personagem começa com **tênis** (e camiseta e calça velhas). Saves antigos com "Sapatos velhos" no pé trocam para o tênis.
+- Mochila: pegar (chão, caixas, área Próximo) ou clicar numa mochila maior que a atual veste ela na hora; a antiga vai para o inventário (ou para o chão, se não couber).
+- Bateria: clicar pergunta se quer equipar e mostra onde colocar (óculos de visão noturna na cabeça ou na mochila; se ele já tiver bateria, oferece trocar).
+- Roupa: clicar pergunta o que fazer — **Vestir** (mostra o lugar e o que vai trocar) ou **Cortar em retalhos** (vira Pano) com um objeto cortante (faca, machado ou lança) no inventário, nas costas ou na mão.
+
 ## Voz por proximidade
 - **CAPS LOCK** liga o microfone e ele fica aberto até apertar de novo. Quem estiver perto (até ~45 m) ouve, com volume pela distância e lado pelo estéreo.
 - No PC aparece o desenho do microfone no alto da tela, embaixo da bússola; ele acende e apaga enquanto você fala e some ao desligar.
@@ -466,6 +472,7 @@ python3 tests/play25.py  # 19 verificações: projeto (roda com 11 peças, encai
 python3 tests/play29.py  # 5 verificações: área Próximo no inventário (pegar e pegar tudo) e lupa nos móveis com loot
 python3 tests/play30.py  # 7 verificações: arma grande direto para as costas, Verificar (pente/mira/silenciador), sem pente não atira, silenciador
 python3 tests/play31.py  # 10 verificações: helicóptero (som, voo, circula e atira, fumaça esconde, tripulação NPC, tiro no piloto, atirador cai, queda, caixas, fumaça)
+python3 tests/play34.py  # 6 verificações: tênis no começo, mochila maior veste sozinha, bateria e roupa perguntam onde equipar, cortar em retalhos
 python3 tests/play33.py  # 9 verificações: voz (CAPS LOCK, ícone pisca, NPC/robô vêm, voz de outro jogador), botões VOZ e bala no celular
 python3 tests/play32.py  # 12 verificações: Modificar controles (Cancelar/Salvar), PAUSA + trava de corrida no joystick + celular (só no celular, joystick, câmera, botões, mochila, engrenagem arrasta/tamanho salvo, aviso de girar)
 python3 tests/play28.py  # 9 verificações: quantidade no slot, fragmentação (fogo, clarão, cratera), luz (4 s + embaçado), fumaça densa 15 s, barulhenta, C4 (20 m) e dano nas construções
