@@ -5,6 +5,7 @@
 import { MeshBuilder, M, hex, shade } from '../engine/mesh.js';
 import { rng, mat4 } from '../engine/math.js';
 import { furniture } from './props.js';
+import { ladderSpec, ladderMesh } from './town.js';
 
 const STONE = 0.93, WOOD = 0.63, FAB = 0.83, MET = 0.5;
 // paletas tiradas da folha de casas (revestimento, acabamento, telhado)
@@ -287,7 +288,7 @@ export function hospitalMesh(b) {
     void holes; }
   // faixas verde-petróleo nos andares e no topo; platibanda
   for (const y of [FL + FH - 0.15, FL + H2 - 0.1]) { box(0, y, hd + 0.17, W + 0.1, 0.22, 0.06, teal); box(0, y, -hd - 0.17, W + 0.1, 0.22, 0.06, teal); box(hw + 0.17, y, 0, 0.06, 0.22, D + 0.1, teal); box(-hw - 0.17, y, 0, 0.06, 0.22, D + 0.1, teal); }
-  box(0, FL + H2, 0, W + 0.4, 0.5, D + 0.4, white); box(0, FL + H2 + 0.5, 0, W - 0.4, 0.03, D - 0.4, hex(0xc4c6c4)); for (const s of [-1, 1]) { box(0, FL + H2 + 0.5, s * (D / 2 + 0.05), W + 0.5, 0.1, 0.3, teal); box(s * (W / 2 + 0.05), FL + H2 + 0.5, 0, 0.3, 0.1, D + 0.5, teal); } col(0, 0, FL + H2, FL + H2 + 0.5, hw, hd, { camOnly: true });
+  box(0, FL + H2, 0, W + 0.4, 0.5, D + 0.4, white); box(0, FL + H2 + 0.5, 0, W - 0.4, 0.03, D - 0.4, hex(0xc4c6c4)); for (const s of [-1, 1]) { box(0, FL + H2 + 0.5, s * (D / 2 + 0.05), W + 0.5, 0.1, 0.3, teal); box(s * (W / 2 + 0.05), FL + H2 + 0.5, 0, 0.3, 0.1, D + 0.5, teal); } col(0, 0, FL + H2, FL + H2 + 0.5, hw, hd, { platform: true }); { const LS = ladderSpec(b); if (LS) ladderMesh(mb, LS); }
   for (const [x, z] of [[-hw + 3, -hd + 3], [-hw + 6.5, -hd + 2.5], [hw - 3, -hd + 3], [hw - 3.5, hd - 3]]) { box(x, FL + H2 + 0.5, z, 2.0, 0.6, 1.4, hex(0xc8cacc), MET); for (const [dx, dz] of [[-0.45, -0.3], [0.45, -0.3], [-0.45, 0.3], [0.45, 0.3]]) { mb.setColor(hex(0x3a3c40), MET); mb.cylinder(M(x + dx, FL + H2 + 1.1, z + dz), 0.22, 0.22, 0.02, 10, hex(0x3a3c40)); } }
   // torres de vidro dos lados da entrada + marquise com cruz vermelha + letreiro "HOSPITAL"
   for (const s of [-1, 1]) { const tx = s * 3.3; box(tx, FL, hd + 0.5, 1.8, H2 + 0.3, 1.0, hex(0x15191d), MET); col(tx, hd + 0.5, 0, FL + H2, 0.9, 0.5);

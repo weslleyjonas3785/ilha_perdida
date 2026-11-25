@@ -29,7 +29,7 @@ export class WorldMap {
     window.addEventListener('resize', () => { if (this.g.ui.open === 'map') this.open(); });
   }
   // ---------- marcações ----------
-  clickAt(wx, wz, sx, sy) { if (this.removeNear(sx, sy, 12)) return; if (Math.abs(wx) > HALF || Math.abs(wz) > HALF) return;
+  clickAt(wx, wz, sx, sy) { const A = this.g.admin; if (A && A.tpMode) { if (Math.abs(wx) > HALF || Math.abs(wz) > HALF) return; A.tpMode = false; this.g.ui.closePanels(); A.teleport(wx, wz); return; } if (this.removeNear(sx, sy, 12)) return; if (Math.abs(wx) > HALF || Math.abs(wz) > HALF) return;
     if (this.marks.length >= MAX_MARKS) this.marks.shift(); const used = new Set(this.marks.map((m) => m.c)); const c = COLORS.findIndex((_, i) => !used.has(i));
     this.marks.push({ x: Math.round(wx), z: Math.round(wz), c: c < 0 ? 0 : c }); this.g.audio.play('ui'); this.changed(); }
   removeNear(sx, sy, maxPx) { let bi = -1, bd = maxPx; this.marks.forEach((m, i) => { const [x, y] = this.toScreen(m.x, m.z); const d = Math.hypot(x - sx, y - sy); if (d < bd) { bd = d; bi = i; } }); if (bi < 0) return false; this.marks.splice(bi, 1); this.changed(); return true; }
@@ -62,8 +62,10 @@ export class WorldMap {
     c.lineCap = 'round'; c.lineJoin = 'round';
     for (const rv of w.rivers) { c.strokeStyle = '#2d6f95'; c.beginPath(); rv.forEach(([px, pz], i) => { const [a, b] = P(px, pz); i ? c.lineTo(a, b) : c.moveTo(a, b); }); c.lineWidth = 3.2; c.stroke(); }
     for (const l of w.lakes) { const [a, b] = P(l.x, l.z); c.fillStyle = '#2d6f95'; c.beginPath(); c.arc(a, b, l.r * S * 0.85, 0, 6.29); c.fill(); }
-    for (const s of w.roadSegs) { if (s[6] === 'street') continue; const [a, b] = P(s[0], s[1]), [d, e] = P(s[2], s[3]); c.strokeStyle = 'rgba(30,26,22,0.85)'; c.lineWidth = s[4] > 5 ? 3.4 : 2.4; c.beginPath(); c.moveTo(a, b); c.lineTo(d, e); c.stroke();
-      c.strokeStyle = s[4] > 5 ? '#e8d9a8' : '#c9b48a'; c.lineWidth = s[4] > 5 ? 1.8 : 1.1; c.stroke(); }
+    for (const f of w.falls || []) { const [a, b] = P(f.px, f.pz); c.fillStyle = '#3d8fb0'; c.beginPath(); c.arc(a, b, 2.2, 0, 6.29); c.fill(); }
+    for (const pass of [0, 1]) for (const s of w.roadSegs) { if (s[6] === 'street') continue; const hw = s[4] >= 9, dirt = s[7] === 'dirt'; const [a, b] = P(s[0], s[1]), [d, e] = P(s[2], s[3]); c.beginPath(); c.moveTo(a, b); c.lineTo(d, e);
+      if (!pass) { c.strokeStyle = 'rgba(30,26,22,0.85)'; c.lineWidth = hw ? 5.2 : dirt ? 2.4 : 3.6; c.stroke(); }
+      else { c.strokeStyle = hw ? '#f0c850' : dirt ? '#b8946a' : '#e8e2d0'; c.lineWidth = hw ? 3.2 : dirt ? 1.1 : 1.9; c.stroke(); } }
     for (const s of w.roadSegs) { if (s[6] !== 'street') continue; const [a, b] = P(s[0], s[1]), [d, e] = P(s[2], s[3]); c.strokeStyle = 'rgba(70,66,60,0.9)'; c.lineWidth = 1; c.beginPath(); c.moveTo(a, b); c.lineTo(d, e); c.stroke(); }
     this.base = base; this.baseS = S;
   }
@@ -89,6 +91,7 @@ export class WorldMap {
     this.marks.forEach((m, i) => { const [a, b] = this.toScreen(m.x, m.z); c.fillStyle = COLORS[m.c]; c.strokeStyle = '#000'; c.lineWidth = 2; c.beginPath(); c.moveTo(a, b); c.lineTo(a - 7, b - 16); c.arc(a, b - 18, 7, Math.PI * 0.85, Math.PI * 0.15); c.closePath(); c.fill(); c.stroke();
       c.fillStyle = '#000'; c.font = '700 10px sans-serif'; c.fillText(String(i + 1), a, b - 14.5);
       c.font = '600 12px Barlow, sans-serif'; c.lineWidth = 3; c.strokeStyle = 'rgba(0,0,0,0.8)'; const t = fmtD(Math.hypot(m.x - P[0], m.z - P[2])); c.strokeText(t, a, b + 14); c.fillStyle = '#fff'; c.fillText(t, a, b + 14); });
+    if (g.admin) g.admin.drawMap(c, this);
     // jogador (seta na direção da câmera)
     { const [a, b] = this.toScreen(P[0], P[2]); const yaw = g.cam.yaw; const fx = Math.sin(yaw), fz = Math.cos(yaw); c.save(); c.translate(a, b); c.rotate(Math.atan2(fx, -fz)); c.fillStyle = '#fff'; c.strokeStyle = '#000'; c.lineWidth = 2; c.beginPath(); c.moveTo(0, -11); c.lineTo(7, 8); c.lineTo(0, 4); c.lineTo(-7, 8); c.closePath(); c.fill(); c.stroke(); c.restore(); }
     // escala

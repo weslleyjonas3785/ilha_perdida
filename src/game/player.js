@@ -11,19 +11,24 @@ export class Player {
     this.game = game; this.assets = assets; this.rig = null;
     this.anim = new Animator(assets.skel); this.clips = assets.clips; this.anim.play(this.clips.idle, 0);
     this.pos = [0, 0, 0]; this.vel = [0, 0, 0]; this.yaw = 0; this.onGround = true; this.crouch = false; this.swimming = false;
-    this.airTime = 0; this.jumpTime = 0; this.climb = null; this.dead = false; this.sleeping = false; this.locked = 0; this.moveSlow = 1;
+    this.airTime = 0; this.jumpTime = 0; this.climb = null; this.ladder = null; this.dead = false; this.sleeping = false; this.locked = 0; this.moveSlow = 1;
     this.stats = { hp: 100, hunger: 100, thirst: 100, energy: 100, stamina: 100 }; this.staminaLock = false; this.staminaDelay = 0;
     this.blocking = false; this.attackCd = 0; this.punchAlt = false; this.speed = 0; this.lastYaw = 0; this.turnTimer = 0; this.hurtFlash = 0;
     this.model = mat4.create(); this.toolModel = mat4.create(); this.dust = []; this.alpha = 1; this.inCave = null; this.lastGroundY = 0; this.footPhase = 0;
   }
   setAssets(a) { this.assets = a; this.clips = a.clips; this.anim = new Animator(a.skel); this.anim.play(a.clips.idle, 0); }
   get height() { return this.crouch ? H_CROUCH : H_STAND; }
-  setPosition(x, y, z) { this.pos = [x, y, z]; this.vel = [0, 0, 0]; }
+  setPosition(x, y, z) { this.pos = [x, y, z]; this.vel = [0, 0, 0]; this.ladder = null; }
 
   update(dt, act, camYaw) { this._dt = dt;
     const g = this.game, ph = g.physics, w = g.world, st = this.stats;
     this.attackCd = Math.max(0, this.attackCd - dt); this.locked = Math.max(0, this.locked - dt); this.hurtFlash = Math.max(0, this.hurtFlash - dt);
+    if (this.seat) { const c = this.clips[this.seat.clip]; if (c && this._seatClip !== c) { this._seatClip = c; this.anim.play(c, 0.25); } this.vel = [0, 0, 0]; this.onGround = true; this.crouch = false; this.slide = null; this.anim.update(dt); this._matrices(); return; } else this._seatClip = null;
     if (this.dead) { this._physicsStep(dt, 0, 0, 0); this.anim.update(dt); this._matrices(); return; }
+    if (this._flySafe > 0) { this._flySafe -= dt; this.airTime = Math.min(this.airTime || 0, 0.04); }
+    if (this.fly) return this._flyStep(dt, act, camYaw);
+    if (this.fainted > 0) { this.fainted -= dt; this.crouch = false; this.slide = null; this.ladder = null; this.sprinting = false; this._physicsStep(dt, 0, 0, 0);
+      if (this.fainted <= 0) { this.fainted = 0; this.anim.play(this.clips.idle, 0.6); this.game.onWake && this.game.onWake(); } this.anim.update(dt); this._matrices(); return; }
     if (this.sleeping) { this.anim.update(dt); this._matrices(); return; }
 
     // ----- escalada em andamento -----
@@ -36,6 +41,8 @@ export class Player {
       this.anim.update(dt); this._matrices(); return;
     }
 
+    // ----- escada vertical -----
+    if (this.ladder) return this._ladderStep(dt, act);
     // ----- puxado pelo arpão-gancho -----
     if (this.grapple) { this._grappleStep(dt, act); this.anim.update(dt); this._matrices(); return; }
     // ----- entrada de movimento relativa à câmera -----
@@ -85,6 +92,21 @@ export class Player {
     this.anim.update(dt); this._matrices();
   }
 
+  // agarra uma escada (E): W sobe, S desce, Shift = sobe rápido / escorrega descendo, Espaço solta
+  grabLadder(L) { const p = this.pos; this.ladder = L; this.crouch = false; this.slide = null; this.vel = [0, 0, 0]; this._ladT = 0.25; this._rung = p[1];
+    p[1] = Math.max(L.y0, Math.min(p[1], L.y1 - 1.4)); this.yaw = Math.atan2(-L.nx, -L.nz); this.anim.play(this.clips.ladder, 0.15, 0); this.game.audio.play('ladder'); this.game.noise && this.game.noise(p, 10, 'escada'); }
+  _ladderStep(dt, act) {
+    const L = this.ladder, p = this.pos, g = this.game; this._ladT = Math.max(0, this._ladT - dt); this.onGround = false; this.sprinting = false;
+    if (act.jump && this._ladT <= 0) { this.ladder = null; this.vel = [L.nx * 2.2, 0, L.nz * 2.2]; this.anim.play(this.clips.idle, 0.2); return this._animate(dt), this.anim.update(dt), this._matrices(); }
+    const dir = act.mz || 0; let v = 0; this.ladderSlide = false;
+    if (dir > 0.2) v = act.sprint ? 3.0 : 1.5; else if (dir < -0.2) { v = act.sprint ? -7.5 : -1.7; this.ladderSlide = !!act.sprint; }
+    p[1] += v * dt; p[0] = L.x; p[2] = L.z; this.yaw = Math.atan2(-L.nx, -L.nz);
+    if (p[1] <= L.y0) { p[1] = L.y0; if (dir < -0.2) { this.ladder = null; this.onGround = true; if (this.ladderSlide) g.audio.play('land', { vol: 0.6 }); this.anim.play(this.clips.idle, 0.2); } }
+    if (this.ladder && p[1] >= L.y1 - 1.3) { if (dir > 0.2) { this.ladder = null; this.climb = { from: p.slice(), to: [L.ex, L.y1, L.ez], t: 0, dur: 0.75 }; this.anim.playAction(this.clips.climb, { fadeIn: 0.08, fadeOut: 0.15 }); this.fullBodyAction = true; g.audio.play('climb'); g.noise && g.noise(p, 12, 'escada'); this.anim.update(dt); this._matrices(); return; } p[1] = L.y1 - 1.3; }
+    if (this.ladder) { this.anim.play(this.clips.ladder, 0.15, this.ladderSlide ? 0 : Math.abs(v) / 1.5 * 0.9);
+      if (Math.abs(p[1] - this._rung) > (this.ladderSlide ? 1.2 : 0.62)) { this._rung = p[1]; g.audio.play(this.ladderSlide ? 'ladderSlide' : 'ladder', { vol: 0.6 }); g.noise && g.noise(p, this.ladderSlide ? 16 : 10, 'escada'); } }
+    this.anim.update(dt); this._matrices();
+  }
   _slideStep(dt, act) {
     const g = this.game, w = g.world, p = this.pos, S = this.slide; S.t += dt;
     // inclinação do terreno ao longo da direção do escorregão
@@ -202,7 +224,18 @@ export class Player {
     for (let r = 0.5; r < 6; r += 0.5) for (let a = 0; a < 16; a++) { const x = p[0] + Math.cos(a * 0.39) * r, z = p[2] + Math.sin(a * 0.39) * r; const q = [x, p[1], z];
       const save = p.slice(); p[0] = x; p[2] = z; if (!inside()) { p[1] = Math.max(p[1], this.game.world.height(x, z)); this.stuckT = 0; return; } p[0] = save[0]; p[2] = save[2]; void q; }
   }
+  // voar (modo deus): sem gravidade e sem colisão, na direção da câmera
+  _flyStep(dt, act, camYaw) {
+    const g = this.game, K = g.input.keys; const pit = g.cam.pitch || 0; const fx = Math.sin(camYaw), fz = Math.cos(camYaw), rx = -fz, rz = fx;
+    const sp = (act.sprint ? 80 : 24); const up = (K.has('Space') ? 1 : 0) - (K.has('KeyC') ? 1 : 0);
+    const cp = Math.cos(pit), spn = Math.sin(pit); let vx = (fx * cp * act.mz + rx * act.mx), vz = (fz * cp * act.mz + rz * act.mx), vy = -spn * act.mz + up;
+    this.pos[0] += vx * sp * dt; this.pos[1] += vy * sp * dt; this.pos[2] += vz * sp * dt; const h = g.world.height(this.pos[0], this.pos[2]); if (this.pos[1] < h + 0.05) this.pos[1] = h + 0.05; this.pos[1] = Math.min(this.pos[1], 900);
+    this.vel = [0, 0, 0]; this.onGround = false; this.airTime = 0; this.swimming = false; this.crouch = false; this.slide = null; this.ladder = null; this._flySafe = 1.5;
+    if (Math.hypot(act.mx, act.mz) > 0.1) this.yaw = Math.atan2(vx, vz); const C = this.clips; const want = C.swim || C.fall || C.idle; if (this.anim.current !== want) this.anim.play(want, 0.25);
+    this.anim.update(dt); this._matrices();
+  }
   _land(impact) {
+    if (this._flySafe > 0) return;
     const g = this.game;
     if (impact > 13) { g.damage((impact - 13) * 7, 'queda'); }
     if (impact > 8.5 && !this.anim.busy) { this.anim.playAction(this.clips.land, { fadeIn: 0.05, fadeOut: 0.2 }); this.locked = impact > 11 ? 0.35 : 0.12; this.fullBodyAction = false; }
@@ -236,7 +269,7 @@ export class Player {
     if (this.anim.busy || this.attackCd > 0 || this.dead || this.swimming || this.climb) return false;
     const C = this.clips; let clip = C[type];
     if (type === 'punch') { clip = this.punchAlt ? C.punchL : C.punch; this.punchAlt = !this.punchAlt; }
-    const calm = ['pickup', 'use', 'eat', 'drink', 'pillBottle', 'blister', 'cough', 'read'].includes(type);
+    const calm = ['pickup', 'use', 'eat', 'drink', 'pillBottle', 'blister', 'cough', 'read', 'pour'].includes(type);
     const st = this.stats; if (st.stamina < 5 && !calm) { this.game.ui.toast('Sem fôlego!', 'warn'); return false; }
     if (!calm) { st.stamina -= opts.cost ?? 7; this.staminaDelay = 0.9; }
     const full = type === 'pickup';
@@ -252,8 +285,10 @@ export class Player {
     else if (!b && this.blocking) { this.blocking = false; if (this.anim.action && this.anim.action.clip === this.clips.block) this.anim.stopAction(0.15); }
   }
   hitReact() { if (!this.anim.busy) this.anim.playAction(this.clips.hit, { mask: this.clips.masks.upper, fadeIn: 0.04, fadeOut: 0.15 }); this.hurtFlash = 0.35; }
-  die() { this.dead = true; this.blocking = false; this.anim.action = null; this.anim.play(this.clips.die, 0.15); this.vel[0] = this.vel[2] = 0; }
-  revive() { this.dead = false; this.anim.play(this.clips.idle, 0); this.anim.action = null; }
+  die(finished) { this.dead = true; this.blocking = false; this.anim.action = null; this.anim.play(finished && this.clips.finish ? this.clips.finish : this.clips.die, finished ? 0.05 : 0.15); this.vel[0] = this.vel[2] = 0; this.fainted = 0; }
+  // desmaio: cai de peito no chão e fica desacordado t segundos
+  faint(t) { this.fainted = t; this.blocking = false; this.anim.action = null; this.prop = null; this.anim.play(this.clips.faint, 0.1); this.vel[0] = this.vel[2] = 0; this.grapple = null; this.climb = null; }
+  revive() { this.dead = false; this.fainted = 0; this.anim.play(this.clips.idle, 0); this.anim.action = null; }
   _matrices() {
     mat4.fromTRS(this.model, this.pos, quat.fromEuler(0, this.yaw, 0), [1, 1, 1]);
     if (this.assets.offset) mat4.mul(this.model, this.model, this.assets.offset);

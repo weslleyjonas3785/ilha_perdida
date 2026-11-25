@@ -80,14 +80,15 @@ export class Input {
       sprint: k('ShiftLeft') || k('ShiftRight') || this.btn('sprint'),
       walk: k('AltLeft') || k('CapsLock'),
       jump: h('Space') || this.btnHit('jump'),
-      crouch: h('ControlLeft') || h('ControlRight') || h('KeyC') || this.btnHit('crouch'),
+      crouch: h('KeyC') || this.btnHit('crouch'), // agachar só no C (Ctrl ficou livre)
       interact: h('KeyE') || this.btnHit('interact'),
       use: h('KeyF') || (this.enabled && this.mouse.leftPressed && (this.locked || this.touchActive || this.clickUse)) || this.btnHit('attack'),
       useHeld: k('KeyF') || (this.enabled && this.mouse.left && (this.locked || this.clickUse)) || this.btn('attack'),
+      pin: h('KeyF'), throwHeld: (this.enabled && this.mouse.left && (this.locked || this.clickUse)) || this.btn('attack'), touchUse: this.touchActive && this.btnHit('attack'),
       block: (this.enabled && this.mouse.right) || this.btn('block'), shoulder: h('KeyQ') || this.btnHit('shoulder'),
       inventory: h('Tab') || this.btnHit('inventory'), map: h('KeyM') || this.btnHit('map'), equipment: h('KeyI'), nvg: h('KeyN'), build: h('KeyB') || this.btnHit('build'),
       pause: h('Escape') || h('KeyP') || this.btnHit('pause'), rotate: h('KeyR') || this.btnHit('rotate'), reload: h('KeyR') || this.btnHit('reload'), demolish: h('KeyX'), ammoNext: h('KeyT'),
-      slot: [1, 2, 3, 4, 5, 6].find((n) => h('Digit' + n)) || 0, unequip: h('Digit0') || h('KeyH'),
+      slot: [1, 2, 3, 4, 5, 6, 7, 8].find((n) => h('Digit' + n)) || 0, unequip: h('Digit0') || h('KeyH'),
       cancel: h('Escape') || (this.enabled && this.mouse.rightPressed) || this.btnHit('cancel'),
     };
   }

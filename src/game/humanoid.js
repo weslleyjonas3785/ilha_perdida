@@ -173,6 +173,28 @@ export function buildHumanClips(skel, variant = 'player') {
     upperArmR: [kf(ph, [[0, -2.5], [0.45, -1.6], [1, -0.3]]), 0, -0.2], foreArmR: [kf(ph, [[0, -0.3], [0.45, -1.4], [1, -0.2]]), 0, 0],
     thighL: [kf(ph, [[0, -0.2], [0.5, -1.4], [1, -0.1]]), 0, 0], shinL: [kf(ph, [[0, 0.3], [0.5, 1.8], [1, 0.2]]), 0, 0],
     thighR: [kf(ph, [[0, 0.2], [0.6, -0.5], [1, 0]]), 0, 0], shinR: [kf(ph, [[0, 0.4], [0.6, 1.2], [1, 0.1]]), 0, 0] } }), { loop: false });
+  // escada vertical: braços e pernas alternados (o tempo anda conforme o personagem sobe/desce)
+  mk('ladder', 1.0, (ph) => { const a = kf(ph, [[0, 0], [0.5, 1], [1, 0]]), b = 1 - a; return { root: [0, 0, 0], bones: { spine: [0.12, 0, 0], head: [-0.25, 0, 0],
+    upperArmL: [-2.0 - 0.7 * a, 0, 0.15], foreArmL: [-0.4 - 0.7 * b, 0, 0], upperArmR: [-2.0 - 0.7 * b, 0, -0.15], foreArmR: [-0.4 - 0.7 * a, 0, 0],
+    thighL: [-0.3 - 0.8 * b, 0, 0.05], shinL: [0.4 + 1.0 * b, 0, 0], thighR: [-0.3 - 0.8 * a, 0, -0.05], shinR: [0.4 + 1.0 * a, 0, 0], footL: [0.3, 0, 0], footR: [0.3, 0, 0] } }; });
+  // arremesso de granada por cima do ombro (evento 'release' quando solta)
+  mk('throw', 0.8, (ph) => { const u = kf(ph, [[0, 0], [0.35, 1], [0.55, -0.5], [0.75, -0.6], [1, 0]]); const tw = kf(ph, [[0, 0], [0.35, -0.5], [0.55, 0.45], [1, 0]]);
+    return { bones: { spine: [0.05 + Math.max(0, -u) * 0.25, tw, 0], chest: [0, tw * 0.5, 0], head: [0, -tw * 0.8, 0],
+      upperArmR: [-0.5 - 2.3 * Math.max(0, u) - 1.1 * Math.max(0, -u), 0, -0.2], foreArmR: [-1.6 * Math.max(0, u) - 0.15, 0, 0],
+      upperArmL: [-1.0 - 0.4 * Math.max(0, u), 0, 0.3], foreArmL: [-0.6, 0, 0] } }; }, { loop: false, events: [{ t: 0.52, name: 'release' }] });
+  // construindo: abre o projeto com as duas mãos na frente do peito (como na referência) e olha para ele
+  mk('blueprint', 1.5, (ph) => { const d = kf(ph, [[0, 0], [0.15, 1], [0.85, 1], [1, 0]]); const s = Math.sin(ph * TAU * 2) * 0.04 * d;
+    return { bones: { spine: [0.06 * d, 0, 0], head: [0.32 * d + s, 0, 0], neck: [0.1 * d, 0, 0],
+      upperArmL: [-1.1 * d, 0, 0.32 * d + 0.1 * (1 - d)], foreArmL: [-0.45 * d, 0, 0], handL: [0, 0, -0.3 * d],
+      upperArmR: [-1.1 * d, 0, -0.32 * d - 0.1 * (1 - d)], foreArmR: [-0.45 * d, 0, 0], handR: [0, 0, 0.3 * d] } }; }, { loop: false });
+  // granada: braço erguido para trás na posição de arremesso enquanto o botão está apertado
+  mk('throwHold', 1.6, (ph) => { const b = Math.sin(ph * TAU) * 0.03; return { bones: { spine: [0.05, -0.5, 0], chest: [0, -0.25, 0], head: [0, 0.4, 0],
+      upperArmR: [-2.8 + b, 0, -0.2], foreArmR: [-1.75 - b, 0, 0], upperArmL: [-1.4, 0, 0.3], foreArmL: [-0.6, 0, 0] } }; });
+  // soltar: o braço vem de trás para frente e a granada sai da mão
+  mk('throwGo', 0.5, (ph) => { const u = kf(ph, [[0, 1], [0.3, -0.5], [0.6, -0.6], [1, 0]]); const tw = kf(ph, [[0, -0.5], [0.3, 0.45], [1, 0]]);
+    return { bones: { spine: [0.05 + Math.max(0, -u) * 0.25, tw, 0], chest: [0, tw * 0.5, 0], head: [0, -tw * 0.8, 0],
+      upperArmR: [-0.5 - 2.3 * Math.max(0, u) - 1.1 * Math.max(0, -u), 0, -0.2], foreArmR: [-1.6 * Math.max(0, u) - 0.15, 0, 0],
+      upperArmL: [-1.0 - 0.4 * Math.max(0, u), 0, 0.3], foreArmL: [-0.6, 0, 0] } }; }, { loop: false, events: [{ t: 0.28, name: 'release' }] });
   mk('pickup', 0.85, (ph) => { const d = kf(ph, [[0, 0], [0.45, 1], [0.6, 1], [1, 0]]);
     return { root: [0, -0.3 * d, 0], bones: { spine: [0.6 * d, 0, 0], chest: [0.25 * d, 0, 0], head: [-0.3 * d, 0, 0],
       thighL: [-0.9 * d, 0, 0.1], shinL: [1.4 * d, 0, 0], footL: [-0.5 * d, 0, 0], thighR: [-0.4 * d, 0, -0.1], shinR: [0.9 * d, 0, 0], footR: [-0.5 * d, 0, 0],
@@ -187,6 +209,14 @@ export function buildHumanClips(skel, variant = 'player') {
   mk('read', 5.2, (ph) => { const d = kf(ph, [[0, 0], [0.07, 1], [0.94, 1], [1, 0]]); const pg = Math.max(0, Math.sin(ph * 4 * TAU - 1.2)) ** 3 * d;
     return { bones: { upperArmR: [-0.85 * d, 0.32 * d, -0.05], foreArmR: [-1.25 * d, -0.45 * pg, 0.25 * pg], upperArmL: [-0.85 * d, -0.32 * d, 0.05], foreArmL: [-1.25 * d, 0, 0], head: [0.42 * d, 0.05 * Math.sin(ph * 9) * d, 0], neck: [0.12 * d, 0, 0] } }; },
     { loop: false, events: [{ t: 0.22, name: 'page' }, { t: 0.47, name: 'page' }, { t: 0.72, name: 'page' }, { t: 0.97, name: 'done' }] });
+  // sentado no carro / pilotando a moto (quadril no banco, braços no volante/guidão)
+  mk('sit', 2.0, (ph) => { const b = Math.sin(ph * TAU) * 0.02; return { root: [0, -0.42, 0], bones: { thighL: [-1.45, 0, 0.08], thighR: [-1.45, 0, -0.08], shinL: [1.5, 0, 0], shinR: [1.5, 0, 0], footL: [-0.1, 0, 0], footR: [-0.1, 0, 0],
+    spine: [0.05 + b, 0, 0], upperArmL: [-0.95, -0.15, 0.1], upperArmR: [-0.95, 0.15, -0.1], foreArmL: [-0.55, 0, 0], foreArmR: [-0.55, 0, 0] } }; });
+  mk('ride', 2.0, (ph) => { const b = Math.sin(ph * TAU) * 0.02; return { root: [0, -0.06, -0.05], bones: { thighL: [-1.1, 0, 0.3], thighR: [-1.1, 0, -0.3], shinL: [1.45, 0, 0], shinR: [1.45, 0, 0], footL: [-0.3, 0, 0], footR: [-0.3, 0, 0],
+    spine: [0.38 + b, 0, 0], chest: [0.1, 0, 0], head: [-0.35, 0, 0], upperArmL: [-1.15, -0.35, 0.25], upperArmR: [-1.15, 0.35, -0.25], foreArmL: [-0.35, 0, 0], foreArmR: [-0.35, 0, 0] } }; });
+  // despejar/encher o galão: segura com as duas mãos e inclina
+  mk('pour', 3.0, (ph) => { const d = kf(ph, [[0, 0], [0.12, 1], [0.9, 1], [1, 0]]); const w = Math.sin(ph * TAU * 3) * 0.05 * d;
+    return { bones: { spine: [0.3 * d, 0, 0], upperArmR: [-0.75 * d, 0.25 * d, -0.1], foreArmR: [-0.7 * d + w, 0, 0], upperArmL: [-0.85 * d, -0.45 * d, 0.1], foreArmL: [-1.1 * d, 0, 0], handR: [0.6 * d, 0, 0], head: [0.3 * d, 0, 0] } }; }, { loop: false });
   mk('drink', 2.0, (ph) => { const d = kf(ph, [[0, 0], [0.15, 1], [0.85, 1], [1, 0]]);
     return { bones: { upperArmR: [-1.6 * d, 0.35 * d, -0.1], foreArmR: [-1.5 * d, 0, 0], head: [-0.45 * d, 0, 0], neck: [-0.15 * d, 0, 0], upperArmL: [-0.15 * d, 0, 0.1] } }; }, { loop: false, events: [{ t: 0.3, name: 'gulp' }, { t: 0.5, name: 'gulp' }, { t: 0.7, name: 'gulp' }, { t: 0.8, name: 'apply' }] });
   mk('pillBottle', 3.6, (ph) => { const front = kf(ph, [[0, 0], [0.06, 1], [0.32, 1], [0.38, 0.6], [0.6, 0.6], [0.66, 1], [0.92, 1], [1, 0]]); const tw = (ph < 0.3 || (ph > 0.66 && ph < 0.9)) ? Math.sin(ph * 40) * 0.35 : 0; const mouth = kf(ph, [[0, 0], [0.38, 0], [0.47, 1], [0.58, 1], [0.64, 0]]);
@@ -229,6 +259,22 @@ export function buildHumanClips(skel, variant = 'player') {
     return { root: [0, -0.84 * d, -0.35 * d], bones: { hips: [-1.52 * d, 0, 0], spine: [-0.1 * d, 0, 0], head: [-0.2 * d, 0.4 * d, 0],
       thighL: [-0.25 * d, 0, 0.15 * d], shinL: [0.3 * d, 0, 0], thighR: [0.05 * d, 0, -0.1 * d], shinR: [0.1 * d, 0, 0],
       upperArmL: [-0.4 * d, 0, 1.2 * d], foreArmL: [-0.3 * d, 0, 0], upperArmR: [-0.6 * d, 0, -1.0 * d], foreArmR: [-0.5 * d, 0, 0] } }; }, { loop: false });
+  // desmaio: cai de peito no chão (rosto virado de lado, braços à frente); finalizado: no chão de bruços, mexe os braços e para
+  const prone = (d, armL = 0, armR = 0) => ({ root: [0, -0.86 * d, 0.42 * d], bones: { hips: [1.5 * d, 0, 0], spine: [0.02 * d, 0, 0], chest: [-0.04 * d, 0, 0], head: [-0.35 * d, 0.95 * d, 0.1 * d],
+    upperArmL: [-2.3 * d + armL, 0, 0.55 * d + armL * 0.5], foreArmL: [-0.9 * d, 0, 0], upperArmR: [-1.0 * d - armR * 0.6, 0, -0.75 * d - armR * 0.4], foreArmR: [-0.5 * d, 0, 0],
+    thighL: [0.12 * d, 0, 0.12 * d], shinL: [0.55 * d, 0, 0], footL: [0.6 * d, 0, 0], thighR: [-0.05 * d, 0, -0.08 * d], shinR: [0.2 * d, 0, 0], footR: [0.7 * d, 0, 0] } });
+  mk('faint', 1.3, (ph) => prone(kf(ph, [[0, 0], [0.2, 0.15], [0.6, 1], [0.7, 0.96], [1, 1]])), { loop: false });
+  mk('finish', 3.2, (ph) => { const live = Math.max(0, 1 - ph / 0.75); const a = Math.sin(ph * 38) * 0.55 * live, b = Math.sin(ph * 31 + 1.3) * 0.5 * live; return prone(1, a, b); }, { loop: false });
+  // carregador: curvado sob o peso, mãos segurando as alças no peito, passos curtos e joelhos dobrados
+  // segurando forte as alças do mochilão na frente do peito (cotovelos colados no corpo, mãos fechadas nas alças, tremendo com o peso)
+  let _sk = 0; const strap = (p) => { _sk += 1; const tr = Math.sin(_sk * 2.7) * 0.025; Object.assign(p.bones, { upperArmL: [0.5 + tr, 0.1, 0.2], foreArmL: [-2.75 - tr, -0.35, 0], handL: [0.5, 0, 0], upperArmR: [0.5 - tr, -0.1, -0.2], foreArmR: [-2.75 + tr, 0.35, 0], handR: [0.5, 0, 0] }); return p; };
+  mk('carryWalk', 1.25, (ph) => strap(gait(ph, { stride: 0.3, knee: 0.75, knee0: 0.3, thigh0: -0.18, foot0: 0.05, bob: 0.025, drop: -0.08, lean: 0.5, twist: 0.05, hipTwist: 0.05, arm: 0, arm0: 0, elbow: 0, elbowSwing: 0 })));
+  mk('carryRun', 0.85, (ph) => strap(gait(ph, { stride: 0.55, knee: 1.2, knee0: 0.35, thigh0: -0.25, foot0: 0.08, bob: 0.045, drop: -0.1, lean: 0.62, twist: 0.08, hipTwist: 0.08, arm: 0, arm0: 0, elbow: 0, elbowSwing: 0 })));
+  mk('carryIdle', 3, (ph) => { const b = Math.sin(ph * TAU); return strap({ root: [0, -0.08 + 0.006 * b, 0], bones: { hips: [0, 0, 0], spine: [0.48 + 0.02 * b, 0, 0], chest: [0.18, 0, 0], head: [-0.5, 0.05 * b, 0], thighL: [-0.2, 0, 0.05], shinL: [0.35, 0, 0], footL: [-0.1, 0, 0], thighR: [-0.15, 0, -0.05], shinR: [0.3, 0, 0], footR: [-0.1, 0, 0] } }); });
+  // vômito: curvado, mãos nos joelhos, convulsões
+  mk('vomit', 2.4, (ph) => { const d = kf(ph, [[0, 0], [0.15, 1], [0.85, 1], [1, 0]]); const k = Math.max(0, Math.sin(ph * Math.PI * 7)) * d;
+    return { root: [0, -0.12 * d, 0], bones: { spine: [0.55 * d + 0.12 * k, 0, 0], chest: [0.25 * d + 0.1 * k, 0, 0], head: [0.35 * d + 0.25 * k, 0, 0], thighL: [-0.35 * d, 0, 0.05], shinL: [0.55 * d, 0, 0], thighR: [-0.35 * d, 0, -0.05], shinR: [0.55 * d, 0, 0],
+      upperArmL: [-0.75 * d, 0, 0.25 * d], foreArmL: [-0.35 * d, 0, 0], upperArmR: [-0.75 * d, 0, -0.25 * d], foreArmR: [-0.35 * d, 0, 0] } }; }, { loop: false, events: [{ t: 0.3, name: 'spew' }, { t: 0.6, name: 'spew' }] });
   mk('sleep', 2, () => ({ root: [0, -0.84, 0], bones: { hips: [-1.55, 0, 0.1], head: [0, 0.5, 0], upperArmL: [-0.2, 0, 0.3], upperArmR: [-2.6, 0, -0.3], foreArmR: [-1.5, 0, 0], thighL: [-0.3, 0, 0.1], shinL: [0.5, 0, 0] } }));
   // garra (inimigo)
   mk('claw', 0.85, (ph) => { const u = kf(ph, [[0, 0], [0.4, 1], [0.55, -0.5], [0.75, -0.5], [1, 0]]);

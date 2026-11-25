@@ -101,6 +101,13 @@ Otimizações:
 - **Borboletas solares** raras: grupos de ~3 em qualquer região, depois demoram a reaparecer.
 - **Óculos de visão noturna** (só em áreas militares): vista no espaço do chapéu, arraste uma **bateria de célula** (achada em casas nas cidades) sobre ele e confirme. Liga/desliga com N; quando a carga acaba a luz verde apaga — clique direito no óculos para tirar a bateria.
 
+## Veículos e combustível
+- **Picape, sedã, hatch, SUV** (azul, verde, amarelo, vermelho) e **motos** espalhados pelas cidades e estradas. Os carros ficam **sem pneus e sem motor**; a moto é **só o chassi** (falta pneus, motor e câmbio). Não dá para arrastar o veículo: as peças têm de ser levadas até ele.
+- Perto do veículo: **E** abre o **menu do veículo**. Arraste as peças do inventário para os encaixes (ou clique no encaixe). Clique com o botão direito num encaixe para tirar a peça. Precisa da habilidade **Mecânica**.
+- Peças: **pneu de carro**, **pneu de moto**, **motor de carro**, **motor de moto**, **câmbio**. Achadas em indústrias, carros abandonados, vilarejos, bases militares e nas lojinhas dos postos.
+- **Galão de combustível** (até 20 L): segure na mão. Perto de um veículo, **E abastece** (animação + barras do galão esvaziando e do tanque enchendo); **F retira combustível** (quantidade aleatória) — funciona também nos carros abandonados. Nas **bombas dos postos** (um em cada cidade, na estrada de saída), **E enche o galão**.
+- Veículo completo e com combustível: **E para dirigir**. **W/S** acelera e freia/ré, **A/D** vira, **Espaço** freio de mão, **E** para sair. O combustível acaba com o uso; dá para atropelar inimigos (o mecha não).
+
 ## Mechas, lança-granadas e lança-foguetes
 - **Mechas** guardam as bases militares (um por base; volta 3 dias depois de destruído). Grandes, blindados, com farol no peito que fica **vermelho** quando te vê. Atiram com duas metralhadoras giratórias e lançam mísseis dos ombros. Cada passo faz o som de passo pesado; quando param de atirar toca o som de "parando de atirar" e as pontas das armas ficam vermelhas, giram cada vez mais devagar e vão esfriando.
 - Só te detectam **pela frente ou pelos lados**; agachado nas costas deles você passa despercebido.
@@ -114,12 +121,73 @@ Otimizações:
 - Os livros são raros: **um de cada no mapa**, no lugar de origem (Medicina em hospitais, Costura em guarda-roupas, Eletrônica em laboratórios/bases militares, Mecânica/Metalurgia/Engenharia em indústrias e bases, Agricultura em vilarejos/cozinhas, Elétrica em indústrias/prateleiras). Depois de pego, reaparece **15 dias depois em outro lugar**.
 - Novos: **Soro de reidratação** (Medicina) e **Canteiro elevado** (Agricultura) para colher frutas.
 
-## Cidades e casas
-- **15 cidades** (a maior é a Cidade Morta, na zona tóxica). Anel rodoviário de asfalto ligando as cidades em volta do mapa, estradas de asfalto até as cidades grandes e de terra até as pequenas do interior e vilarejos. No mapa (M), as cidades aparecem como ícones de casinhas com o nome.
+## Cidades, estradas e casas
+- **Malha viária**: uma **rodovia central de asfalto** (pista larga, faixa amarela tracejada e faixas brancas nas bordas) atravessa a ilha de sul a norte. Dela saem **ramais de asfalto** (faixa branca tracejada) para todas as cidades, indústrias e bases militares, e **estradas de terra** para os vilarejos (as cidades do interior) e os laboratórios. Os caminhos contornam água, encostas e outros lugares; onde passam sobre a água há **aterro com guard-rail**.
+- **15 cidades em grade** (a maior é a Cidade Central, na zona tóxica), como uma cidade de verdade: quadras de 44 m, ruas de **asfalto com calçada, meio-fio, faixa tracejada e faixas de pedestre**, cruzamentos e postes. Cada quadra tem **lotes cercados com cerca de madeira**, gramado e árvores, e **todas as casas ficam de frente para a rua** — não há mais casa solta no meio do nada.
+- No centro de cada cidade: **igreja** (torre com sino e cruz), **loja** (toldo listrado e letreiro LOJA, com comida e água nas prateleiras), **oficina** (letreiro GARAGEM, pilhas de pneus, peças de carro nas estantes), **hospital**, **farmácia**, **prédios de apartamento** com sacadas e uma **praça com caixa d'água**. O ramal da rodovia entra pela rua principal; o **posto de combustível** fica logo na saída.
+- **Vilarejos** (cidades do interior): uma rua de terra com casas cercadas dos dois lados, poço, postes e carros.
 - **Casas de subúrbio** espalhadas pelos bairros: revestimento em 16 cores, acabamento branco, varanda com colunas e guarda-corpo, telhado de duas águas, chaminé, água-furtada, venezianas, garagem com portão de madeira, sobrados de 2 andares. Viradas para a rua e espelhadas aleatoriamente.
 - **Interior das casas**: banheiro (box de vidro, vaso, pia com espelho), quarto (cama de casal, criados-mudos, quadro, guarda-roupa), sala (TV, sofá, mesinha, poltrona, tapete, plantas) e cozinha (bancada com pia, armários, geladeira, fogão, mesa redonda com 4 cadeiras); a ordem dos móveis muda de casa para casa. Armários, geladeira, criados-mudos e pia podem ser revistados.
 - **Hospital de 2 andares** (térreo + 1º andar com escada): torres de vidro na entrada, marquise com cruz vermelha, letreiro HOSPITAL, aparelhos de ar no telhado. Saguão com recepção curva, cadeiras azuis e sofás; alas com quartos de macas, biombos verdes, soro e armários de remédio — a ordem muda em cada quarto.
-- **Cavar** com a picareta (F): buraco de até 6 m, dá areia; alargue para ir mais fundo; dá para fazer a base dentro do buraco.
+- **Cavar** com a picareta (F): buraco de até 6 m, dá **terra** (areia no deserto); alargue para ir mais fundo; dá para fazer a base dentro do buraco. Não dá para cavar nas ruas e estradas.
+
+## Água, chuva e composteira
+- **Mais rios, lagos e cachoeiras**: rios novos descem dos morros até o mar (ou até outro rio) e empoçam em lagos; há lagos nas baixadas. As **cachoeiras** caem de um paredão na beira do rio, com gotas, névoa e som; em cima, um laguinho alimentado por um riacho.
+- **Toda água natural é contaminada** (rio, lago, riacho, mar). **E** bebe direto (mata a sede, mas pode dar infecção intestinal); **F** enche uma garrafa de **água suja**. Na fogueira (**Tab → Cozinhar**) a água suja é **fervida** e vira **água potável**. Garrafas lacradas achadas nas casas continuam potáveis.
+- **Chuva**: mais frequente, com respingos no chão. O **coletor de chuva** (barril com funil de lona; construção) junta a água da chuva, que é **potável** — até 10 garrafas; um visor na lateral mostra o nível. **E** enche as garrafas.
+- **Composteira** (construção, habilidade Agricultura): **E** coloca **10 terras** (cavadas com a picareta) e **10 comidas**. Cheia, aparece uma **barra de compostagem** carregando em cima dela; quando termina, aparece um **✔ verde** indicando que está pronta. **E** pega **5 adubos**.
+- **Adubo no canteiro** (E no canteiro): as frutas crescem no **dobro da velocidade** e as próximas 3 colheitas rendem mais. O canteiro agora leva terra em vez de areia.
+
+## Construção por projeto (bandeira, projeto e martelo)
+- **Bandeira de território** (menu B): marca sua área de **32 m de raio**. As peças do projeto só podem ser construídas dentro da área da **sua** bandeira (não dá para colocar perto da bandeira de outro jogador). Com o projeto ou o martelo na mão aparecem estacas amarelas no limite.
+- **Projeto** (fabricação: 3 folhas + 2 fibras): na mão, **segure o botão direito** → aparece a **roda** com: fundação, fundação triangular, parede, meia parede, parede com porta, escada, escada vertical, telhado, rampa, telhado com alçapão e telhado triangular. Mova o mouse até a peça e solte. A prévia **encaixa sozinha** (bordas das fundações e telhados, topo das paredes, paredes para a escada vertical) e fica verde/vermelha. **Clique** para construir: o personagem **abre o projeto nas mãos** e a peça vai subindo. R ou a roda do mouse giram (fundação solta, escada e rampa).
+- **Martelo de madeira** (2 galhos + 2 madeira + 2 fibras): olhando para a peça, **botão esquerdo repara** (gasta material do nível dela). **Segure o direito** → roda **Upar / Mudar posição / Demolir**. Níveis: **Galhos → Madeira → Pedra → Metal** (cada um mais resistente). **Demolir devolve metade** do material do nível atual.
+- **Peças sem apoio caem** (tirou a fundação, caem as paredes e o telhado que estavam nela). **Explosões** (granada, C4, foguete) danificam as construções; metal aguenta muito mais. Parede com porta e alçapão abrem e fecham com E.
+
+## Painel do dono do mundo (Ctrl + Shift + F1)
+Só aparece para quem criou o mundo (no jogo solo sempre; no multiplayer só para o dono que hospeda — os amigos não abrem).
+- **DROPAR:** todos os itens do jogo por categoria (armas, munição, saúde, comida, roupas, materiais…) e também **NPCs, robôs e animais**. Escolha a quantidade e o destino (**aos seus pés**, **onde está mirando** ou **perto de um jogador**). Dá para montar uma **lista** e **Dropar tudo** de uma vez.
+- **MODO DEUS:** imortalidade, vitalidade infinita (fome/sede/energia), durabilidade infinita, invisibilidade, munição infinita, um tiro mata, **voar pelo mapa** (Espaço sobe, C desce, Shift acelera), **esqueletos com nome e ID** dos jogadores (e das criaturas) através das paredes, **itens no mapa**, regeneração rápida e proteção ambiental. **Teleportar pelo mapa:** abre o mapa e você vai para onde clicar.
+- **Jogadores** (ir até / trazer um amigo), **Mundo** (hora, clima, matar inimigos por perto, chamar comboio, repor loot), **Sistema** (FPS e contagens) e **Console** (`give id qtd`, `spawn tipo qtd`, `tp x z`, `time 0.5`, `weather chuva`, `god on`, `heal`, `kill 80`, `items busca`).
+
+## Multiplayer por IP (Radmin VPN)
+Todos entram na mesma VPN (Radmin VPN, Hamachi, ZeroTier…) ou na mesma rede de casa.
+- **Dono do mundo:** baixe o jogo do GitHub (Code → Download ZIP), descompacte e dê dois cliques em **Hospedar mundo.bat** (precisa do [Node.js](https://nodejs.org), versão LTS; no Linux/macOS rode `hospedar.sh`). Se o Firewall do Windows perguntar, clique em **Permitir**. A janela preta mostra o IP da VPN (no Radmin começa com 26.) e abre o jogo; no menu vá em **Multiplayer → Hospedar**, escolha o nome do mundo e uma senha (opcional). Deixe a janela preta aberta enquanto jogarem.
+- **Amigos:** abrem o jogo (pelo link do GitHub mesmo), **Multiplayer**, colam o **IP do dono**, clicam em **Buscar**: aparece o mundo, quantos jogadores e se tem senha. Digitam a senha (se tiver) e **Entrar**. O jogo passa a ser carregado do PC do dono.
+- O navegador do dono roda o mundo (robôs, NPCs, animais, loot) e manda para os outros: todos veem os mesmos inimigos, construções, fogueiras, baús, loot no chão, caixas saqueadas, árvores cortadas e portas. Tiros e dano funcionam entre jogadores (PvP) e nas criaturas. O personagem de cada amigo (inventário, roupas, posição) fica salvo no navegador dele; o mundo fica salvo no PC do dono.
+
+## Bases, patrulhas, acampamentos e sinais de fumaça
+- **NPCs com braços humanos** (manga comprida e mãos): só o jogador tem os braços robóticos.
+- **Bases militares**: uns **30 soldados armados** e **uma sentinela (mecha)** em cada base. A **base da zona tóxica** não tem soldados: só **robôs** (guarnição de androides, pesados, aranhas-tanque e drones) e **três sentinelas**.
+- **Patrulhas militares** (4 soldados) em mais ou menos metade das cidades, andando em formação pelas ruas da grade.
+- **Acampamentos de civis** espalhados pelo mapa: **cabanas de madeira**, uma barraca, **fogueira** e caixas; os civis ficam andando em volta.
+- **Sinal de fumaça**: toda fogueira acesa (do jogador ou dos acampamentos) solta uma coluna de fumaça alta, acima das árvores, vista de longe — menos quando a fogueira está **dentro de construção** (embaixo de piso/teto, de um abrigo ou dentro de um prédio). **À noite** a claridade da fogueira (brilho e a base da fumaça alaranjada) é vista de longe.
+- **Granada**: segurando o botão esquerdo o personagem fica com o **braço erguido para trás** na posição de arremesso; ao soltar ele **joga para frente**.
+- O **carregador** do comboio anda curvado **segurando forte as alças** do mochilão, que fica **encaixado nas costas** (da cintura até os ombros).
+
+## Comboio, fogueira, doenças e desmaio
+- **Comboio militar**: um **carregador** curvado sob uma carga enorme (caixa de madeira, mochilão, bolsas e saco de dormir), escoltado por **15 soldados armados**, anda em formação pelas estradas até uma base militar. Lá eles entram no alojamento e somem sem ninguém ver.
+  - Se alguém atira perto (ou eles te veem), todos procuram de onde veio o tiro; quando acham, vão atrás e atiram. O carregador **foge correndo com a carga** junto com alguns guarda-costas e some quando não há ninguém por perto. Morto, deixa a carga no chão (munição, granadas, remédios, peças…).
+  - **Armadilha de granada** (construção: granada de fragmentação + fibra + galhos): um fio entre duas estacas; quem tropeçar detona a granada 1 s depois. O comboio **identifica a armadilha** na estrada: para, recua, um soldado vai agachado desarmar e eles seguem.
+- **Fogueira com inventário** (E na fogueira): **combustível** (lenha, galhos, folhas, carvão), **grelha** com 4 lugares e **sobras**. Lenha queimada vira **carvão**; carvão queimado vira **cinza**. Sem combustível a fogueira apaga (botão Acender/Apagar no menu).
+  - A carne fica **assando na grelha, à vista**: crua → assada (som de assado e a cor muda) → **queimada** se demorar. Dá para pegar só **mirando nela** (E). Assar saiu da lista de fabricação.
+  - Carnes **assadas** e **queimadas** de vaca, javali, galinha, cervo e humana, com os ícones das imagens.
+- **Kuru**: comer carne humana (crua, assada ou queimada) dá kuru — tremores, a mira não fica firme e dá trancos para cima e para os lados. Com kuru, **qualquer outra comida faz vomitar** (perde metade da fome e da sede).
+- **Comer demais**: com a fome em 100%, continuar comendo faz vomitar e **desmaiar** (tela escura); depois você acorda.
+- **Carne queimada**: uns 10 minutos (do jogo) depois de comer, começa a vomitar e fica intoxicado.
+- As doenças (água contaminada, carne crua ou queimada, kuru, radiação) **continuam depois de sair e entrar no jogo**, até tratar.
+- **Desmaio por tiro**: um tiro que tira 70% da vida derruba — o personagem cai **de peito no chão** e fica desacordado. Se for atingido desmaiado, é **finalizado**: mexe os braços no chão e fica uma **poça de sangue**. A morte comum deixa o corpo **de barriga para cima**. Vale para você e para os NPCs.
+- **Granada de luz**: quem está de frente fica com a tela toda branca (como no CS) e, ao voltar, a imagem fica turva até normalizar.
+
+## NPCs, granadas de mão e bifes
+- **Acampamentos de saqueadores** espalhados em lugares aleatórios: civis (camisa xadrez, regata e calça cargo, jaqueta verde com faca, velho de chapéu com espingarda). Quando avistam você, **gritam** e avisam os outros; os que têm arma de fogo atiram, os de faca, machado ou porrete partem para cima.
+- **Soldados** (camuflado verde com máscara, tático azul, deserto de boné e óculos, boina vermelha) guardam as **bases militares** junto com a **sentinela gigante** — os robôs comuns não aparecem mais nelas. Na base da zona tóxica só há robôs. **Soldados/saqueadores e robôs se atacam** quando se veem.
+- **Tudo faz barulho**: passos (correndo mais, agachado quase nada), gemidos de dor, trocar de arma das costas, subir escadas, abrir porta, beber, comer, cortar árvore, quebrar pedra… Robôs, animais e NPCs por perto ouvem e vão ver o que foi.
+- **Picotar corpos**: com faca ou machado na mão, perto de um corpo humano aparece **E Picotar o corpo**. O personagem corta, uma barra enche e no fim sobram no chão a mochila, as roupas, as armas, o **bife humano** e os **ossos**.
+- **Granadas de mão** (bases militares e soldados): **fragmentação**, **luz (flash)**, **fumaça** e **barulhenta**. F puxa o pino — na mão a granada ativa em 5 s. Segurando o **botão esquerdo** aparece a **barra de força** (verde → amarelo → vermelho) com um marcador preto indo e voltando: solte no verde para jogar perto, no amarelo para meia distância e no vermelho para jogar longe. Depois de jogada: fragmentação em 5 s (mata ou fere conforme a distância), luz e fumaça em 3 s. **Luz**: tela branca por 4 s com zumbido no ouvido; NPCs ficam cegos com o braço no rosto e robôs perdem o alvo. **Fumaça**: a nuvem cresce aos poucos; dentro dela os robôs não te veem e os NPCs ficam em alerta, só atirando se te virem. **Barulhenta**: buzina alta — robôs vão até ela atirando para destruí-la e NPCs na direção em que você jogou te veem e vêm atrás.
+- **Bifes**: vaca, javali, galinha, cervo e humano, cada animal dá o seu (cru pode intoxicar; asse na fogueira).
+- **Escadas verticais** na lateral dos hospitais e prédios levam ao telhado (E agarra; W/S; Shift rápido/escorrega; Espaço solta).
+- **Cidades maiores**: as médias têm mais de 150 construções acessíveis, as pequenas mais de 100, e a Cidade Central (zona tóxica) cerca de 450 entre casas, prédios e laboratórios. Entrando na zona tóxica sem a roupa R.A.T você começa a **tossir**; 5 minutos exposto e fica **infectado**.
 
 ## Mundo de 10 km e mapa
 
@@ -217,7 +285,7 @@ Otimizações:
 | Shift | Sprint |
 | Alt ou Caps Lock | Caminhar devagar |
 | Espaço | Pular ou escalar obstáculos de até ~1,6 m |
-| Ctrl ou C | Agachar (furtivo: dano dobrado em inimigos distraídos) |
+| C | Agachar (furtivo: dano dobrado em inimigos distraídos) |
 | E | Interagir, coletar, beber |
 | F ou clique esquerdo | Usar ferramenta ou atacar |
 | Clique direito (segurar) | Mirar / abrir a luneta (sem arma: defender) |
@@ -226,9 +294,17 @@ Otimizações:
 | Q | Trocar a câmera de ombro |
 | M | Mapa (clique marca um ponto; clique na marca remove) |
 | Tab | Inventário e fabricação |
+| Ctrl + Shift + F1 | Painel do dono do mundo (dropar e modo deus) — só para quem criou o mundo |
 | I | Equipamentos |
 | B | Construção (R gira a peça, X desmonta) |
-| 1–6 | Empunhar/guardar a ferramenta do espaço, ou consumir o item |
+| 1 e 2 | Armas grandes (fuzis, escopetas, machados, picaretas, lanças, arco) |
+| 3 | Pistola ou faca |
+| 4–8 | Outros itens (comida, remédios, granadas, ferramentas pequenas…) |
+| E (perto de escada) | Agarrar a escada: W/S sobe e desce, Shift sobe rápido / escorrega descendo, Espaço solta |
+| F (granada na mão) | puxa o pino |
+| Segurar botão direito (Projeto na mão) | roda das peças de construção; clique constrói |
+| Martelo na mão | clique repara; segurar o direito: Upar / Mudar posição / Demolir |
+| Segurar e soltar botão esquerdo (granada sem pino) | barra de força: verde perto, amarelo médio, vermelho longe |
 | 0 ou H | Guardar a ferramenta |
 | Esc | Pausa |
 
@@ -330,6 +406,17 @@ python3 tests/play2.py   # 33 verificações: água/natação, comer/cozinhar, m
                          # defesa, fome/sede, controles de toque
 python3 tests/play3.py   # 13 verificações: os 14 androides, tiro, voo/mergulho, investida, alarme, saque, lança de choque
 python3 tests/play4.py   # 16 verificações: rinoceronte (rugido + míssil), tigre (giro, rajada, superaquecimento, mordida), abelhas e colmeias
+python3 tests/play20.py  # 22 verificações: rodovia central e ramais (asfalto/terra), cidades em grade, casas de frente
+                         # para a rua, lagos/rios/cachoeiras, água contaminada, coletor de chuva, composteira e adubo
+python3 tests/play21.py  # 33 verificações: bifes, cidades grandes, tosse/infecção, escadas, barulho, barra 1-2/3/4-8,
+                         # NPCs (acampamentos, militares, briga com robôs, picotar) e as 4 granadas de mão
+python3 tests/play25.py  # 19 verificações: projeto (roda com 11 peças, encaixes, animação), bandeira (área), martelo (reparar, upar até metal, girar, demolir com metade), peças sem apoio caem, explosão, salvar
+python3 tests/play27.py  # 14 verificações: painel do dono (Ctrl+Shift+F1): dropar itens/NPCs/robôs/animais, lista, modo deus, voar, esqueletos, teleporte, console
+python3 tests/play26.py  # 20 verificações: multiplayer com dois navegadores (o teste liga o server.mjs sozinho): busca por IP, senha, avatares, mundo, criaturas, PvP
+python3 tests/play23.py  # 9 verificações: granada (F puxa o pino, barra de força verde/amarelo/vermelho, braço erguido, arremesso perto/médio/longe), mochila nas costas
+python3 tests/play24.py  # 8 verificações: braços humanos dos NPCs, bases (30 soldados + mecha), base tóxica só robôs, patrulhas, acampamentos, sinal de fumaça e brilho, carregador nas alças
+python3 tests/play22.py  # 33 verificações: comboio (formação, armadilha, tiro, fuga, base), fogueira (combustível, grelha,
+                         # carvão/cinza, queimar, pegar mirando, sem duplicar), kuru, vômito, desmaio/finalização, flash
 python3 tests/shots.py   # capturas de tela de várias cenas
 ```
 

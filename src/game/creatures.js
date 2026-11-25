@@ -6,6 +6,8 @@ import { mat4, quat, clamp, dampAngle, angleDiff, rng } from '../engine/math.js'
 import { kf, makeHumanSkeleton, buildHumanClips } from './humanoid.js';
 import { ROBOT_STYLES, withPal, palSt, buildTigerMesh, buildMechaMesh, buildRobotHumanMesh, buildRobotQuadMesh, makeBugSkeleton, buildBugMesh, buildBugClips, makeBirdSkeleton, buildBirdMesh, buildBirdClips } from './androids.js';
 import { WATER } from './world.js';
+import { makeChibiSkeleton, buildChibiMesh } from './chibi.js';
+import { NPC_LOOKS } from './npcs.js';
 import { makeDeerSkeleton, makeBoarSkeleton, buildDeerMesh, buildBoarMesh, facetize, makeCowSkeleton, buildCowMesh, COW_COATS, makeChickenSkeleton, buildChickenMesh, buildChickenClips } from './fauna.js';
 
 const QB = (name, parent, pos) => ({ name, parent, pos });
@@ -81,10 +83,10 @@ const STYLES = {
 const R_LOOT = (a) => a; // legibilidade
 export const DEFS = {
   // fauna (fonte de carne)
-  deer: { name: 'Cervo', hp: 30, dmg: 0, walk: 1.3, run: 7.6, detect: 15, range: 0, flee: true, rig: 'quad', scale: 1.0, radius: 0.5, loot: [['meat', 2, 3], ['leather', 1, 2]] },
-  cow: { name: 'Vaca', hp: 70, dmg: 0, walk: 0.9, run: 4.6, detect: 9, range: 0, flee: true, rig: 'quad', scale: 1.0, radius: 0.7, noDesert: true, loot: [['meat', 4, 6], ['leather', 2, 3]] },
-  chicken: { name: 'Galinha', hp: 8, dmg: 0, walk: 0.8, run: 4.2, detect: 7, range: 0, flee: true, rig: 'bird', scale: 1.0, radius: 0.22, noDesert: true, small: true, loot: [['meat', 1, 1], ['fiber', 1, 2]] },
-  boar: { name: 'Javali', hp: 55, dmg: 12, walk: 1.1, run: 5.3, detect: 10, range: 1.6, retaliate: true, rig: 'quad', scale: 1.0, radius: 0.55, loot: [['meat', 2, 4], ['leather', 1, 1]] },
+  deer: { name: 'Cervo', hp: 30, dmg: 0, walk: 1.3, run: 7.6, detect: 15, range: 0, flee: true, rig: 'quad', scale: 1.0, radius: 0.5, loot: [['meat_deer', 2, 3], ['leather', 1, 2]] },
+  cow: { name: 'Vaca', hp: 70, dmg: 0, walk: 0.9, run: 4.6, detect: 9, range: 0, flee: true, rig: 'quad', scale: 1.0, radius: 0.7, noDesert: true, loot: [['meat_cow', 4, 6], ['leather', 2, 3]] },
+  chicken: { name: 'Galinha', hp: 8, dmg: 0, walk: 0.8, run: 4.2, detect: 7, range: 0, flee: true, rig: 'bird', scale: 1.0, radius: 0.22, noDesert: true, small: true, loot: [['meat_chicken', 1, 1], ['fiber', 1, 2]] },
+  boar: { name: 'Javali', hp: 55, dmg: 12, walk: 1.1, run: 5.3, detect: 10, range: 1.6, retaliate: true, rig: 'quad', scale: 1.0, radius: 0.55, loot: [['meat_boar', 2, 4], ['leather', 1, 1]] },
   // androides humanoides
   soldier: { name: 'Androide soldado', robot: true, hostile: true, ai: 'ranged', tactical: true, mag: 6, reloadT: 2.2, hp: 60, dmg: 8, walk: 1.4, run: 3.9, detect: 32, range: 1.6, rig: 'human', scale: 1.0, radius: 0.38, attack: 'punch', shoot: { min: 4, max: 24, cd: 1.8, dmg: 9, speed: 95, y: 1.35 }, loot: R_LOOT([['scrap', 1, 3], ['circuit', 0, 1], ['ammo555', 6, 18]]), lootChance: [['rifle', 0.12], ['rifle540', 0.06], ['medkit', 0.1]] },
   hunter: { name: 'Androide caçador', robot: true, hostile: true, ai: 'melee', hp: 85, dmg: 14, walk: 1.5, run: 5.1, detect: 26, range: 1.8, rig: 'human', scale: 1.05, radius: 0.38, attack: 'claw', shoot: { min: 6, max: 20, cd: 2.4, dmg: 8, speed: 96, y: 1.35 }, loot: [['scrap', 2, 3], ['circuit', 0, 1]] },
@@ -105,6 +107,11 @@ export const DEFS = {
   fly: { name: 'Libélula de ataque', robot: true, hostile: true, ai: 'flyer', hp: 20, dmg: 6, walk: 3.0, run: 6.5, detect: 22, range: 1.2, rig: 'bug', scale: 0.8, radius: 0.35, alt: 2.4, loot: [['circuit', 0, 1], ['scrap', 0, 1]] },
   wasp: { name: 'Abelha cibernética', robot: true, hostile: true, ai: 'flyer', bee: true, hp: 14, dmg: 5, walk: 3.0, run: 8.5, detect: 24, range: 1.0, rig: 'bug', scale: 0.55, radius: 0.25, alt: 3.0, loot: [['scrap', 1, 1], ['circuit', 0, 1]] },
   butterfly: { name: 'Borboleta solar', robot: true, hostile: true, ai: 'sentinel', flyerSentinel: true, hp: 40, dmg: 0, walk: 1.6, run: 3.6, detect: 30, range: 0, rig: 'bug', scale: 1.0, radius: 0.9, alt: 3.5, loot: [['solarpanel', 2, 4], ['circuit', 0, 1]] },
+  // humanos (NPCs): saqueadores dos acampamentos e soldados das bases militares
+  bandit: { name: 'Saqueador', human: true, hostile: true, ai: 'npc', hp: 100, dmg: 12, walk: 1.4, run: 5.0, detect: 38, range: 1.7, rig: 'human', scale: 1.0, radius: 0.36, loot: [] },
+  avatar: { name: 'Jogador', human: true, hostile: false, ai: 'net', hp: 100, dmg: 0, walk: 1.4, run: 5, detect: 0, range: 0, rig: 'human', scale: 1.0, radius: 0.36, loot: [] },
+  porter: { name: 'Carregador', human: true, hostile: true, ai: 'npc', hp: 160, dmg: 0, walk: 1.3, run: 4.4, detect: 40, range: 1.7, rig: 'human', scale: 1.0, radius: 0.42, loot: [] },
+  milsoldier: { name: 'Soldado', human: true, hostile: true, ai: 'npc', hp: 140, dmg: 12, walk: 1.4, run: 4.8, detect: 55, range: 1.7, rig: 'human', scale: 1.0, radius: 0.36, loot: [] },
   // aves
   raven: { name: 'Corvo mecânico', robot: true, hostile: false, retaliate: true, ai: 'flyer', hp: 35, dmg: 9, walk: 3.5, run: 8.5, detect: 28, range: 1.3, rig: 'bird', scale: 1.0, radius: 0.45, alt: 5.0, loot: [['scrap', 1, 2]] },
   eagle: { name: 'Águia de aço', robot: true, hostile: false, retaliate: true, ai: 'flyer', hp: 70, dmg: 15, walk: 4.0, run: 10, detect: 34, range: 1.6, rig: 'bird', scale: 1.6, radius: 0.6, alt: 7.0, loot: [['scrap', 2, 3], ['circuit', 1, 1]] },
@@ -127,6 +134,7 @@ export function buildCreatureAssets(renderer) {
     else { const sk = makeBugSkeleton(R.p); rigs[k] = { skel: sk, clips: buildBugClips(sk, R.p, !!R.flyer) }; meshes[k] = renderer.createMesh(withPal(R.pal, () => buildBugMesh(sk, R.p, R.st))); }
   }
   rigs.mecha = { skel: hs, clips: hc }; meshes.mecha = renderer.createMesh(buildMechaMesh(hs));
+  { const cs = makeChibiSkeleton(), cc = buildHumanClips(cs, 'player'); for (const k of ['bandit', 'milsoldier', 'porter']) { rigs[k] = { skel: cs, clips: cc }; meshes[k + 'V'] = NPC_LOOKS[k].map((L) => renderer.createMesh(buildChibiMesh(cs, { name: '', ...L }))); meshes[k] = meshes[k + 'V'][0]; } }
   return { rigs, meshes };
 }
 
@@ -158,6 +166,7 @@ export class CreatureManager {
       const a = this.r() * 6.283, d = rmin + this.r() * (rmax - rmin); const x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d; const h = w.height(x, z);
       if (h < 1.5 || Math.abs(x) > 5050 || Math.abs(z) > 5050) continue;
       if (['deer', 'boar', 'cow', 'chicken'].includes(kind) && w.biome(x, z) === 'desert') continue;
+      if (!DEFS[kind].robot && !this.force && w.toxicAt(x, z) > 0) continue; // zona tóxica: só robôs e sentinelas (nada de animais ou NPCs)
       if (!FLYERS.has(kind)) { if (w.normal(x, z)[1] < 0.75) continue; if (g.physics.query(x, z, 1.5).some((c) => g.physics.insideXZ(c, x, z, DEFS[kind].radius + 0.5))) continue; }
       if (g.nearBase(x, z, 25) && DEFS[kind].hostile) continue;
       const c = new Creature(kind, x, h, z, this.assets); if (c.flyer) c.pos[1] = h + (c.def.alt || 4);
@@ -165,13 +174,16 @@ export class CreatureManager {
     }
     return null;
   }
+  // criatura controlada pela rede (avatar de outro jogador ou cópia de criatura do dono)
+  addNet(kind, x, y, z) { if (!this.assets.rigs[kind] || !DEFS[kind]) return null; const c = new Creature(kind, x, y, z, this.assets); c.net = true; this.list.push(c); this.game.physics.dynamic.push(c.collider); return c; }
   remove(c) { const i = this.list.indexOf(c); if (i >= 0) this.list.splice(i, 1); const j = this.game.physics.dynamic.indexOf(c.collider); if (j >= 0) this.game.physics.dynamic.splice(j, 1); }
   populate(dt) {
     const g = this.game, p = g.player.pos; this.spawnT -= dt; if (this.spawnT > 0) return; this.spawnT = 2.5;
     const night = g.env.isNight; const counts = {}; let hostile = 0;
-    for (const c of [...this.list]) { const d = Math.hypot(c.pos[0] - p[0], c.pos[2] - p[2]);
-      if (d > 200 || (c.dead && c.deadTime > 150)) { this.remove(c); continue; }
-      if (!c.dead && d < 160 && !c.hive) { counts[c.kind] = (counts[c.kind] || 0) + 1; if (c.def.hostile && c.kind !== 'butterfly') hostile++; } }
+    for (const c of [...this.list]) { if (c.net) continue; const d = g.net && g.net.host && g.net.peers.size ? g.net.minDist(c.pos) : Math.hypot(c.pos[0] - p[0], c.pos[2] - p[2]);
+      if (d > (c.npc ? 360 : c.garrison !== undefined ? 280 : 200) || (c.dead && c.deadTime > (c.npc ? 900 : 150))) { this.remove(c); continue; }
+      if (!c.dead && !c.def.robot && !c.avatar && !c.adminSpawn && !c.convoy && d > 35 && g.world.toxicAt(c.pos[0], c.pos[2]) > 0) { this.remove(c); continue; } // bicho/NPC que entrou na névoa some (longe da vista)
+      if (!c.dead && d < 160 && !c.hive && !c.npc) { counts[c.kind] = (counts[c.kind] || 0) + 1; if (c.def.hostile && c.kind !== 'butterfly') hostile++; } }
     const city = g.world.cityAt(p[0], p[2], 60), ruinsNear = !!city; const caveNear = g.world.caves.find((c) => Math.hypot(c.x - p[0], c.z - p[2]) < 70);
     const mul = g.settings.enemyMul; const target = Math.round((night ? 8 : 5) * mul + (ruinsNear ? 2 : 0) + (g.world.toxicAt(p[0], p[2]) > 0 ? 3 : 0));
     // fauna
@@ -185,14 +197,18 @@ export class CreatureManager {
       const lead = this.spawnNear('butterfly', p[0], p[2], 60, 130); if (lead) { lead.bfly = true; for (let k = 0; k < 2; k++) { const b = this.spawnNear('butterfly', lead.pos[0], lead.pos[2], 2, 8); if (b) b.home = lead.home.slice(); } } }
     // mechas: um por base militar, guardando o pátio (reaparece 3 dias depois de destruído)
     for (const st of g.world.sites) { if (st.kind !== 'military' || Math.hypot(st.x - p[0], st.z - p[2]) > st.r + 200 || (st.mechaRespawn || 0) > g.env.day) continue;
-      if (this.list.some((c) => c.kind === 'mecha' && c.siteId === st.id && !c.dead)) continue; const c = this.spawnNear('mecha', st.x, st.z, 4, Math.max(8, st.r * 0.45)); if (c) { c.siteId = st.id; c.home = [c.pos[0], c.pos[2]]; c.origin = c.home.slice(); } }
+      const want = st.toxic ? 3 : 1; let have = this.list.filter((c) => c.kind === 'mecha' && c.siteId === st.id && !c.dead).length;
+      for (; have < want; have++) { const c = this.spawnNear('mecha', st.x, st.z, 4, Math.max(8, st.r * (st.toxic ? 0.7 : 0.45))); if (c) { c.siteId = st.id; c.home = [c.pos[0], c.pos[2]]; c.origin = c.home.slice(); } else break; }
+      // base militar da zona tóxica: guarnição de robôs
+      if (st.toxic && Math.hypot(st.x - p[0], st.z - p[2]) < 170) { const pool = ['soldier', 'soldier', 'soldier', 'heavy', 'hunter', 'spidertank', 'drone']; if (st.garDay !== undefined && g.env.day >= st.garDay + 2) { st.garDead = 0; st.garDay = undefined; } let n = this.list.filter((c) => c.garrison === st.id && !c.dead).length;
+        for (; n < 14 - (st.garDead || 0); n++) { const c = this.spawnNear(pool[Math.floor(this.r() * pool.length)], st.x, st.z, 6, st.r * 0.85); if (!c) break; c.garrison = st.id; c.home = [c.pos[0], c.pos[2]]; c.origin = c.home.slice(); } } }
     if (hostile >= target) return;
     const caps = { hauler: 1, drone: 2, soldier: 6, hunter: 4, heavy: 1, spidertank: 1, scorpion: 3, rhino: 1, tiger: 2, eagle: 2, beetle: 2, tick: 2, butterfly: 2 };
     let pool, area = 'player';
     const site = g.world.sites.find((q) => q.kind !== 'city' && Math.hypot(q.x - p[0], q.z - p[2]) < q.r + 90);
     const tox = g.world.toxicAt(p[0], p[2]) > 0;
-    if (tox) { pool = ['soldier', 'soldier', 'heavy', 'spidertank', 'tick', 'tick', 'spider', 'scorpion']; area = 'toxic'; } // Cidade Morta: androides armados e máquinas mutantes
-    else if (site && site.kind === 'military') { pool = ['soldier']; area = 'site'; caps.soldier = 9; } // base militar: somente androides armados (com fuzil)
+    if (tox) { pool = ['soldier', 'soldier', 'heavy', 'spidertank', 'tick', 'tick', 'drone', 'spider', 'scorpion']; area = 'toxic'; } // Cidade Morta: androides armados e máquinas mutantes
+    else if (site && site.kind === 'military') return; // base militar: só os soldados humanos (NPCs) e o mecha sentinela
     else if (site && site.kind === 'industry' && this.r() < 0.8) { pool = ['hauler', 'ant', 'ant', 'drone', 'spidertank', 'soldier', 'beetle']; area = 'site'; }
     else if (site && site.kind === 'village' && this.r() < 0.6) { pool = ['hunter', 'soldier', 'spider', 'drone', 'tiger']; area = 'site'; }
     else if (ruinsNear && (g.world.inRuins(p[0], p[2]) || this.r() < 0.7)) { pool = ['soldier', 'soldier', 'soldier', 'hunter', 'hunter', 'heavy']; area = 'ruins'; } // cidades: só humanoides armados
@@ -208,11 +224,14 @@ export class CreatureManager {
     else { const a = this.spawnNear(kind, p[0], p[2], 55, 120); if (a && (kind === 'spider' || kind === 'ant' || kind === 'fly') && this.r() < 0.5) this.spawnNear(kind, a.pos[0], a.pos[2], 2, 6); }
   }
   update(dt) {
-    const g = this.game; this.populate(dt); this.updateHives(dt); this.alarmToastT -= dt;
+    const g = this.game; const N = g.net && g.net.active ? g.net : null; if (!g.netClient) this.populate(dt); this.updateHives(dt); this.alarmToastT -= dt;
+    const P0 = g.player, multi = N && N.host && N.peers.size;
     for (const c of this.list) {
-      const d = Math.hypot(c.pos[0] - g.player.pos[0], c.pos[2] - g.player.pos[2]);
-      if (d > 130 && !c.dead) { this._matrices(c); continue; } // LOD de IA: congela longe
-      this._think(c, dt, d); c.anim.update(dt); this._matrices(c);
+      if (c.net) { if (N) N.stepProxy(c, dt); continue; } if (g.netClient) continue;
+      const d = multi ? N.minDist(c.pos) : Math.hypot(c.pos[0] - g.player.pos[0], c.pos[2] - g.player.pos[2]);
+      if (d > (c.convoy ? 260 : 130) && !c.dead) { this._matrices(c); continue; } // LOD de IA: congela longe (o comboio continua andando)
+      if (multi && !c.dead) { const T = N.nearestTarget(c); g.player = T; try { this._think(c, dt, Math.hypot(c.pos[0] - T.pos[0], c.pos[2] - T.pos[2])); c.anim.update(dt); } finally { g.player = P0; } } // eventos da animação (golpe) também acertam o alvo certo
+      else { this._think(c, dt, d); c.anim.update(dt); } this._matrices(c);
     }
   }
   // tiros fazem barulho: androides hostis no raio vão investigar/atacar; fauna foge
@@ -225,8 +244,8 @@ export class CreatureManager {
   alarm(src) {
     const g = this.game; let n = 0;
     for (const c of this.list) if (c !== src && !c.dead && c.def.robot && Math.hypot(c.pos[0] - src.pos[0], c.pos[2] - src.pos[2]) < 70) { c.alerted = 12; if (c.state === 'wander') c.state = c.def.ai === 'sentinel' ? 'alarm' : 'chase'; n++; }
-    g.audio.play('alarm', { vol: 0.8 });
-    if (this.alarmToastT <= 0) { this.alarmToastT = 20; g.ui.toast(`⚠ ${src.def.name} detectou você e alertou ${n} androide${n === 1 ? '' : 's'}!`, 'warn'); }
+    g.audio.play('alarm', { vol: 0.8, at: src.pos });
+    if (this.alarmToastT <= 0 && !g.player.remote) { this.alarmToastT = 20; g.ui.toast(`⚠ ${src.def.name} detectou você e alertou ${n} androide${n === 1 ? '' : 's'}!`, 'warn'); }
   }
   _think(c, dt, dist) {
     const g = this.game, P = g.player, def = c.def, C = c.clips, w = g.world;
@@ -234,9 +253,11 @@ export class CreatureManager {
     if (c.dead) {
       c.deadTime += dt; c.collider.ghost = true;
       if (c.flyer && c.pos[1] > gh + 0.01) { c.vy -= 20 * dt; c.pos[1] = Math.max(gh, c.pos[1] + c.vy * dt); if (c.pos[1] <= gh) { g.fx.burst([c.pos[0], gh + 0.3, c.pos[2]], 14, [0.6, 0.6, 0.6], 3, 0.5, 0.05); } }
+      if (def.human && c.deadTime < 0.1 && !c.deathClip) c.anim.play(C.die, 0.1);
       if (c.def.robot && c.deadTime < 3 && Math.random() < dt * 6) g.fx.burst([c.pos[0], c.pos[1] + 0.6 * def.scale, c.pos[2]], 3, [1, 0.8, 0.3], 3, 0.25, 0.03);
       return;
     }
+    if (def.ai === 'npc') { if (g.npcs) g.npcs.think(c, dt, dist); return; }
     c.attackCd = Math.max(0, c.attackCd - dt); c.leapCd = (c.leapCd || 0) - dt; c.coverCd = (c.coverCd || 0) - dt; c.shootCd -= dt; c.missileCd -= dt; c.gunCd -= dt; c.chargeCd -= dt; c.diveCd -= dt; c.timer -= dt; c.soundT -= dt; c.alarmCd -= dt;
     c.alerted = Math.max(0, c.alerted - dt); c.angry = Math.max(0, c.angry - dt);
     const pp = P.pos; const toP = Math.atan2(pp[0] - c.pos[0], pp[2] - c.pos[2]);
@@ -245,7 +266,7 @@ export class CreatureManager {
     if (P.inCave && !w.caveAt(c.pos[0], c.pos[2])) detect *= 0.5;
     if (!c.origin) c.origin = [c.pos[0], c.pos[2]];
     // visão: cone à frente + linha de visão livre (paredes, árvores e rochas escondem); de muito perto sente o jogador
-    let canSee = !P.dead && !P.sleeping && dist < detect;
+    let canSee = !P.dead && !P.sleeping && !P.invis && dist < detect;
     if (canSee && (dist > 2.2 || (def.blindBack && P.crouch)) && !c.hive) { const fov = def.fov || (def.robot ? 1.15 : 1.35); const engaged = (c.state === 'chase' || c.state === 'attack' || c.state === 'firing') && (c.seenT || 0) < 1.2;
       if (!engaged && Math.abs(angleDiff(c.yaw, toP)) > fov) canSee = false;
       else { c.losT2 = (c.losT2 || 0) - dt; if (c.losT2 <= 0) { c.losT2 = 0.2 + Math.random() * 0.1; c.losOK = this._los(c); } if (c.losOK === false) canSee = false; } }
@@ -529,19 +550,27 @@ export class CreatureManager {
     });
   }
   damage(c, dmg, fromYaw, kind) {
+    if (c.net) { if (this.game.net) this.game.net.onDamage(c, dmg, fromYaw, kind); return; }
     if (c.dead) return; const g = this.game;
     if (c.def.heavyArmor) { // mecha: só C4 (3), foguete (2) ou granada de fragmentação (14) o derrubam
       const per = { c4: c.def.hp / 3 + 0.5, rocket: c.def.hp / 2 + 0.5, grenade: c.def.hp / 14 + 0.05 }[kind] || 0;
       if (!per) { g.fx.burst([c.pos[0], c.pos[1] + 2.5, c.pos[2]], 6, [3, 2.2, 1], 4, 0.2, 0.03, 6); g.audio.play('metalHit', { at: c.pos, vol: 0.6 }); if (!this._armorTip || g.env.elapsed - this._armorTip > 8) { this._armorTip = g.env.elapsed; g.ui.toast('🛡 Blindagem pesada! Só C4 (3), lança-foguetes (2) ou lança-granadas (14) derrubam o mecha.', 'warn'); }
         if (c.state === 'wander' || c.state === 'search' || c.state === 'return') { c.state = 'chase'; c.lastSeen = [g.player.pos[0], g.player.pos[2]]; } return; }
       dmg = per; }
-    c.hp -= dmg; g.audio.play(c.def.robot ? 'metalHit' : 'hit');
+    // humano desmaiado levando mais dano: é finalizado (bruços, mexe os braços, poça de sangue)
+    if (c.npc && c.fainted > 0) { c.hp = 0; c.fainted = 0; c.dead = true; c.anim.action = null; c.deathClip = c.clips.finish; c.anim.play(c.clips.finish, 0.05); c.deadTime = 0; c.vy = 0; g.audio.play('hit', { at: c.pos }); g.audio.play('enemyDie', { vol: 0.9 }); g.addBloodPool && g.addBloodPool(c.pos[0], c.pos[2], c.yaw); g.onCreatureKilled(c); return; }
+    if (c.convoy && g.convoys) g.convoys.onHurt(c);
+    c.hp -= dmg; g.audio.play(c.def.robot ? 'metalHit' : 'hit', c.npc ? { at: c.pos } : undefined);
+    // tiro que tira 70% da vida total sem matar: desmaia de peito no chão
+    if (c.npc && c.hp > 0 && dmg >= c.def.hp * 0.7) { c.fainted = 20 + Math.random() * 10; c.target = null; c.anim.action = null; c.anim.play(c.clips.faint, 0.1); g.audio.play('groan', { at: c.pos, f0: c.voice || 150 }); g.fx.burst([c.pos[0], c.pos[1] + 0.8, c.pos[2]], 14, [0.6, 0.05, 0.05], 3, 0.6); return; }
+    if (c.npc && kind !== 'robot' && kind !== 'npc' && c.hp > 0) { c.target = 'player'; c.lostT = 0; if ((c.shoutCd || 0) <= 0) { c.shoutCd = 5; g.audio.play('groan', { at: c.pos, f0: c.voice || 150 }); } }
     const hp = [c.pos[0], c.pos[1] + 0.8 * c.def.scale, c.pos[2]];
     if (c.def.robot) { g.fx.burst(hp, 12, [1, 0.75, 0.3], 4, 0.35, 0.04); g.fx.burst(hp, 6, [0.35, 0.35, 0.38], 2, 0.6, 0.06); } else g.fx.burst(hp, 14, [0.6, 0.05, 0.05], 3, 0.6);
     const kb = 0.35 / Math.max(1, c.def.scale); c.pos[0] += Math.sin(fromYaw) * kb; c.pos[2] += Math.cos(fromYaw) * kb;
     c.alerted = 10;
     if (c.hp <= 0) { c.dead = true; c.anim.action = null; c.anim.play(c.clips.die, 0.1); c.deadTime = 0; c.vy = 0; g.audio.play(c.def.robot ? 'robotDie' : 'enemyDie', { vol: 0.9 }); if (c.hive) { c.hive.killed = (c.hive.killed || 0) + 1; c.hive.angry = Math.max(c.hive.angry || 0, 15); } g.onCreatureKilled(c); return; }
     if (c.def.retaliate) { c.angry = 25; if (c.def.ai === 'flyer') for (const o of this.list) if (o !== c && o.kind === c.kind && !o.dead && Math.hypot(o.pos[0] - c.pos[0], o.pos[2] - c.pos[2]) < 45) o.angry = 20; } // o bando revida junto
+    if (c.npc) { if (c.hp > 0 && (!c.anim.busy)) c.anim.playAction(c.clips.hit, { mask: c.clips.masks.upper, fadeIn: 0.04, fadeOut: 0.15 }); return; }
     if (['charge', 'firing', 'spinup', 'roar'].includes(c.state)) return; // ações pesadas não são interrompidas
     if (!c.anim.busy || (c.anim.action && c.anim.action.clip === c.clips.aim)) c.anim.playAction(c.clips.hit, { mask: c.def.rig === 'human' ? c.clips.masks.upper : null, fadeIn: 0.04, fadeOut: 0.15 });
     if (c.state === 'dive') { c.state = 'climb'; c.timer = 1.2; c.diveCd = 3; }

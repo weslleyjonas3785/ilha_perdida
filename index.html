@@ -30,6 +30,8 @@
     <div id="geigerHud" class="hidden"><div class="gh-top"><b>📟 CONTADOR GEIGER</b><span id="ghLabel">Seguro</span></div><div class="gh-dial"><div class="gh-arc"></div><i id="ghNeedle"></i></div><div class="gh-bar"><div id="ghFill"></div></div><div class="gh-val"><span id="ghVal">0,00 mSv/h</span></div><div id="ghSrc" class="gh-src">Aponte para as coisas</div></div>
     <div id="hotbar"></div>
     <div id="prompt" class="hidden"></div>
+    <div id="fuelBars" class="hidden"><div class="fbl"></div><div class="fbrow"><span>⛽ Galão</span><div class="fb"><i class="c"></i></div><b class="cv"></b></div><div class="fbrow"><span class="tl">Tanque</span><div class="fb"><i class="t"></i></div><b class="tv"></b></div></div>
+    <div id="driveHud" class="hidden"><div class="spd">0</div><div class="u">km/h</div><div class="fb"><i></i></div><div class="nm"></div></div>
     <div id="readRing" class="hidden"><div class="rr"><div class="rrin">📖</div></div><div class="rrtx">Lendo…</div></div>
     <div id="toasts"></div>
     <div id="crosshair"></div>
@@ -47,6 +49,9 @@
   </div>
   <div id="vignette"></div>
   <div id="hurt"></div>
+  <div id="flashOv"></div>
+  <div id="radial" class="hidden"><div class="rc"></div></div>
+  <div id="throwBar" class="hidden"><div class="tbl"></div><div class="tbt"><i class="tbm"></i></div></div>
   <div id="fade"></div>
 
   <!-- Controles de toque -->
@@ -89,8 +94,17 @@
   </div>
   <div id="buildPanel" class="panel hidden"><div class="phead"><h2>Construção</h2><button class="close" data-close>✕</button></div><div class="pbody"><div id="buildList" class="list cards"></div></div></div>
   <div id="powerPanel" class="panel hidden"><div class="phead"><h2 id="powerTitle">Aparelho</h2><button class="close" data-close>✕</button></div><div class="pbody" id="powerBody"></div></div>
+  <div id="vehiclePanel" class="panel hidden"><div class="phead"><h2 id="vehTitle">Veículo</h2><button class="close" data-close>✕</button></div><div class="pbody" id="vehBody"></div></div>
   <div id="chestPanel" class="panel hidden"><div class="phead"><h2>Baú</h2><button class="close" data-close>✕</button></div>
     <div class="pbody chest"><div><h3>Baú</h3><div id="chestGrid" class="grid"></div></div><div><h3>Mochila</h3><div id="chestInv" class="grid"></div></div></div><p class="muted pad">Clique em um item para transferir a pilha inteira.</p></div>
+
+  <div id="firePanel" class="panel hidden"><div class="phead"><h2>🔥 Fogueira</h2><button class="close" data-close>✕</button></div>
+    <div class="pbody chest fire"><div>
+      <div class="fireTop"><button id="fireLit" class="itb wide"></button><div id="fireBurn" class="fireBurn"><i></i></div></div>
+      <h3>Combustível <span class="muted">(lenha, galhos, folhas, carvão)</span></h3><div id="fireFuel" class="grid fslots"></div>
+      <h3>Grelha <span class="muted">(carnes, água suja)</span></h3><div id="fireCook" class="grid fslots"></div>
+      <h3>Sobras <span class="muted">(lenha → carvão, carvão → cinza)</span></h3><div id="fireOut" class="grid fslots"></div>
+    </div><div><h3>Mochila</h3><div id="fireInv" class="grid"></div></div></div><p class="muted pad">Clique num item da mochila para pôr na fogueira; clique na fogueira para pegar de volta. A comida assando aparece na grelha — dá para pegar mirando nela.</p></div>
 
   <!-- Menus -->
   <div id="createPanel" class="hidden">
@@ -112,6 +126,7 @@
     <div class="mbtns">
       <button id="btnNew">Novo jogo</button>
       <button id="btnContinue">Continuar</button>
+      <button id="btnMulti">Multiplayer</button>
       <button id="btnSettings">Configurações</button>
       <button id="btnControls">Controles</button>
       <button id="btnQuit">Sair</button>
@@ -123,6 +138,7 @@
     <div class="mbtns">
       <button id="btnResume">Continuar</button>
       <button id="btnSave">Salvar jogo</button>
+      <button id="btnOpenWorld">Abrir mundo para amigos</button>
       <button id="btnSettings2">Configurações</button>
       <button id="btnControls2">Controles</button>
       <button id="btnUnstuck">Destravar personagem</button>
@@ -148,10 +164,28 @@
     <label>Resolução <select id="setRes"><option value="0.6">60%</option><option value="0.8">80%</option><option value="1">100%</option><option value="1.5">150%</option></select></label>
     <label>Dificuldade <select id="setDiff"><option value="0.6">Fácil</option><option value="1">Normal</option><option value="1.5">Difícil</option></select></label>
     <button data-back>Voltar</button></div></div>
+  <div id="multiPanel" class="menu hidden dim"><div class="box wide mp"><h2>Multiplayer</h2>
+    <p class="muted small">Todos conectados na mesma VPN (ex.: Radmin VPN) ou na mesma rede. O dono do mundo roda o <b>Hospedar mundo.bat</b>; os amigos colam o IP dele aqui.</p>
+    <div class="mpcols">
+      <div class="mpcol"><h3>Entrar no mundo de um amigo</h3>
+        <label>IP do dono <input id="mpIp" placeholder="ex.: 26.12.34.56" autocomplete="off"></label>
+        <label>Seu nome <input id="mpName" maxlength="20" autocomplete="off"></label>
+        <button id="mpFind">Buscar</button>
+        <div id="mpFound" class="mpfound hidden"></div>
+        <label id="mpPassRow" class="hidden">Senha do mundo <input id="mpPass" type="password" autocomplete="off"></label>
+        <button id="mpJoin" class="pri hidden">Entrar</button></div>
+      <div class="mpcol"><h3>Hospedar o meu mundo</h3>
+        <div id="mpHostInfo" class="muted small"></div>
+        <label>Nome do mundo <input id="mpWorld" maxlength="30" autocomplete="off"></label>
+        <label>Senha (opcional) <input id="mpWorldPass" autocomplete="off"></label>
+        <button id="mpHost" class="pri">Hospedar (abrir meu mundo)</button></div>
+    </div>
+    <div id="mpStatus" class="muted small"></div>
+    <div class="cbtns"><button data-back>Voltar</button></div></div></div>
   <div id="controlsPanel" class="menu hidden dim"><div class="box wide"><h2>Controles</h2>
     <div class="cols"><div><h3>Computador</h3><table>
       <tr><td>W A S D</td><td>Mover (correr leve)</td></tr><tr><td>Mouse</td><td>Câmera (clique para capturar)</td></tr><tr><td>Roda do mouse</td><td>Zoom / girar peça</td></tr>
-      <tr><td>Shift</td><td>Correr rápido (sprint)</td></tr><tr><td>Alt / Caps Lock</td><td>Caminhar devagar</td></tr><tr><td>Espaço</td><td>Pular / escalar obstáculo</td></tr><tr><td>Ctrl ou C</td><td>Agachar</td></tr>
+      <tr><td>Shift</td><td>Correr rápido (sprint)</td></tr><tr><td>Alt / Caps Lock</td><td>Caminhar devagar</td></tr><tr><td>Espaço</td><td>Pular / escalar obstáculo</td></tr><tr><td>C</td><td>Agachar</td></tr>
       <tr><td>E</td><td>Interagir / coletar / beber</td></tr><tr><td>F ou clique esq.</td><td>Usar ferramenta / atacar / atirar</td></tr><tr><td>Clique dir.</td><td>Defender (corpo a corpo) · Mirar (arma de fogo, arco; luneta no fuzil de precisão)</td></tr><tr><td>Q</td><td>Trocar a câmera de ombro (direito / esquerdo)</td></tr><tr><td>R</td><td>Recarregar arma</td></tr>
       <tr><td>Tab</td><td>Inventário e fabricação</td></tr><tr><td>M</td><td>Mapa (clique para marcar um ponto)</td></tr><tr><td>I</td><td>Equipamentos</td></tr><tr><td>B</td><td>Construção</td></tr><tr><td>1–6 / 0</td><td>Barra rápida / guardar ferramenta</td></tr>
       <tr><td>R / X</td><td>Girar / desmontar (construção)</td></tr><tr><td>Esc</td><td>Pausa / cancelar</td></tr></table></div>

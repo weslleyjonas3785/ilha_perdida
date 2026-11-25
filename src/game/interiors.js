@@ -27,6 +27,18 @@ export function interiorLayout(b) {
     add('counter', 0, hv - 1.8, Math.PI); for (let i = 0; i < 2; i++) add('shelf2', -hu + 1.2 + i * (hu - 0.8), -0.5, 0, 'pharmacy'); add('shelfwall', 0, -hv + 0.25, 0, 'pharmacy'); add('medcabinet', hu - 0.3, -hv + 1.5, -Math.PI / 2, 'pharmacy');
     return { F, P, walls };
   }
+  if (st === 'shop') { // loja: balcão no fundo, gôndolas no meio e prateleira na parede
+    add('counter', hu - 1.6, hv - 1.8, Math.PI, null, { len: 2.4 }); for (let i = 0; i < 2; i++) add('shelf2', -hu + 2.0 + i * 3.4, -0.6, 0, 'shop'); add('shelfwall', -hu / 3, -hv + 0.25, 0, 'shop'); add('fridge', hu - 0.42, -hv + 0.42, 0, 'fridge');
+    return { F, P, walls };
+  }
+  if (st === 'garage') { // oficina: bancada de ferramentas, estantes de peças, pneus e tambores
+    add('workbench', -hu + 1.4, -hv + 0.45, 0, 'garage'); add('shelf', hu - 0.25, -hv + 1.6, -Math.PI / 2, 'garage'); add('shelf', hu - 0.25, -hv + 3.0, -Math.PI / 2, 'garage'); add('tirerack', -hu + 0.5, 0.2, Math.PI / 2, 'garage'); add('drums', 1.2, -hv + 0.6, 0);
+    return { F, P, walls };
+  }
+  if (st === 'church') { // igreja: fileiras de bancos e o altar no fundo
+    for (let i = 0; i < 5; i++) for (const s of [-1, 1]) add('pew', s * (hu * 0.45 + 0.1), -hv + 3.2 + i * 1.5, Math.PI); add('altar', 0, -hv + 1.0, 0, 'church'); add('lamp', -hu + 0.4, -hv + 0.4, 0); add('lamp', hu - 0.4, -hv + 0.4, 0);
+    return { F, P, walls };
+  }
   if (st === 'barracks') { // quartel: beliches e armários militares nas duas paredes
     const n = Math.max(2, Math.floor((F.Wu - 2) / 2.2)); for (let i = 0; i < n; i++) { const u = -hu + 1.2 + i * 2.2; add('bed', u, -hv + 1.08, 0); add('wardrobe', u + 0.95, -hv + 0.3, 0, i % 2 ? 'locker' : null); if (i < n - 1) add('bed', u, hv - 1.5, Math.PI); }
     add('wardrobe', hu - 0.32, 0, -Math.PI / 2, 'locker'); add('desk', -hu + 0.9, 0.2, Math.PI / 2); return { F, P, walls };

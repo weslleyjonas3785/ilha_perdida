@@ -14,14 +14,44 @@ export const ITEMS = {
   berry: { name: 'Frutas', icon: '🫐', stack: 20, type: 'food', food: 12, water: 4, desc: 'Frutas silvestres. +12 fome, +4 sede.' },
   mushroom: { name: 'Cogumelo', icon: '🍄', stack: 20, type: 'food', food: 8, desc: 'Comestível cru. Melhor assado.' },
   meat: { name: 'Carne crua', icon: '🥩', stack: 10, type: 'food', food: 14, risk: 0.45, desc: 'Comer crua pode intoxicar. Asse na fogueira.' },
+  meat_cow: { name: 'Carne de vaca', icon: '🥩', img: 'meat_cow', stack: 10, type: 'food', food: 16, risk: 0.45, desc: 'Bife cru de vaca. Comer cru pode intoxicar — asse na fogueira.' },
+  meat_boar: { name: 'Carne de javali', icon: '🥩', img: 'meat_boar', stack: 10, type: 'food', food: 14, risk: 0.5, desc: 'Carne crua de javali, escura e marmorizada. Asse na fogueira.' },
+  meat_chicken: { name: 'Carne de galinha', icon: '🍗', img: 'meat_chicken', stack: 10, type: 'food', food: 9, risk: 0.6, desc: 'Peito de galinha cru — alto risco de intoxicação. Asse na fogueira.' },
+  meat_deer: { name: 'Carne de cervo', icon: '🥩', img: 'meat_deer', stack: 10, type: 'food', food: 14, risk: 0.4, desc: 'Carne magra de cervo, crua. Asse na fogueira.' },
+  meat_human: { name: 'Carne humana', icon: '🥩', img: 'meat_human', stack: 10, type: 'food', human: true, food: 14, risk: 0.85, riskMsg: '🤢 Comer carne humana crua te deixou doente!', desc: 'Retirada de um corpo picotado. Muito arriscado comer — mesmo assada pode causar doença.' },
+  cooked_cow: { name: 'Bife de vaca assado', icon: '🍖', img: 'cooked_cow', stack: 10, type: 'food', food: 42, heal: 6, desc: 'Bife assado na fogueira. +42 fome.' },
+  cooked_boar: { name: 'Javali assado', icon: '🍖', img: 'cooked_boar', stack: 10, type: 'food', food: 40, heal: 6, desc: 'Carne de javali assada. +40 fome.' },
+  cooked_chicken: { name: 'Galinha assada', icon: '🍗', img: 'cooked_chicken', stack: 10, type: 'food', food: 26, heal: 4, desc: 'Peito de galinha assado. +26 fome.' },
+  cooked_deer: { name: 'Cervo assado', icon: '🍖', img: 'cooked_deer', stack: 10, type: 'food', food: 38, heal: 8, desc: 'Carne de cervo assada. +38 fome, cura 8.' },
+  cooked_human: { name: 'Carne humana assada', icon: '🍖', img: 'cooked_human', stack: 10, type: 'food', human: true, food: 30, risk: 0.35, riskMsg: '🤢 A carne humana te fez mal, mesmo assada!', desc: 'Mata a fome, mas pode deixar doente.' },
+  bone: { name: 'Osso', icon: '🦴', stack: 30, type: 'resource', kg: 0.25, desc: 'Osso de um corpo picotado.' },
+  burnt_cow: { name: 'Bife de vaca queimado', icon: '🥩', img: 'burnt_cow', stack: 10, type: 'food', food: 12, burnt: true, desc: 'Passou do ponto na fogueira. Comer pode fazer mal depois de uns minutos.' },
+  burnt_boar: { name: 'Javali queimado', icon: '🥩', img: 'burnt_boar', stack: 10, type: 'food', food: 12, burnt: true, desc: 'Passou do ponto na fogueira. Comer pode fazer mal depois de uns minutos.' },
+  burnt_chicken: { name: 'Galinha queimada', icon: '🍗', img: 'burnt_chicken', stack: 10, type: 'food', food: 8, burnt: true, desc: 'Passou do ponto na fogueira. Comer pode fazer mal depois de uns minutos.' },
+  burnt_deer: { name: 'Cervo queimado', icon: '🥩', img: 'burnt_deer', stack: 10, type: 'food', food: 11, burnt: true, desc: 'Passou do ponto na fogueira. Comer pode fazer mal depois de uns minutos.' },
+  burnt_human: { name: 'Carne humana queimada', icon: '🥩', img: 'burnt_human', stack: 10, type: 'food', food: 10, burnt: true, human: true, desc: 'Passou do ponto na fogueira. Comer pode fazer mal — e é carne humana.' },
+  burnt_meat: { name: 'Carne queimada', icon: '🥩', img: 'burnt_cow', stack: 10, type: 'food', food: 10, burnt: true, desc: 'Passou do ponto na fogueira. Comer pode fazer mal depois de uns minutos.' },
+  charcoal: { name: 'Carvão', icon: '⚫', stack: 30, type: 'resource', kg: 0.2, desc: 'Sobra da lenha queimada na fogueira. É um combustível que dura mais que a madeira (e vira cinza).' },
+  ash: { name: 'Cinza', icon: '🩶', stack: 50, type: 'resource', kg: 0.1, desc: 'Sobra do carvão queimado na fogueira.' },
   cookedmeat: { name: 'Carne assada', icon: '🍖', stack: 10, type: 'food', food: 38, heal: 6, desc: 'Muito nutritiva. +38 fome.' },
   cookedmush: { name: 'Cogumelo assado', icon: '🍢', stack: 20, type: 'food', food: 16, heal: 2, desc: '+16 fome.' },
   honey: { name: 'Mel', icon: '🍯', stack: 10, type: 'food', food: 20, water: 6, heal: 5, desc: 'Mel das colmeias robóticas. +20 fome, cura 5.' },
   canned: { name: 'Comida enlatada', icon: '🥫', stack: 10, type: 'food', food: 30, water: 5, desc: 'Encontrada nas ruínas.' },
+  tire: { name: 'Pneu de carro', icon: '🛞', stack: 4, type: 'part', kg: 9, desc: 'Pneu com roda para carros (picape, sedã, hatch, SUV). Abra o menu do veículo (E) e arraste para a roda.' },
+  mototire: { name: 'Pneu de moto', icon: '🛞', stack: 2, type: 'part', kg: 5, desc: 'Pneu com roda para a moto.' },
+  engine: { name: 'Motor de carro', icon: '⚙️', stack: 1, type: 'part', kg: 32, desc: 'Motor para carros. Pesado! Leve até o carro e instale pelo menu do veículo (E).' },
+  motoengine: { name: 'Motor de moto', icon: '⚙️', stack: 1, type: 'part', kg: 14, desc: 'Motor para a moto. Instale pelo menu do veículo (E).' },
+  gearbox: { name: 'Câmbio (engrenagens)', icon: '🔩', stack: 1, type: 'part', kg: 8, desc: 'Caixa de engrenagens: a moto precisa de uma (os carros já vêm com câmbio).' },
+  jerrycan: { name: 'Galão de combustível', icon: '⛽', stack: 1, type: 'tool', tool: 'jerry', kg: 1.5, desc: 'Leva até 20 L. Na mão, perto de um veículo: E abastece, F retira combustível. Nas bombas dos postos: E enche o galão.' },
   soro: { name: 'Soro de reidratação', icon: '🧃', stack: 5, type: 'drink', water: 60, heal: 10, desc: 'Água com mel e cinzas: +60 sede e +10 de vida. Bom contra a desidratação do deserto.' },
-  water: { name: 'Água', icon: '💧', stack: 10, type: 'drink', water: 35, desc: 'Garrafa de água potável. +35 sede.' },
+  water: { name: 'Água potável', icon: '💧', stack: 10, type: 'drink', water: 35, desc: 'Garrafa de água potável (fervida, da chuva ou lacrada). +35 sede.' },
+  dirtywater: { name: 'Água suja', icon: '🫗', stack: 10, type: 'drink', water: 30, risk: 0.55, riskMsg: '🤢 A água estava contaminada — infecção intestinal! Ferva a água na fogueira.', desc: 'Toda água de rio, lago, riacho ou mar é contaminada. Ferva na fogueira para virar água potável. Beber assim pode causar infecção.' },
+  dirt: { name: 'Terra', icon: '🟤', stack: 60, type: 'resource', kg: 0.35, desc: 'Cavada do chão com a picareta (fora do deserto). Vai na composteira e nos canteiros.' },
+  adubo: { name: 'Adubo', icon: '🌿', stack: 20, type: 'resource', kg: 0.4, desc: 'Composto pronto da composteira. Use num canteiro (E) para as frutas crescerem no dobro da velocidade e renderem mais.' },
   bandage: { name: 'Bandagem', icon: '🩹', stack: 10, type: 'medical', heal: 25, cure: ['bleed'], desc: 'Estanca sangramento e recupera 25 de vida.' },
   medkit: { name: 'Kit médico', icon: '💊', stack: 5, type: 'medical', heal: 60, cure: ['bleed', 'poison'], desc: 'Cura sangramento e veneno, recupera 60 de vida.' },
+  blueprint: { name: 'Projeto', icon: '📜', stack: 1, type: 'tool', tool: 'blueprint', kg: 0.1, desc: 'Na mão: segure o botão direito para escolher a peça (fundação, parede, telhado…) e clique para construir. Só dentro da área da sua Bandeira de território.' },
+  hammer: { name: 'Martelo de madeira', icon: '🔨', stack: 1, type: 'tool', tool: 'hammer', kg: 0.6, desc: 'Na mão, olhando para a construção: botão esquerdo repara; segure o direito para Upar (galhos → madeira → pedra → metal), Mudar posição ou Demolir (devolve metade).' },
   axe: { name: 'Machado de pedra', icon: '🪓', stack: 1, type: 'tool', tool: 'axe', dmg: 15, chop: 1, reach: 2.0, desc: 'Corta árvores. Dano 15.' },
   scrapaxe: { name: 'Machado de sucata', icon: '⚒️', stack: 1, type: 'tool', tool: 'axe', dmg: 24, chop: 2, mine: 1, reach: 2.1, desc: 'Corta rápido e minera um pouco. Dano 24.' },
   pickaxe: { name: 'Picareta de pedra', icon: '⛏️', stack: 1, type: 'tool', tool: 'pickaxe', dmg: 12, mine: 1, reach: 2.0, desc: 'Minera rochas. Dano 12.' },
@@ -62,6 +92,10 @@ export const ITEMS = {
   nvg: { name: 'Óculos de visão noturna', icon: '🥽', img: 'nvg', stack: 1, type: 'clothing', slot: 'hat', dur: 99999, nvg: true, kg: 0.6, desc: 'Vista no lugar do chapéu. Arraste uma bateria de célula sobre ele para anexar; liga/desliga com N. Clique direito nele para tirar a bateria. Encontrado só em áreas militares.' },
   nvcell: { name: 'Bateria de célula', icon: '🔋', img: 'nvcell', stack: 4, type: 'misc', kg: 0.05, desc: 'Pequena célula de energia. Arraste sobre o óculos de visão noturna para anexar (dura cerca de uma noite ligada). Achada em casas nas cidades.' },
   nvcell_dead: { name: 'Bateria descarregada', icon: '🪫', img: 'nvcell_dead', stack: 8, type: 'misc', kg: 0.05, desc: 'Célula sem carga. Não serve mais para o óculos.' },
+  hg_frag: { name: 'Granada de fragmentação', icon: '💣', img: 'hg_frag', stack: 5, type: 'tool', tool: 'grenade', kg: 0.4, desc: 'F puxa o pino (na mão explode em 5 s); segure o botão esquerdo para escolher a força e solte para jogar. Explode 5 s depois de puxar o pino: mata ou fere muito dependendo da distância (jogadores, NPCs e robôs).' },
+  hg_flash: { name: 'Granada de luz (flash)', icon: '💥', img: 'hg_flash', stack: 5, type: 'tool', tool: 'grenade', kg: 0.3, desc: 'F puxa o pino; segure e solte o botão esquerdo para jogar. Ativa 3 s depois de jogada: clarão que cega por 4 s (tela branca e zumbido); NPCs cobrem o rosto com o braço e robôs perdem o alvo.' },
+  hg_smoke: { name: 'Granada de fumaça', icon: '🌫️', img: 'hg_smoke', stack: 5, type: 'tool', tool: 'grenade', kg: 0.35, desc: 'F puxa o pino; segure e solte o botão esquerdo para jogar. Ativa 3 s depois de jogada e solta fumaça aos poucos: dentro dela os robôs não te veem; os NPCs ficam em alerta e só atiram se te virem.' },
+  hg_horn: { name: 'Granada barulhenta', icon: '📯', img: 'hg_horn', stack: 5, type: 'tool', tool: 'grenade', kg: 0.35, desc: 'F puxa o pino; segure e solte o botão esquerdo para jogar: toca uma buzina alta. Robôs por perto vão até ela atirando para destruí-la; NPCs na direção em que você jogou te veem e vêm atrás.' },
   c4: { name: 'C4', icon: '🧨', stack: 5, type: 'tool', tool: 'c4', kg: 1.0, dmg: 4, reach: 1.2, desc: 'Explosivo com cronômetro de 10 s. Na mão mostra onde vai ficar: verde = dá para colocar (até 3,5 m, em chão, parede, objeto ou inimigo), vermelho = não dá. Clique para armar. Destrói construções e mata quase tudo no raio.' },
   geiger: { name: 'Contador Geiger', img: 'geiger', icon: '📟', stack: 1, type: 'tool', tool: 'geiger', dmg: 2, reach: 1.2, desc: 'Na mão, aponte para as coisas: a barra mostra quanta radiação vem daquela direção (zona tóxica, itens e caixas contaminados). Botão direito: apontar com precisão. Achado em laboratórios e bases militares, ou impresso na impressora 3D.' },
   harpoonammo: { name: 'Munição de arpão', img: 'harpoonammo', icon: '🪝', stack: 6, type: 'ammo', desc: 'Arpão de ferro com corda. Cada uma dá 3 disparos.' },
@@ -119,6 +153,8 @@ export const ITEMS = {
 
 // Fabricação (combinação de materiais). station: null | 'bench' | 'fire'
 export const RECIPES = [
+  { id: 'blueprint', out: 'blueprint', n: 1, cost: { leaf: 3, fiber: 2 }, station: null },
+  { id: 'hammer', out: 'hammer', n: 1, cost: { stick: 2, wood: 2, fiber: 2 }, station: null },
   { id: 'axe', out: 'axe', n: 1, cost: { stick: 2, stone: 3, fiber: 2 }, station: null },
   { id: 'pickaxe', out: 'pickaxe', n: 1, cost: { stick: 2, stone: 4, fiber: 2 }, station: null },
   { id: 'spear', out: 'spear', n: 1, cost: { stick: 3, stone: 1, fiber: 2 }, station: null },
@@ -140,6 +176,7 @@ export const RECIPES = [
   { id: 'arrow', out: 'arrow', n: 1, cost: { stick: 1, stone: 1 }, station: null },
   { id: 'bandage', out: 'bandage', n: 1, cost: { fiber: 3, leaf: 2 }, station: null },
   { id: 'cookedmeat', out: 'cookedmeat', n: 1, cost: { meat: 1 }, station: 'fire' },
+  ...['cow', 'boar', 'chicken', 'deer', 'human'].map((k) => ({ id: 'cooked_' + k, out: 'cooked_' + k, n: 1, cost: { ['meat_' + k]: 1 }, station: 'fire' })),
   { id: 'cookedmush', out: 'cookedmush', n: 1, cost: { mushroom: 1 }, station: 'fire' },
   { id: 'scrapaxe', out: 'scrapaxe', n: 1, cost: { wood: 2, scrap: 3, fiber: 2 }, station: 'bench' },
   { id: 'scrapspear', out: 'scrapspear', n: 1, cost: { wood: 3, scrap: 2, fiber: 2 }, station: 'bench' },
@@ -160,7 +197,9 @@ export const RECIPES = [
   { id: 'wheelkit', out: 'wheelkit', n: 1, cost: { wood: 12, iron: 2, scrap: 4, circuit: 1 }, station: 'bench' },
   { id: 'battery', out: 'battery', n: 1, cost: { scrap: 4, circuit: 2, crystal: 2 }, station: 'bench' },
   { id: 'pack_impro', out: 'pack_impro', n: 1, cost: { stick: 3, cord: 3, leaf: 8 }, station: null },
+  { id: 'jerrycan', out: 'jerrycan', n: 1, cost: { scrap: 4, iron: 1 }, station: 'bench' },
   { id: 'soro', out: 'soro', n: 1, cost: { water: 1, honey: 1 }, station: 'fire' },
+  { id: 'boilwater', out: 'water', n: 1, cost: { dirtywater: 1 }, station: 'fire' },
   { id: 'gl', out: 'gl', n: 1, cost: { scrap: 8, gunparts: 2, iron: 3, cloth: 3, wood: 2, cord: 2 }, station: 'bench' },
   { id: 'medkit', out: 'medkit', n: 1, cost: { bandage: 2, mushroom: 2, cloth: 1 }, station: 'bench' },
 ];
@@ -182,22 +221,23 @@ export const SKILL_OF = {
   wall: 'carpintaria', floor: 'carpintaria', door: 'carpintaria', chest: 'carpintaria', bench: 'carpintaria', shelter: 'carpintaria',
   bandage: 'medicina', medkit: 'medicina', antidote: 'medicina', soro: 'medicina',
   windkit: 'engenharia', waterwheel: 'engenharia', wind: 'engenharia', c4: 'engenharia',
-  wheelkit: 'mecanica', pistol: 'mecanica', gl: 'mecanica',
+  wheelkit: 'mecanica', pistol: 'mecanica', jerrycan: 'metalurgia', gl: 'mecanica',
   copperwire: 'eletrica', solarlamp: 'eletrica', shockspear: 'eletrica', panel: 'eletrica', solar: 'eletrica',
-  planter: 'agricultura',
+  planter: 'agricultura', composter: 'agricultura',
   iron: 'metalurgia', scrapaxe: 'metalurgia', scrapspear: 'metalurgia', scrapknife: 'metalurgia', scraparmor: 'metalurgia', ammo42: 'metalurgia', shells: 'metalurgia', harpoonammo: 'metalurgia',
   shirt: 'costura', pants: 'costura', clothvest: 'costura', hat: 'costura', parka: 'costura', leathergloves: 'costura', leatherboots: 'costura', barkarmor: 'costura',
   printer3d: 'eletronica', epanel: 'eletronica', battery: 'eletronica',
 };
 for (const s of SKILLS) ITEMS['book_' + s.id] = { name: 'Livro de ' + s.name, icon: '📕', img: 'book_' + s.id, stack: 1, type: 'book', skill: s.id, kg: 0.5, desc: `Livro raro. Clique com o botão direito e escolha "Ler" para aprender ${s.name}: ${s.desc}` };
 export const PIECES = {
-  planter: { name: 'Canteiro elevado', icon: '🌱', cost: { wood: 4, sand: 6, berry: 2 }, desc: 'Plante frutas: depois de algumas horas do dia dá para colher (E).', shape: { type: 'box', hx: 0.95, hz: 0.6, h: 0.45 }, snap: false },
+  flag: { name: 'Bandeira de território', icon: '🚩', cost: { wood: 4, fiber: 6, leaf: 4 }, desc: 'Marca sua área (raio de 32 m): as construções do Projeto só podem ser feitas dentro dela. Não pode ficar perto da bandeira de outro jogador.', shape: { type: 'cyl', r: 0.3, h: 4.2 }, snap: false },
   campfire: { name: 'Fogueira', icon: '🔥', cost: { stone: 5, stick: 4 }, desc: 'Luz, calor e cozinhar.', shape: { type: 'cyl', r: 0.75, h: 0.4 }, snap: false },
   tent: { name: 'Barraca', icon: '⛺', cost: { stick: 6, leaf: 8, fiber: 4 }, desc: 'Dormir e definir ponto de renascimento.', shape: { type: 'box', hx: 0.95, hz: 1.3, h: 1.4 }, snap: false },
   shelter: { name: 'Abrigo', icon: '🛖', cost: { wood: 8, leaf: 10, fiber: 4 }, desc: 'Abrigo de troncos. Dormir e renascer.', shape: { type: 'box', hx: 1.55, hz: 1.55, h: 2.6 }, snap: false },
-  wall: { name: 'Parede', icon: '🧱', cost: { wood: 4 }, desc: 'Parede de troncos (encaixa na grade).', shape: { type: 'box', hx: 1.5, hz: 0.25, h: 2.7 }, snap: 'edge' },
-  floor: { name: 'Piso de madeira', icon: '🟫', cost: { wood: 4 }, desc: 'Plataforma nivelada (encaixa na grade).', shape: { type: 'box', hx: 1.5, hz: 1.5, h: 0.25 }, snap: 'cell' },
-  door: { name: 'Porta', icon: '🚪', cost: { wood: 5, fiber: 2 }, desc: 'Batente com porta que abre e fecha.', shape: { type: 'box', hx: 1.5, hz: 0.22, h: 2.7 }, snap: 'edge' },
+  wall: { legacy: true, name: 'Parede', icon: '🧱', cost: { wood: 4 }, desc: 'Parede de troncos (encaixa na grade).', shape: { type: 'box', hx: 1.5, hz: 0.25, h: 2.7 }, snap: 'edge' },
+  floor: { legacy: true, name: 'Piso de madeira', icon: '🟫', cost: { wood: 4 }, desc: 'Plataforma nivelada (encaixa na grade).', shape: { type: 'box', hx: 1.5, hz: 1.5, h: 0.25 }, snap: 'cell' },
+  door: { legacy: true, name: 'Porta', icon: '🚪', cost: { wood: 5, fiber: 2 }, desc: 'Batente com porta que abre e fecha.', shape: { type: 'box', hx: 1.5, hz: 0.22, h: 2.7 }, snap: 'edge' },
+  gtrap: { name: 'Armadilha de granada', icon: '🪤', cost: { hg_frag: 1, fiber: 2, stick: 2 }, desc: 'Granada de fragmentação presa num fio esticado entre duas estacas (2,4 m). Quem tropeçar no fio detona a granada 1 s depois. Cuidado: vale para você também.', shape: { type: 'box', hx: 1.2, hz: 0.12, h: 0.3 }, snap: false },
   chest: { name: 'Baú', icon: '🧰', cost: { wood: 8, fiber: 2 }, desc: 'Armazena 16 tipos de itens.', shape: { type: 'box', hx: 0.52, hz: 0.32, h: 0.75 }, snap: false },
   bench: { name: 'Bancada de criação', icon: '🛠️', cost: { wood: 10, stone: 6 }, desc: 'Libera receitas avançadas.', shape: { type: 'box', hx: 0.95, hz: 0.48, h: 1.0 }, snap: false },
   printer: { name: 'Impressora 3D', icon: '🖨️', cost: { printer3d: 1 }, desc: 'Imprime peças com filamento + energia.', shape: { type: 'box', hx: 0.5, hz: 0.45, h: 1.0 }, snap: false, power: 'use', kit: true },
@@ -206,25 +246,35 @@ export const PIECES = {
   wind: { name: 'Turbina eólica', icon: '🌬️', cost: { windkit: 1 }, desc: 'Fonte: energia do vento (até 120 W).', shape: { type: 'cyl', r: 0.45, h: 6.5 }, snap: false, power: 'gen', kit: true },
   waterwheel: { name: 'Roda d’água', icon: '🛞', cost: { wheelkit: 1 }, desc: 'Fonte: 90 W constantes na beira de rio/lago.', shape: { type: 'box', hx: 1.0, hz: 1.6, h: 2.8 }, snap: false, power: 'gen', kit: true },
   battery: { name: 'Bateria', icon: '🔋', cost: { battery: 1 }, desc: 'Armazena até 6 kJ de energia.', shape: { type: 'box', hx: 0.3, hz: 0.22, h: 0.6 }, snap: false, power: 'store', kit: true },
+  planter: { name: 'Canteiro elevado', icon: '🌱', cost: { wood: 4, dirt: 6, berry: 2 }, desc: 'Plante frutas: depois de algumas horas do dia dá para colher (E). Com adubo cresce no dobro da velocidade e rende mais.', shape: { type: 'box', hx: 0.95, hz: 0.6, h: 0.45 }, snap: false },
+  collector: { name: 'Coletor de chuva', icon: '🛢️', cost: { wood: 4, cloth: 3, scrap: 2 }, desc: 'Barril com funil de lona: junta a água da chuva, que é potável (até 10 garrafas). E para encher garrafas.', shape: { type: 'box', hx: 0.6, hz: 0.6, h: 1.4 }, snap: false },
+  composter: { name: 'Composteira', icon: '♻️', cost: { wood: 6, stick: 4 }, desc: 'Coloque 10 terras e 10 comidas (E). Cheia, a barra de compostagem começa a carregar; quando aparecer o ✔ verde em cima, pegue o adubo para os canteiros.', shape: { type: 'box', hx: 0.75, hz: 0.55, h: 1.0 }, snap: false },
+  // peças do Projeto (não aparecem no menu B — construídas com o projeto na mão)
+  s_found: { hidden: true, name: 'Fundação', icon: '⬛', cost: { wood: 2 }, desc: '', shape: { type: 'box', hx: 1.5, hz: 1.5, h: 3 } }, s_tfound: { hidden: true, name: 'Fundação triangular', icon: '🔺', cost: { wood: 1 }, desc: '', shape: { type: 'box', hx: 1.5, hz: 1.3, h: 3 } },
+  s_wall: { hidden: true, name: 'Parede', icon: '🧱', cost: { wood: 2 }, desc: '', shape: { type: 'box', hx: 1.5, hz: 0.15, h: 3 } }, s_halfwall: { hidden: true, name: 'Meia parede', icon: '▬', cost: { wood: 1 }, desc: '', shape: { type: 'box', hx: 1.5, hz: 0.15, h: 1.5 } },
+  s_doorway: { hidden: true, name: 'Parede com porta', icon: '🚪', cost: { wood: 2 }, desc: '', shape: { type: 'box', hx: 1.5, hz: 0.15, h: 3 } }, s_stairs: { hidden: true, name: 'Escada', icon: '🪜', cost: { wood: 3 }, desc: '', shape: { type: 'box', hx: 0.7, hz: 1.5, h: 3 } },
+  s_ladder: { hidden: true, name: 'Escada vertical', icon: '🪜', cost: { wood: 3 }, desc: '', shape: { type: 'box', hx: 0.3, hz: 0.1, h: 3 } }, s_roof: { hidden: true, name: 'Telhado', icon: '⬜', cost: { wood: 2 }, desc: '', shape: { type: 'box', hx: 1.5, hz: 1.5, h: 0.25 } },
+  s_ramp: { hidden: true, name: 'Rampa', icon: '◢', cost: { wood: 2 }, desc: '', shape: { type: 'box', hx: 1.5, hz: 1.5, h: 3 } }, s_hatch: { hidden: true, name: 'Telhado com alçapão', icon: '🔳', cost: { wood: 2 }, desc: '', shape: { type: 'box', hx: 1.5, hz: 1.5, h: 0.25 } },
+  s_troof: { hidden: true, name: 'Telhado triangular', icon: '🔻', cost: { wood: 1 }, desc: '', shape: { type: 'box', hx: 1.5, hz: 1.3, h: 0.25 } },
 };
 
 
 // ---------- tamanho dos itens na grade (largura × altura em células) ----------
 const SIZE_BY_ID = {
-  canned: [1, 2], water: [1, 2], medkit: [2, 1], bandage: [1, 1],
+  canned: [1, 2], water: [1, 2], dirtywater: [1, 2], medkit: [2, 1], bandage: [1, 1],
   pill_green: [2, 1], pill_orange: [2, 1], pill_yellow: [2, 1], pill_blue: [2, 1], radpills: [1, 1], soap: [1, 2],
   axe: [1, 3], scrapaxe: [1, 3], knife: [1, 2], scrapknife: [1, 2], pickaxe: [2, 3], spear: [1, 4], scrapspear: [1, 4], shockspear: [1, 4], torch: [1, 2], solarlamp: [1, 2], bow: [1, 4],
   pistol35: [2, 1], pistol: [2, 2], pistol65: [2, 2], shotgun: [4, 2], rifle540: [4, 2], rifle: [4, 2], rifle577: [4, 2], sniper745: [5, 2], sniper: [5, 2], sniper790: [5, 2],
   scope4: [2, 1], scope8: [2, 1], ratsuit: [2, 2], scraparmor: [2, 2], barkarmor: [2, 2], vest: [2, 2], parka: [2, 2],
   rags_shirt: [2, 2], rags_pants: [2, 2], rags_shoes: [2, 1], shirt: [2, 2], pants: [2, 2], clothvest: [2, 2], parka: [2, 2], milshirt: [2, 2], milpants: [2, 2], barkarmor: [2, 2], scraparmor: [2, 2], vest: [2, 2], hat: [2, 1], milhelmet: [2, 2], fibergloves: [1, 1], leathergloves: [1, 1], milgloves: [1, 1], fibershoes: [2, 1], leatherboots: [2, 1], milboots: [2, 1],
-  harpoon: [3, 2], geiger: [2, 2], c4: [2, 1], nvg: [2, 1], gl: [4, 2], rpg: [5, 1], rocket: [3, 1], gren_he: [1, 1], gren_gas: [1, 1], gren_smoke: [1, 1], soro: [1, 2], book_carpintaria: [2, 2], book_medicina: [2, 2], book_engenharia: [2, 2], book_mecanica: [2, 2], book_eletrica: [2, 2], book_agricultura: [2, 2], book_metalurgia: [2, 2], book_costura: [2, 2], book_eletronica: [2, 2], nvcell: [1, 1], nvcell_dead: [1, 1], harpoonammo: [3, 1], printer3d: [3, 3], epanel: [2, 2], windkit: [2, 4], wheelkit: [3, 3], battery: [2, 2], copperwire: [1, 1], filament: [1, 1], iron: [1, 1], gunparts: [1, 1],
+  harpoon: [3, 2], geiger: [2, 2], c4: [2, 1], nvg: [2, 1], tire: [2, 2], mototire: [2, 2], engine: [3, 2], motoengine: [2, 2], gearbox: [2, 2], jerrycan: [2, 2], gl: [4, 2], rpg: [5, 1], rocket: [3, 1], gren_he: [1, 1], gren_gas: [1, 1], gren_smoke: [1, 1], soro: [1, 2], book_carpintaria: [2, 2], book_medicina: [2, 2], book_engenharia: [2, 2], book_mecanica: [2, 2], book_eletrica: [2, 2], book_agricultura: [2, 2], book_metalurgia: [2, 2], book_costura: [2, 2], book_eletronica: [2, 2], nvcell: [1, 1], nvcell_dead: [1, 1], harpoonammo: [3, 1], printer3d: [3, 3], epanel: [2, 2], windkit: [2, 4], wheelkit: [3, 3], battery: [2, 2], copperwire: [1, 1], filament: [1, 1], iron: [1, 1], gunparts: [1, 1],
   pack_impro: [2, 2], pack_small: [2, 2], pack_medium: [2, 3], pack_large: [3, 3], pack_climb: [3, 4], solarpanel: [2, 1], core: [1, 1], cookedmeat: [1, 1], honey: [1, 1],
 };
 export function itemSize(id) { return SIZE_BY_ID[id] || [1, 1]; }
 // mochilas: grade (colunas × linhas)
 export const PACKS = { pack_impro: [5, 4], pack_small: [7, 5], pack_medium: [5, 11], pack_large: [10, 7], pack_climb: [10, 11], ratsuit: [4, 3] };
 // peso (kg) por item: valor próprio (it.kg) ou pelo tipo
-const KG_TYPE = { clothing: 0.6, resource: 0.3, food: 0.35, drink: 0.6, medical: 0.12, ammo: 0.02, tool: 1.2, armor: 3, backpack: 0.9, suit: 2.5, attachment: 0.4, machine: 6, misc: 0.3 };
+const KG_TYPE = { part: 8, clothing: 0.6, resource: 0.3, food: 0.35, drink: 0.6, medical: 0.12, ammo: 0.02, tool: 1.2, armor: 3, backpack: 0.9, suit: 2.5, attachment: 0.4, machine: 6, misc: 0.3 };
 const KG_ID = { wood: 0.8, stone: 1.0, scrap: 0.6, iron: 1.5, log: 6, stick: 0.2, fiber: 0.05, leaf: 0.02, cloth: 0.1, cord: 0.1, water: 0.6, shells: 0.04, arrow: 0.05, harpoonammo: 0.5,
   pistol: 1.0, pistol35: 0.8, pistol65: 1.3, shotgun: 3.4, rifle: 3.5, rifle540: 3.3, rifle577: 3.8, sniper: 5.5, sniper745: 5.0, sniper790: 6.2, bow: 1.0, harpoon: 2.2, spear: 1.5, scrapspear: 1.8, shockspear: 2.0, axe: 1.6, scrapaxe: 1.8, pickaxe: 2.0, knife: 0.3, scrapknife: 0.35 };
 export function itemKg(id) { const it = ITEMS[id]; if (!it) return 0; return it.kg ?? KG_ID[id] ?? KG_TYPE[it.type] ?? 0.3; }
@@ -234,6 +284,9 @@ export const SLOT_NAMES = { hat: 'Chapéu', shirt: 'Camisa', vest: 'Colete', glo
 // armas grandes vão para as costas (2 espaços), não para o inventário
 export const LARGE = new Set(['gl', 'rpg', 'bow', 'shotgun', 'rifle', 'rifle540', 'rifle577', 'sniper', 'sniper745', 'sniper790', 'axe', 'scrapaxe', 'pickaxe', 'spear', 'scrapspear', 'shockspear']);
 export const POCKETS = [5, 3];
+export const SIDEARMS = new Set(['pistol35', 'pistol', 'pistol65', 'knife', 'scrapknife']);
+export function quickClass(id) { return LARGE.has(id) || id === 'harpoon' ? 'big' : SIDEARMS.has(id) ? 'side' : 'misc'; }
+export function slotClass(k) { return k < 2 ? 'big' : k === 2 ? 'side' : 'misc'; }
 
 // Inventório em grade: cada item ocupa células conforme o tamanho; pilhas de munição/recursos somam no mesmo espaço.
 // Itens contaminados por radiação (rad) não empilham com os limpos.

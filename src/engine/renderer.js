@@ -345,7 +345,7 @@ export class Renderer {
     gl.uniformMatrix4fv(u.u_model, false, it.model || IDENT);
     if (it.bones && u.u_bones) gl.uniformMatrix4fv(u.u_bones, false, it.bones);
     if (!depth) {
-      gl.uniform1f(u.u_alpha, it.alpha ?? 1); gl.uniform1f(u.u_emissive, it.emissive || 0); if (u.u_rim) gl.uniform1f(u.u_rim, it.rim || 0);
+      gl.uniform1f(u.u_alpha, it.alpha ?? 1); gl.uniform1f(u.u_emissive, it.emissive || 0); if (u.u_fogMul) gl.uniform1f(u.u_fogMul, it.fogMul ?? 1); if (u.u_rim) gl.uniform1f(u.u_rim, it.rim || 0);
       gl.uniform4fv(u.u_tint, it.tint || ONE4);
       if (it.doubleSided) gl.disable(gl.CULL_FACE);
     }

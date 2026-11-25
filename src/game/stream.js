@@ -1,10 +1,13 @@
 // Streaming do mundo grande: carrega/descarrega por blocos de 192 m o terreno fino (com níveis de detalhe),
 // os objetos (árvores, rochas, arbustos, coletáveis, colmeias) com seus colisores, e os assentamentos
 // (prédios, carros e adereços mesclados por sítio). Longe do jogador o horizonte usa o grid grosso.
+import * as V from './vehicles.js';
 import { MeshBuilder } from '../engine/mesh.js';
 import { mat4 } from '../engine/math.js';
 import { TILES, TILE, TC, CELL, HALF, NC, CC } from './world.js';
 import * as P from './props.js';
+import * as T from './town.js';
+const MC = new Map(); const cached = (k, fn) => { let m = MC.get(k); if (!m) MC.set(k, (m = fn())); return m; };
 
 const R_OBJ = 2, R_OBJ_OUT = 3, R_FINE = 3, R_FINE_OUT = 4, FAR = 1650, SITE_IN = 520, SITE_OUT = 680;
 const HT_N = 512, HT_CELL = 6;
@@ -134,6 +137,7 @@ export class WorldStream {
   }
   // reaplica o estado salvo aos objetos já carregados (após carregar um jogo)
   reapply() { const keys = [...this.objs.keys()]; for (const k of keys) this._unloadObjs(k); for (const k of keys) { const ti = k % TILES, tj = Math.floor(k / TILES); this._loadObjs(k, ti, tj); } }
+  forEachDoor(fn) { for (const b of this.buckets.values()) for (const d of b.doors || []) fn(d); }
   forEachLoaded(fn) { for (const o of this.objs.values()) fn(o.d); }
   // ---------- assentamentos (malhas mescladas + colisores) ----------
   _loadBucket(key, site) {
@@ -145,7 +149,7 @@ export class WorldStream {
       for (const gp of gl || []) { gp.id = `${key}:${glass.length}`; gp.broken = g.brokenGlass.has(gp.id); if (!gp.broken) { gp.col = ph.add({ type: 'box', x: gp.x, z: gp.z, hx: gp.w / 2, hz: 0.04, rot: gp.rot, y0: gp.y - gp.h / 2, y1: gp.y + gp.h / 2, glass: gp }); cols.push(gp.col); } glass.push(gp); } }
     for (const p of src.props) {
       const m = mat4.compose([p.x, p.y, p.z], p.rot); const box = (hx, hz, h, extra = {}) => add({ type: 'box', x: p.x, z: p.z, hx, hz, rot: p.rot, y0: p.y - 0.5, y1: p.y + h, ...extra });
-      if (['well', 'tank', 'chimney', 'container', 'fence', 'tower', 'sandbag', 'gate', 'booth', 'tent', 'barrel'].includes(p.kind)) { appendRaw(mb, P.siteMesh(p.kind, p), m);
+      if (['well', 'tank', 'chimney', 'container', 'fence', 'tower', 'sandbag', 'gate', 'booth', 'tent', 'barrel', 'hut'].includes(p.kind)) { appendRaw(mb, P.siteMesh(p.kind, p), m);
         if (p.kind === 'well') add({ type: 'cyl', x: p.x, z: p.z, r: 1.05, y0: p.y - 0.5, y1: p.y + 0.8 });
         else if (p.kind === 'tank') add({ type: 'cyl', x: p.x, z: p.z, r: 3.05 * p.s, y0: p.y - 0.5, y1: p.y + 8 * p.s, noClimb: true });
         else if (p.kind === 'chimney') add({ type: 'cyl', x: p.x, z: p.z, r: 1.5, y0: p.y - 0.5, y1: p.y + 24, noClimb: true });
@@ -155,15 +159,26 @@ export class WorldStream {
         else if (p.kind === 'sandbag') box(1.4, 0.45, 0.95);
         else if (p.kind === 'booth') box(1.3, 1.3, 2.8);
         else if (p.kind === 'tent') { const c = Math.cos(p.rot), s2 = Math.sin(p.rot); for (const sd of [-1, 1]) add({ type: 'box', x: p.x + c * sd * 2.25, z: p.z - s2 * sd * 2.25, hx: 0.25, hz: 2.3, rot: p.rot, y0: p.y - 0.5, y1: p.y + 1.1 }); add({ type: 'box', x: p.x, z: p.z, hx: 0.3, hz: 2.3, rot: p.rot, y0: p.y + 2.0, y1: p.y + 2.4 }); }
+        else if (p.kind === 'hut') add({ type: 'box', x: p.x, z: p.z, hx: 1.95, hz: 1.75, rot: p.rot, y0: p.y - 0.5, y1: p.y + 3.4 });
         else if (p.kind === 'barrel') add({ type: 'cyl', x: p.x, z: p.z, r: 0.32, y0: p.y - 0.5, y1: p.y + 0.9 });
         else if (p.kind === 'gate') { for (const s2 of [-1, 1]) add({ type: 'cyl', x: p.x + Math.cos(p.rot) * s2 * 3.4, z: p.z - Math.sin(p.rot) * s2 * 3.4, r: 0.25, y0: p.y - 0.5, y1: p.y + 3 }); }
         continue; }
+      if (p.kind === 'street') { appendRaw(mb, cached(`st${p.L}${p.zA ? 1 : 0}${p.zB ? 1 : 0}${p.toxic ? 1 : 0}`, () => T.streetMesh(p)), m); continue; }
+      if (p.kind === 'xing') { appendRaw(mb, cached(`x${p.arms.map((a) => (a ? 1 : 0)).join('')}${p.toxic ? 1 : 0}`, () => T.crossMesh(p)), m); continue; }
+      if (p.kind === 'wfence') { appendRaw(mb, cached(`f${Math.round(p.len * 4)}${p.toxic ? 1 : 0}`, () => T.fenceMesh(Math.round(p.len * 4) / 4, p.toxic)), m); box(p.len / 2, 0.09, 1.0, { noClimb: true }); continue; }
+      if (p.kind === 'ytree') { appendRaw(mb, cached(`t${p.seed % 6}${p.variant}`, () => T.yardTreeMesh(p.seed % 6, p.variant)), m); add({ type: 'cyl', x: p.x, z: p.z, r: 0.3, y0: p.y - 0.5, y1: p.y + 4.5, noClimb: true }); continue; }
+      if (p.kind === 'wtower') { appendRaw(mb, cached('wt', () => T.waterTowerMesh()), m); const c = Math.cos(p.rot), s2 = Math.sin(p.rot); for (const [lx, lz] of [[2, 2], [-2, 2], [2, -2], [-2, -2]]) add({ type: 'cyl', x: p.x + lx * c + lz * s2, z: p.z - lx * s2 + lz * c, r: 0.25, y0: p.y - 0.5, y1: p.y + 12, noClimb: true }); continue; }
+      if (p.kind === 'tires') { appendRaw(mb, cached(`ti${p.seed % 4}`, () => T.tiresMesh(p.seed % 4)), m); add({ type: 'cyl', x: p.x, z: p.z, r: 0.42, y0: p.y - 0.5, y1: p.y + 1.0 }); continue; }
+      if (p.kind === 'strip') { appendRaw(mb, T.roadStripMesh(p, g.world), null); continue; }
+      if (p.kind === 'rail') { appendRaw(mb, T.railMesh(p, g.world), null); add({ type: 'box', x: p.x, z: p.z, hx: p.len / 2, hz: 0.08, rot: p.rot, y0: p.y - 1, y1: p.y + 1.0, noClimb: true }); continue; }
+      if (p.kind === 'campfire') { appendRaw(mb, cached('cf', () => P.pieceMesh('campfire')), m); add({ type: 'cyl', x: p.x, z: p.z, r: 0.72, y0: p.y - 0.1, y1: p.y + 0.32 }); continue; }
+      if (p.kind === 'gasstation') { appendRaw(mb, V.gasStationMesh(), m); for (const c of V.gasStationColliders(p)) add(c); continue; }
       if (p.kind === 'car') { const cs = P.carSpec(p.seed); appendRaw(mb, P.carMesh(p.seed), m); box(cs.L / 2 + 0.05, cs.W / 2 + 0.08, cs.H, { car: p }); }
       else if (p.kind === 'lamp') { appendRaw(mb, P.lampMesh(p.bent), m); add({ type: 'cyl', x: p.x, z: p.z, r: 0.16, y0: p.y - 0.5, y1: p.y + 5.8, noClimb: true }); }
       else if (p.kind === 'rubble') { appendRaw(mb, P.rubbleMesh(p.seed), mat4.compose([p.x, p.y, p.z], p.rot, p.s)); add({ type: 'cyl', x: p.x, z: p.z, r: 0.75 * p.s, y0: p.y - 0.5, y1: p.y + 0.42 * p.s }); }
     }
     let sphere; if (site) sphere = [site.x, site.y + 6, site.z, site.r + 12];
-    else { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9, y = 0; for (const p of src.props) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); y = p.y; } sphere = [(x0 + x1) / 2, y, (z0 + z1) / 2, Math.hypot(x1 - x0, z1 - z0) / 2 + 8]; }
+    else { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9, y = 0; for (const p of src.props) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); y = p.y; } sphere = [(x0 + x1) / 2, y, (z0 + z1) / 2, Math.hypot(x1 - x0, z1 - z0) / 2 + 30]; }
     this.buckets.set(key, { mesh: mb.idx.length ? r.createMesh(mb.build()) : null, colliders: cols, sphere, glass, doors });
   }
   _unloadBucket(key) { const b = this.buckets.get(key); if (!b) return; if (b.mesh) this.g.renderer.disposeMesh(b.mesh); for (const c of b.colliders) this.g.physics.remove(c); this.buckets.delete(key); }

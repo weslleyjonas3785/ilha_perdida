@@ -1,6 +1,8 @@
 // Interface: HUD, inventário, fabricação, equipamento, construção, baú, menus e configurações.
+import * as VEHMOD from './vehicles.js';
 import { ITEMS, RECIPES, PIECES, costText, Inventory, itemSize, CLOTH_SLOTS, LARGE, SKILLS, SKILL_OF } from './items.js';
 import { PRINTS, WIRE_MAX, BATT_CAP } from './power.js';
+import * as FIRE from './campfire.js';
 
 const $ = (id) => document.getElementById(id);
 export class UI {
@@ -15,7 +17,7 @@ export class UI {
     strip.innerHTML = html + '<span class="m" id="homeMark" style="display:none">⌂</span>'; this.strip = strip;
     // barra rápida
     const hb = $('hotbar'); this.hslots = [];
-    for (let i = 0; i < 6; i++) { const d = document.createElement('div'); d.className = 'hslot'; d.innerHTML = `<span class="k">${i + 1}</span><span class="ic"></span><span class="q"></span>`; d.onclick = () => { game.audio.init(); game.hotbar(i); }; hb.appendChild(d); this.hslots.push(d); }
+    for (let i = 0; i < 8; i++) { const d = document.createElement('div'); d.className = 'hslot' + (i === 2 || i === 3 ? ' gapL' : '') + (i < 2 ? ' big' : i === 2 ? ' side' : ''); d.innerHTML = `<span class="k">${i + 1}</span><span class="ic"></span><span class="q"></span>`; d.onclick = () => { game.audio.init(); game.hotbar(i); }; hb.appendChild(d); this.hslots.push(d); }
     // painéis
     for (const b of document.querySelectorAll('[data-close]')) b.onclick = () => this.closePanels();
     for (const t of document.querySelectorAll('.tabs button')) t.onclick = () => this.tab(t.dataset.tab);
@@ -27,6 +29,11 @@ export class UI {
     $('btnQuit').onclick = () => { this.click(); game.quit(); };
     $('btnBackFromQuit').onclick = () => this.showMain();
     $('btnResume').onclick = () => { this.click(); game.resume(); };
+    $('btnMulti').onclick = () => { this.click(); this.showMulti(); };
+    $('btnOpenWorld').onclick = () => { this.click(); this.showMulti(true); };
+    $('mpFind').onclick = () => { this.click(); this.mpFind(); };
+    $('mpJoin').onclick = () => { this.click(); this.mpJoin(); };
+    $('mpHost').onclick = () => { this.click(); this.mpHost(); };
     $('btnSave').onclick = () => { this.click(); game.saveGame(true); this.updatePauseInfo(); };
     $('btnUnstuck').onclick = () => { this.click(); game.unstuck(); game.resume(); };
     $('btnToMenu').onclick = () => { this.click(); game.saveGame(false); game.toMenu(); };
@@ -50,7 +57,7 @@ export class UI {
   showCreator() { this.hideMenus(); $('hud').classList.add('hidden'); $('createPanel').classList.remove('hidden'); this.syncCreator(); }
   click() { this.game.audio.init(); this.game.audio.play('ui'); }
   // ---------- Menus ----------
-  hideMenus() { for (const id of ['mainMenu', 'pauseMenu', 'settingsPanel', 'controlsPanel', 'deathScreen', 'quitScreen', 'loading']) $(id).classList.add('hidden'); }
+  hideMenus() { for (const id of ['mainMenu', 'pauseMenu', 'settingsPanel', 'controlsPanel', 'multiPanel', 'deathScreen', 'quitScreen', 'loading']) $(id).classList.add('hidden'); }
   showMain() {
     this.hideMenus(); this.closePanels(true); $('hud').classList.add('hidden'); $('mainMenu').classList.remove('hidden'); this.prev = 'mainMenu';
     const info = this.game.saveInfo(); $('btnContinue').disabled = !info;
@@ -58,6 +65,28 @@ export class UI {
   }
   showPause() { this.hideMenus(); this.closePanels(true); $('pauseMenu').classList.remove('hidden'); this.prev = 'pauseMenu'; this.updatePauseInfo(); }
   updatePauseInfo() { const i = this.game.saveInfo(); $('pauseInfo').textContent = i ? `Último salvamento: ${new Date(i.at).toLocaleTimeString('pt-BR')} (salvamento automático a cada 60 s)` : ''; }
+  // ---------- multiplayer ----------
+  mpServed() { return location.protocol === 'http:' && !!location.port; }
+  async showMulti(fromPause) { const g = this.game, N = g.net; this.menuStack('multiPanel'); $('mpName').value = (g.look && g.look.name) || 'Sobrevivente'; $('mpWorld').value = $('mpWorld').value || `Mundo de ${(g.look && g.look.name) || 'Sobrevivente'}`;
+    $('mpStatus').textContent = N.active ? (N.host ? `Hospedando "${N.worldName}" — ${1 + N.peers.size} jogador(es)` : `Conectado a "${N.worldName}"`) : '';
+    let served = false; if (this.mpServed()) { try { const r = await fetch('/mp/info', { cache: 'no-store' }); const j = await r.json(); served = j.game === 'ilha_perdida'; } catch (e) { served = false; } }
+    const local = ['localhost', '127.0.0.1'].includes(location.hostname);
+    $('mpHost').disabled = !(served && local) || N.active; $('mpHostInfo').innerHTML = N.host ? '✔ Seu mundo está aberto.' : served && local ? `Servidor ligado ✔ — os amigos usam o IP deste PC na VPN (aparece na janela preta do servidor).${fromPause ? '' : ' Vai abrir o seu jogo salvo (ou um novo).'}` : 'Para hospedar: baixe o jogo, dê dois cliques em <b>Hospedar mundo.bat</b> (precisa do Node.js) e jogue pela janela que ele abrir.';
+    if (location.hash.startsWith('#mp=')) { const ip = decodeURIComponent(location.hash.slice(4)); $('mpIp').value = ip; history.replaceState(null, '', location.pathname + location.search); this.mpFind(); } }
+  _mpAddr() { let ip = $('mpIp').value.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, ''); if (!ip) return null; if (!/:\d+$/.test(ip)) ip += ':8790'; return ip; }
+  async mpFind() { const g = this.game, addr = this._mpAddr(); if (!addr) return this.toast('Digite o IP do dono do mundo', 'warn'); const nm = $('mpName').value.trim(); if (nm) g.look.name = nm;
+    // páginas https (GitHub Pages) não podem falar com http: vai para o jogo servido pelo próprio dono
+    if (location.protocol === 'https:' || (location.host !== addr && !this.mpServed())) { $('mpStatus').textContent = 'Abrindo o jogo pelo servidor do dono…'; location.href = `http://${addr}/#mp=${encodeURIComponent(addr)}`; return; }
+    $('mpStatus').textContent = 'Procurando…'; $('mpFound').classList.add('hidden'); $('mpJoin').classList.add('hidden');
+    try { const r = await fetch(`http://${addr}/mp/info`, { cache: 'no-store' }); const j = await r.json(); if (j.game !== 'ilha_perdida') throw new Error();
+      if (!j.open) { $('mpStatus').textContent = 'Achei o servidor, mas o dono ainda não abriu o mundo.'; return; }
+      $('mpFound').classList.remove('hidden'); $('mpFound').innerHTML = `<b>🌍 ${j.name}</b><br>${j.players} jogador${j.players > 1 ? 'es' : ''}: ${j.names.join(', ')}${j.pass ? '<br>🔒 Precisa de senha' : '<br>🔓 Sem senha'}`;
+      $('mpPassRow').classList.toggle('hidden', !j.pass); $('mpJoin').classList.remove('hidden'); $('mpStatus').textContent = j.pass ? 'Digite a senha e clique em Entrar.' : 'Mundo encontrado — clique em Entrar.'; this._mpFoundAddr = addr; }
+    catch (e) { $('mpStatus').textContent = 'Não achei nenhum mundo nesse IP. Confira o IP da VPN, se o servidor está aberto e se o Firewall permitiu.'; } }
+  async mpJoin() { const g = this.game, addr = this._mpFoundAddr || this._mpAddr(); const nm = $('mpName').value.trim(); if (nm) g.look.name = nm; $('mpStatus').textContent = 'Conectando…';
+    try { if (g.state === 'playing' || g.state === 'paused') g.saveGameIfAny(); await g.net.join(addr, $('mpPass').value); this.hideMenus(); } catch (e) { $('mpStatus').textContent = e.message; } }
+  async mpHost() { const g = this.game; $('mpStatus').textContent = 'Abrindo o mundo…';
+    try { if (g.state === 'menu') { if (g.saveInfo()) g.continueGame(); else { g.newGame(); } } await g.net.startHost($('mpWorld').value.trim() || 'Mundo', $('mpWorldPass').value); this.hideMenus(); if (g.state === 'paused') g.resume(); else this.showHUD && this.showHUD(); } catch (e) { $('mpStatus').textContent = e.message; } }
   menuStack(id) { const cur = ['mainMenu', 'pauseMenu'].find((m) => !$(m).classList.contains('hidden')); if (cur) this.prev = cur; this.hideMenus(); $(id).classList.remove('hidden'); }
   back() { this.hideMenus(); $(this.prev || 'mainMenu').classList.remove('hidden'); if (this.prev === 'mainMenu') this.showMain(); }
   showDeath(cause) { this.hideMenus(); this.closePanels(true); $('deathScreen').classList.remove('hidden'); $('deathCause').textContent = cause; $('btnLoadLast').disabled = !this.game.saveInfo(); }
@@ -86,6 +115,10 @@ export class UI {
   feed(html) { let box = $('killfeed'); if (!box) { box = document.createElement('div'); box.id = 'killfeed'; document.getElementById('hud').appendChild(box); } const t = document.createElement('div'); t.className = 'kf'; t.innerHTML = '💀 ' + html; box.appendChild(t); while (box.children.length > 5) box.firstChild.remove(); setTimeout(() => t.classList.add('out'), 9000); setTimeout(() => t.remove(), 9600); }
   // aviso grande de perigo no centro
   danger(msg) { let d = $('dangerMsg'); if (!d) { d = document.createElement('div'); d.id = 'dangerMsg'; document.getElementById('hud').appendChild(d); } d.textContent = msg; d.classList.remove('show'); void d.offsetWidth; d.classList.add('show'); }
+  // granada de luz: branco total e clareando no último segundo e meio
+  // granada de luz (como no CS): tela toda branca; ao voltar, o branco vai sumindo e a imagem fica turva até normalizar
+  flash(t) { const el = this._flashEl || (this._flashEl = document.getElementById('flashOv')); if (!el) return; const o = t <= 0 ? 0 : t >= 2.2 ? 1 : Math.pow(t / 2.2, 1.6); const bl = t <= 0 ? 0 : Math.min(10, t * 3.2);
+    const key = o.toFixed(3) + '|' + bl.toFixed(1); if (el._k === key) return; el._k = key; el.style.opacity = o.toFixed(3); const cv = this._cv || (this._cv = document.querySelector('canvas')); if (cv) cv.style.filter = bl > 0.05 ? `blur(${bl.toFixed(1)}px) brightness(${(1 + o * 0.6).toFixed(2)})` : ''; }
   toast(msg, type = 'info') {
     const t = document.createElement('div'); t.className = 'toast ' + type; t.innerHTML = msg; const box = $('toasts'); box.appendChild(t);
     while (box.children.length > 6) box.firstChild.remove();
@@ -101,8 +134,9 @@ export class UI {
     const deg = ((-g.cam.yaw * 180 / Math.PI) % 360 + 360 + 180) % 360; // 0 = norte (−Z)
     this.strip.style.transform = `translateX(${(this.strip.parentElement.clientWidth / 2) - (deg + 360) * this.pxPerDeg}px)`;
     const hm = $('homeMark'); if (g.home) { const a = Math.atan2(g.home[0] - P.pos[0], -(g.home[2] - P.pos[2])) * 180 / Math.PI; const hd = ((a % 360) + 360) % 360; hm.style.display = ''; hm.style.left = (hd + 360) * this.pxPerDeg + 'px'; } else hm.style.display = 'none';
-    for (let i = 0; i < 6; i++) { const id = g.quick[i], n = id ? g.inv.count(id) : 0, s = id ? { id, qty: n } : null, el = this.hslots[i]; const ic = el.querySelector('.ic'); const key = id ? id + (n ? '' : '0') : ''; if (ic.dataset.k !== key) { ic.innerHTML = id ? this._icon(id) : ''; ic.dataset.k = key; } el.classList.toggle('empty', !!id && !n); el.querySelector('.q').textContent = n > 1 ? n : ''; el.classList.toggle('eq', !!id && g.equip.hand === id); el.title = s ? ITEMS[s.id].name : ''; }
-    const hand = g.equip.hand; $('handIcon').textContent = hand ? ITEMS[hand].icon : '✊'; $('handName').textContent = hand ? ITEMS[hand].name : 'Mãos';
+    for (let i = 0; i < 8; i++) { const id = g.quick[i], n = id ? g.inv.count(id) : 0, s = id ? { id, qty: n } : null, el = this.hslots[i]; const ic = el.querySelector('.ic'); const key = id ? id + (n ? '' : '0') : ''; if (ic.dataset.k !== key) { ic.innerHTML = id ? this._icon(id) : ''; ic.dataset.k = key; } el.classList.toggle('empty', !!id && !n); el.querySelector('.q').textContent = n > 1 ? n : ''; el.classList.toggle('eq', !!id && g.equip.hand === id); el.title = s ? ITEMS[s.id].name : ''; }
+    const hand = g.equip.hand; $('handIcon').textContent = hand ? ITEMS[hand].icon : '✊'; $('handName').textContent = hand ? (hand === 'jerrycan' ? `${ITEMS[hand].name} (${g.jerryFuel.toFixed(1)}/${g.vehicles.jerryCap()} L)` : ITEMS[hand].name) : 'Mãos';
+    if (!g.vehicles.driving && !$('driveHud').classList.contains('hidden')) $('driveHud').classList.add('hidden');
     // munição, retícula (abre com a dispersão) e marcador de acerto
     const F = g.guns, gun = F && F.gun; const am = $('ammo'); am.classList.toggle('hidden', !gun);
     if (gun) { const m = F.mag(), rs = F.reserve(); $('ammoMag').textContent = F.reloading ? '↻' : m; $('ammoRes').textContent = gun.direct ? 'flechas' : rs; am.classList.toggle('direct', !!gun.direct); am.classList.toggle('low', !F.reloading && m <= Math.ceil(gun.mag * 0.25)); am.classList.toggle('reload', !!F.reloading); }
@@ -119,7 +153,7 @@ export class UI {
     // estado: temperatura corporal, sangramento, veneno, molhado
     const tC = st.temp ?? 37; const tags = [];
     tags.push(`<span class="st ${tC < 35.5 ? 'bad cold' : tC > 38.8 ? 'bad hot' : ''}">🌡 ${tC.toFixed(1)}°C</span>`);
-    if (st.bleed > 0) tags.push('<span class="st bad">🩸 Sangrando</span>'); if (st.poison > 0) tags.push('<span class="st bad">🧪 Envenenado</span>');
+    if (st.bleed > 0) tags.push('<span class="st bad">🩸 Sangrando</span>'); if (st.poison > 0) tags.push('<span class="st bad">🧪 Envenenado</span>'); if (st.kuru) tags.push('<span class="st bad">🧠 Kuru</span>'); if (st.burntSick) tags.push('<span class="st bad">🤢 Enjoado</span>'); if (g.player.fainted > 0) tags.push('<span class="st bad">💫 Desmaiado</span>');
     if ((st.wet || 0) > 25) tags.push('<span class="st">💧 Molhado</span>');
     { let seen = false, hunted = false; for (const c of g.creatures.list) { if (c.dead || !(c.def.hostile || c.angry > 0)) continue; if (Math.abs(c.pos[0] - P.pos[0]) > 60 || Math.abs(c.pos[2] - P.pos[2]) > 60) continue; if ((c.seenT ?? 99) < 0.3 && c.state !== 'wander') seen = true; else if (c.state === 'chase' || c.state === 'search') hunted = true; }
       if (seen) tags.push('<span class="st bad">👁 Visto</span>'); else if (hunted) tags.push('<span class="st">❓ Procurando você</span>'); else if (P.crouch) tags.push('<span class="st ok">🥷 Furtivo</span>'); }
@@ -149,6 +183,9 @@ export class UI {
     if (type) this.closePanels();
   }
   buildStatus(gh) {
+    if (!gh) { $('buildHint').classList.add('hidden'); document.body.classList.remove('building'); return; }
+    if (gh.struct) { $('buildHint').classList.remove('hidden'); document.body.classList.add('building');
+      $('buildHint').innerHTML = `<div>${PIECES[gh.type].icon} <b>${PIECES[gh.type].name}</b> — ${costText(this.game.structCost(gh.type), this.game.inv)}</div><div class="st ${gh.valid ? 'ok' : 'no'}">${gh.valid ? 'Posição válida — clique para construir' : gh.reason}</div><div class="muted">Clique: construir · R/roda: girar · segure o botão direito: trocar peça · troque o item da mão para sair</div>`; return; }
     const d = PIECES[gh.type];
     $('buildHint').innerHTML = `<div>${d.icon} <b>${d.name}</b> — ${costText(d.cost, this.game.inv)}</div><div class="st ${gh.valid ? 'ok' : 'no'}">${gh.valid ? 'Posição válida' : gh.reason}</div><div class="muted">Clique/F: construir · R/roda: girar · X: desmontar · Esc/clique dir.: sair</div>`;
   }
@@ -160,10 +197,12 @@ export class UI {
     if (name === 'inv') { $('invPanel').classList.remove('hidden'); this.tab(opts.tab || 'inv'); }
     if (name === 'build') { $('buildPanel').classList.remove('hidden'); this.renderBuild(); }
     if (name === 'chest') { this.chest = opts.piece; $('chestPanel').classList.remove('hidden'); this.renderChest(); }
+    if (name === 'fire') { this.fire = opts.piece; $('firePanel').classList.remove('hidden'); this.renderFire(); }
     if (name === 'power') { this.power = opts.piece; this._pwSig = null; $('powerPanel').classList.remove('hidden'); this.renderPower(); }
     if (name === 'map') this.game.map.open();
+    if (name === 'vehicle') { this.veh = opts.v; this.veh._wasComplete = this.game.vehicles.complete(opts.v); $('vehiclePanel').classList.remove('hidden'); this.renderVehicle(); }
   }
-  closePanels(silent) { for (const id of ['invPanel', 'buildPanel', 'chestPanel', 'powerPanel']) $(id).classList.add('hidden'); this.power = null; if (this.game.map) this.game.map.close(); const was = this.open; this.open = null; this.sel = null; this.chest = null; if (was && !silent) this.game.onPanelClosed(); }
+  closePanels(silent) { if (this.game.admin && this.game.admin.isOpen) this.game.admin.close(true); for (const id of ['invPanel', 'buildPanel', 'chestPanel', 'firePanel', 'powerPanel', 'vehiclePanel']) $(id).classList.add('hidden'); if (this.veh) { const g = this.game, v = this.veh; this.veh = null; if (!v._wasComplete && g.vehicles.complete(v)) { g.audio.play('craft'); g.ui.toast(`🚗 Veículo montado! Abasteça com o galão e aperte E para dirigir.`, 'ok'); } } this.power = null; if (this.game.map) this.game.map.close(); const was = this.open; this.open = null; this.sel = null; this.chest = null; if (was && !silent) this.game.onPanelClosed(); }
   tab(t) { for (const b of document.querySelectorAll('.tabs button')) b.classList.toggle('on', b.dataset.tab === t); for (const p of document.querySelectorAll('#invPanel .pane')) p.classList.toggle('on', p.dataset.pane === t); this.curTab = t; this.refresh(); }
   refresh() { if (this.open === 'inv') { if (this.curTab === 'inv') this.renderInv(); if (this.curTab === 'craft') this.renderCraft(); if (this.curTab === 'equip') this.renderEquip(); if (this.curTab === 'skills') this.renderSkills(); } if (this.open === 'chest') this.renderChest(); if (this.open === 'build') this.renderBuild(); if (this.open === 'power') this.renderPower(true); }
   // caixa de pergunta Sim/Não dentro do jogo
@@ -190,8 +229,8 @@ export class UI {
     ec.appendChild(doll); { const av = g.armorVal(), wv = g.warmVal(); const p2 = document.createElement('div'); p2.className = 'muted dollinfo'; p2.textContent = `Proteção ${Math.round(av * 100)}% · Aquecimento ${wv.toFixed(1)}`; ec.appendChild(p2); }
     // barra rápida
     const hb = $('invHotbar'); hb.innerHTML = '';
-    g.quick.forEach((id, k) => { const d = document.createElement('div'); d.className = 'slot qs' + (id && g.equip.hand === id ? ' eq' : ''); d.dataset.quick = k; const n = id ? g.inv.count(id) : 0;
-      d.innerHTML = `<span class="k">${k + 1}</span>` + (id ? `${this._icon(id)}<span class="q">${n > 1 ? n : n === 0 ? '0' : ''}</span>` : ''); if (id && !n) d.classList.add('empty'); d.title = id ? ITEMS[id].name + ' (clique para desassociar)' : 'Arraste um item para cá';
+    g.quick.forEach((id, k) => { const d = document.createElement('div'); d.className = 'slot qs' + (id && g.equip.hand === id ? ' eq' : '') + (k === 2 || k === 3 ? ' gapL' : ''); d.dataset.quick = k; const n = id ? g.inv.count(id) : 0;
+      d.innerHTML = `<span class="k">${k + 1}</span>` + (id ? `${this._icon(id)}<span class="q">${n > 1 ? n : n === 0 ? '0' : ''}</span>` : ''); if (id && !n) d.classList.add('empty'); d.title = id ? ITEMS[id].name + ' (clique para desassociar)' : (k < 2 ? 'Arma grande (fuzil, escopeta, machado, picareta…)' : k === 2 ? 'Pistola ou faca' : 'Outros itens');
       d.onclick = () => { if (id) { g.quick[k] = null; this.renderInv(); } }; hb.appendChild(d); });
     // grades
     const box = $('invGrids'); box.innerHTML = ''; this.multi = this.multi || new Set();
@@ -264,13 +303,45 @@ export class UI {
       const b = document.createElement('button'); b.textContent = 'Construir'; b.disabled = !can; b.dataset.piece = type; b.onclick = () => { this.closePanels(true); g.build.start(type); g.onPanelClosed(); }; el.appendChild(b); list.appendChild(el);
     }
     head('Itens');
-    for (const r of RECIPES) {
+    for (const r of RECIPES) { if (FIRE.isCookRecipe(r)) continue; // assar é na grelha da fogueira (E na fogueira)
       const it = ITEMS[r.out]; const sk = SKILL_OF[r.id], skOk = g.hasSkillFor(r.id); const stOk = !r.station || (r.station === 'bench' && bench) || (r.station === 'fire' && fire); const can = skOk && stOk && g.inv.has(r.cost);
       const d = document.createElement('div'); d.className = 'recipe' + (stOk && skOk ? '' : ' locked') + (skOk ? '' : ' noskill');
       d.innerHTML = `<div class="ic">${it.icon}</div><div><div class="nm">${it.name}${r.station ? ` <span class="muted">· requer ${r.station === 'bench' ? 'bancada' : 'fogueira acesa'}</span>` : ''}</div><div class="muted">${it.desc}</div>${skOk ? '' : `<div class="lk">🔒 Precisa da habilidade ${g.skillName(sk)}</div>`}<div class="cost">${costText(r.cost, g.inv)}</div></div>`;
-      const b = document.createElement('button'); b.textContent = !skOk ? '🔒' : r.station === 'fire' ? 'Cozinhar' : 'Fabricar'; b.disabled = !can; b.onclick = () => { g.craft(r); this.refresh(); }; d.appendChild(b); list.appendChild(d);
+      const b = document.createElement('button'); b.textContent = !skOk ? '🔒' : r.station === 'fire' ? 'Cozinhar' : 'Fabricar'; b.disabled = !can; b.dataset.recipe = r.id; b.onclick = () => { g.craft(r); this.refresh(); }; d.appendChild(b); list.appendChild(d);
     }
   }
+  // menu do veículo: arraste as peças do inventário para os encaixes (pneus, motor, câmbio)
+  renderVehicle() { const g = this.game, v = this.veh; if (!v) return; const VS = g.vehicles, VEH = VEHMOD; const T = VEH.VTYPES[v.type]; $('vehTitle').textContent = `${T.moto ? '🏍' : '🚗'} ${VEH.vName(v)}`;
+    const body = $('vehBody'); const skill = g.skills.has('mecanica'); const slots = []; for (let i = 0; i < T.wheels; i++) slots.push({ key: 'wheels', i, item: T.tire, on: v.wheels > i, label: T.moto ? (i ? 'Pneu traseiro' : 'Pneu dianteiro') : ['Pneu diant. esq.', 'Pneu diant. dir.', 'Pneu tras. esq.', 'Pneu tras. dir.'][i] });
+    slots.push({ key: 'engine', item: T.engine, on: v.engine, label: T.moto ? 'Motor de moto' : 'Motor' }); slots.push({ key: 'gear', item: 'gearbox', on: v.gear, label: 'Câmbio (engrenagens)' });
+    const need = VS.missing(v); const pct = Math.round(v.fuel / T.tank * 100);
+    body.innerHTML = `<div class="vehwrap"><div><div class="vstat">${need.length ? `Faltam: <b>${need.join(', ')}</b>` : '<b class="ok">✔ Completo — saia do menu, abasteça e aperte E para dirigir</b>'}</div>${skill ? '' : '<div class="lk">🔒 Precisa da habilidade Mecânica para instalar peças (leia o livro)</div>'}
+      <div class="vslots ${T.moto ? 'moto' : 'car'}">${slots.map((s, k) => `<div class="vslot ${s.on ? 'on' : ''} ${s.key}" data-vs="${k}" title="${s.label}"><div class="vi">${s.on ? ITEMS[s.item].icon : '➕'}</div><small>${s.label}</small></div>`).join('')}</div>
+      <div class="vfuel">⛽ Combustível: ${v.fuel.toFixed(1)} / ${T.tank} L<div class="fb"><i style="width:${pct}%"></i></div></div></div>
+      <div><h3 class="hbtitle">Suas peças <span class="muted">— arraste até o encaixe (ou clique)</span></h3><div class="vparts"></div><p class="muted">Clique com o botão direito num encaixe preenchido para tirar a peça.</p></div></div>`;
+    const parts = body.querySelector('.vparts'); const ids = [T.tire, T.engine, 'gearbox']; let any = false;
+    for (const id of ids) { const n = g.inv.count(id); if (!n) continue; any = true; const d = document.createElement('div'); d.className = 'vpart'; d.dataset.id = id; d.innerHTML = `<div class="vi">${ITEMS[id].icon}</div><div>${ITEMS[id].name}<br><span class="muted">× ${n}</span></div>`; parts.appendChild(d);
+      d.addEventListener('pointerdown', (e) => { if (e.button !== 0) return; const gh = d.cloneNode(true); gh.classList.add('vghost'); document.body.appendChild(gh); const mv = (ev) => { gh.style.left = ev.clientX - 30 + 'px'; gh.style.top = ev.clientY - 20 + 'px'; }; mv(e);
+        const up = (ev) => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); gh.remove(); const t = document.elementFromPoint(ev.clientX, ev.clientY); const sl = t && t.closest && t.closest('[data-vs]');
+          if (sl) this._vInstall(slots[+sl.dataset.vs], id); else if (Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) < 6) { const s = slots.find((q) => !q.on && q.item === id); if (s) this._vInstall(s, id); } };
+        window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); }); }
+    if (!any) parts.innerHTML = `<p class="muted">Você não tem peças para este veículo. Procure ${T.moto ? 'pneus de moto, motor de moto e câmbio' : 'pneus e motor'} em indústrias, carros abandonados, vilarejos, bases militares e na lojinha dos postos.</p>`;
+    body.querySelectorAll('[data-vs]').forEach((el) => { const s = slots[+el.dataset.vs]; el.onclick = () => { if (!s.on && g.inv.count(s.item)) this._vInstall(s, s.item); };
+      el.oncontextmenu = (e) => { e.preventDefault(); if (!s.on) return; if (s.key === 'wheels' && s.i !== v.wheels - 1) return this.toast('Tire primeiro o último pneu colocado', 'info'); if (g.inv.add(s.item, 1) < 1) return this.toast('Inventário cheio', 'warn'); if (s.key === 'wheels') v.wheels--; else v[s.key] = false; g.audio.play('cloth'); this.renderVehicle(); }; }); }
+  _vInstall(s, id) { const g = this.game, v = this.veh; if (!v || s.on) return; if (s.item !== id) return this.toast('Essa peça não vai nesse encaixe', 'warn'); if (!g.skills.has('mecanica')) return this.toast('🔒 Precisa da habilidade Mecânica (encontre e leia o livro)', 'warn');
+    if (g.inv.count(id) < 1) return; if (s.key === 'wheels' && s.i !== v.wheels) { s = { ...s, i: v.wheels }; } g.inv.remove(id, 1); if (s.key === 'wheels') v.wheels++; else v[s.key] = true; g.audio.play('craft'); this.renderVehicle(); }
+  // roda de opções do projeto/martelo
+  radial(R) { const el = this._rdEl || (this._rdEl = $('radial')); if (!el) return; if (!R) { el.classList.add('hidden'); this._rdKey = null; return; } el.classList.remove('hidden');
+    const key = R.kind + R.opts.map((o) => o.id + o.label).join('|'); if (this._rdKey !== key) { this._rdKey = key; el.querySelectorAll('.ro').forEach((n) => n.remove()); const n = R.opts.length, rr = n > 6 ? 165 : 130;
+      R.opts.forEach((o, i) => { const a = i / n * Math.PI * 2; const d = document.createElement('div'); d.className = 'ro'; d.style.left = (220 + Math.sin(a) * rr) + 'px'; d.style.top = (220 - Math.cos(a) * rr) + 'px'; d.innerHTML = `<b>${o.icon}</b>${o.label}`; el.appendChild(d); }); }
+    el.querySelectorAll('.ro').forEach((n, i) => n.classList.toggle('on', i === R.sel)); const o = R.opts[R.sel]; el.querySelector('.rc').innerHTML = o ? `${o.label}${o.sub ? `<small>${o.sub}</small>` : ''}` : (R.kind === 'build' ? 'Mova o mouse até a peça e solte o botão' : 'Mova o mouse e solte'); }
+  // barra de força do arremesso: gradiente verde→amarelo→vermelho com o marcador preto; mostra o tempo do pino
+  throwBar(pw, fuse) { const el = this._tbEl || (this._tbEl = $('throwBar')); if (!el) return; if (pw === null || pw === undefined) { if (!el.classList.contains('hidden')) el.classList.add('hidden'); return; }
+    el.classList.remove('hidden'); el.querySelector('.tbm').style.left = (pw * 100).toFixed(1) + '%'; const z = pw < 1 / 3 ? 'Perto' : pw < 2 / 3 ? 'Médio' : 'Longe';
+    el.querySelector('.tbl').textContent = `💣 ${Math.max(0, fuse).toFixed(1).replace('.', ',')} s · ${z}`; }
+  fuelBars(o) { const el = $('fuelBars'); if (!o) { el.classList.add('hidden'); return; } el.classList.remove('hidden'); el.querySelector('.fbl').textContent = o.label; el.querySelector('.c').style.width = (o.canMax ? Math.min(100, o.can / o.canMax * 100) : 0) + '%'; el.querySelector('.cv').textContent = `${o.can.toFixed(1)}/${o.canMax} L`;
+    el.querySelector('.t').style.width = Math.min(100, o.tank / o.tankMax * 100) + '%'; el.querySelector('.tv').textContent = `${o.tank.toFixed(1)} L`; el.querySelector('.tl').textContent = o.tankLabel; }
+  driveHud(v, T) { const el = $('driveHud'); el.classList.remove('hidden'); el.querySelector('.spd').textContent = Math.round(Math.abs(v.speed) * 3.6); el.querySelector('i').style.width = (v.fuel / T.tank * 100).toFixed(1) + '%'; el.querySelector('.nm').textContent = `⛽ ${v.fuel.toFixed(1)} L · E para sair`; }
   renderSkills() { const g = this.game, box = $('skillList'); box.innerHTML = '';
     for (const s of SKILLS) { const on = g.skills.has(s.id); const unl = [...RECIPES.filter((r) => SKILL_OF[r.id] === s.id).map((r) => ITEMS[r.out].name), ...Object.keys(PIECES).filter((k) => SKILL_OF[k] === s.id).map((k) => PIECES[k].name)];
       const d = document.createElement('div'); d.className = 'skill' + (on ? ' on' : ''); d.innerHTML = `<img class="bk" src="assets/icons/book_${s.id}.png" draggable="false" alt=""><div><div class="nm">${s.name} ${on ? '<span class="ok">✔ liberada</span>' : '<span class="lk">🔒 encontre o livro</span>'}</div><div class="muted">${s.desc}</div>${unl.length ? `<div class="unl">Libera: ${unl.join(', ')}</div>` : ''}<div class="where">📍 ${s.where}</div></div>`; box.appendChild(d); } }
@@ -313,11 +384,23 @@ export class UI {
   }
   renderBuild() {
     const g = this.game, list = $('buildList'); list.innerHTML = '';
-    for (const [type, d] of Object.entries(PIECES)) {
+    for (const [type, d] of Object.entries(PIECES)) { if (d.hidden || d.legacy) continue;
       const skOk = g.hasSkillFor(type); const can = skOk && g.inv.has(d.cost); const el = document.createElement('div'); el.className = 'recipe' + (skOk ? '' : ' locked noskill');
       el.innerHTML = `<div class="ic">${d.icon}</div><div><div class="nm">${d.name}</div><div class="muted">${d.desc}</div>${skOk ? '' : `<div class="lk">🔒 Precisa da habilidade ${g.skillName(SKILL_OF[type])}</div>`}<div class="cost">${costText(d.cost, g.inv)}</div></div>`;
-      const b = document.createElement('button'); b.textContent = 'Posicionar'; b.disabled = !can; b.onclick = () => { this.closePanels(true); g.build.start(type); g.onPanelClosed(); }; el.appendChild(b); list.appendChild(el);
+      const b = document.createElement('button'); b.textContent = 'Posicionar'; b.disabled = !can; b.dataset.piece = type; b.onclick = () => { this.closePanels(true); g.build.start(type); g.onPanelClosed(); }; el.appendChild(b); list.appendChild(el);
     }
+  }
+  // fogueira: combustível, grelha (com barra de assar), sobras e a mochila
+  renderFire() {
+    const g = this.game, p = this.fire; if (!p || !g.build.pieces.includes(p)) { this.fire = null; return; } const d = FIRE.fireData(p);
+    const lit = $('fireLit'); lit.textContent = p.lit ? '🔥 Apagar' : '🔥 Acender'; lit.onclick = () => { g.fires.setLit(p, !p.lit); this.renderFire(); };
+    const tot = d.burnId ? FIRE.FUEL[d.burnId].t : 1; $('fireBurn').firstElementChild.style.width = (p.lit && d.burnId ? Math.max(0, d.burn / tot) * 100 : 0).toFixed(1) + '%';
+    const fill = (el, arr, area) => { el.innerHTML = ''; arr.forEach((s, i) => { const v = s ? { id: s.id, qty: s.qty || 1 } : null; const sl = this._slotEl(v, -1, () => { if (!s) return; g.fires.take(p, area, i); this.renderFire(); });
+        if (area === 'cook' && s) { const raw = !!FIRE.COOK[s.id], ck = !!FIRE.BURN[s.id], bt = ITEMS[s.id].burnt; const f = raw ? s.t / FIRE.COOK_T : ck ? s.t / FIRE.BURN_T : 1; const b = document.createElement('div'); b.className = 'cookbar' + (raw ? '' : bt ? ' burnt' : ' done'); b.innerHTML = `<i style="width:${(Math.min(1, f) * 100).toFixed(0)}%"></i>`; sl.style.position = 'relative'; sl.appendChild(b); sl.title = ITEMS[s.id].name + (raw ? ' — assando' : ck ? ' — pronta (vai queimar se ficar)' : ''); }
+        el.appendChild(sl); }); };
+    fill($('fireFuel'), d.fuel, 'fuel'); fill($('fireCook'), d.cook, 'cook'); fill($('fireOut'), d.out, 'out');
+    const ig = $('fireInv'); ig.innerHTML = ''; g.inv.slots.forEach((s, i) => ig.appendChild(this._slotEl(s, i, () => { if (!s) return; if (g.fires.putFromInv(p, i)) g.audio.play('pickup'); this.renderFire(); })));
+    this._fireSig = JSON.stringify([p.lit, d.fuel, d.cook.map((c) => c && c.id), d.out]);
   }
   renderChest() {
     const g = this.game, p = this.chest; if (!p) return; const box = new Inventory(16); box.load(p.items);

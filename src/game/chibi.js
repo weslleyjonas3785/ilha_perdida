@@ -88,6 +88,12 @@ export function buildChibiMesh(skel, look = {}) {
   for (const sd of ['L', 'R']) { const x = sd === 'L' ? 0.225 : -0.225, o = sd === 'L' ? 1 : -1;
     mb.setBone(I['shoulder' + sd]); S(jacket, FAB); mb.roundBox(M(x - o * 0.025, 1.44, 0), 0.14, 0.12, 0.15, jacket, 0.05);
     mb.setBone(I['upperArm' + sd]); S(jacket, FAB); mb.cylinder(M(x, 1.31), 0.064, 0.07, 0.13, 8, jacket); S(jacketD, FAB); mb.cylinder(M(x, 1.305), 0.066, 0.066, 0.014, 8, jacketD);
+    if (L.humanArms) { // NPCs: braço humano com manga comprida e mão de pele (só o jogador tem braço robótico)
+      S(jacket, FAB); mb.cylinder(M(x, 1.18), 0.058, 0.064, 0.14, 8, jacket); mb.setBone(I['foreArm' + sd]); mb.sphere(M(x, 1.17), 0.058, 8, 6, jacket); mb.cylinder(M(x, 0.95), 0.05, 0.057, 0.22, 8, jacket);
+      S(jacketD, FAB); mb.cylinder(M(x, 0.945), 0.054, 0.054, 0.02, 8, jacketD); S(skinD, SKIN); mb.cylinder(M(x, 0.915), 0.038, 0.04, 0.035, 8, skinD);
+      mb.setBone(I['hand' + sd]); S(skin, SKIN); mb.roundBox(M(x, 0.87, 0.005), 0.07, 0.07, 0.042, skin, 0.014);
+      for (let f = 0; f < 4; f++) { const fx = x - 0.025 + f * 0.017; mb.box(M(fx, 0.815, 0.01), 0.014, 0.05, 0.015, skin); mb.box(M(fx, 0.783, 0.011), 0.013, 0.022, 0.014, skinD); }
+      mb.box(M(x - o * 0.038, 0.86, 0.02, 0, 1, 0, o * 0.5), 0.016, 0.045, 0.016, skin); continue; }
     S(metal, MET); mb.cylinder(M(x, 1.18), 0.046, 0.052, 0.13, 8, metal); S(blueD, MET); mb.box(M(x + o * 0.048, 1.24, 0), 0.008, 0.07, 0.016, blueD);
     mb.setBone(I['foreArm' + sd]); S(metalD, MET); mb.sphere(M(x, 1.17), 0.054, 8, 6, metalD); S(blueD, MET); mb.cylinder(M(x, 1.162), 0.056, 0.056, 0.012, 10, blueD);
     S(metal, MET); mb.roundBox(M(x, 1.03, 0), 0.1, 0.22, 0.105, metal, 0.028); S(metalD, MET); mb.box(M(x, 1.08, 0.054), 0.075, 0.01, 0.006, metalD); mb.box(M(x, 0.99, 0.054), 0.075, 0.01, 0.006, metalD);

@@ -31,7 +31,7 @@ export class Firearms {
     const g = this.g, P = g.player, gun = this.gun, id = this.gunId;
     this.cool = Math.max(0, this.cool - dt); this.flash = Math.max(0, this.flash - dt); this.hitMark = Math.max(0, this.hitMark - dt);
     this.bloom = Math.max(0, this.bloom - dt * 2.2);
-    const canUse = gun && !P.dead && !P.swimming && !P.climb && !P.sleeping && !g.build.mode;
+    const canUse = gun && !P.dead && !P.swimming && !P.climb && !P.ladder && !P.sleeping && !g.build.mode;
     this.aiming = !!(canUse && !blocked && act.block && !P.sprinting);
     this.aimT = clamp(this.aimT + (this.aiming ? dt / 0.16 : -dt / 0.2), 0, 1);
     // luneta encaixada: abre a mira enquanto o botão direito está segurado; a roda ajusta a ampliação
@@ -42,8 +42,9 @@ export class Firearms {
     // postura da arma (camada sobre a locomoção)
     const C = P.clips;
     if (canUse && C.rifleHold) { const rifle = gun.hold === 'rifle'; P.anim.setOverlay(this.aiming ? (rifle ? C.rifleAim : C.pistolAim) : (rifle ? C.rifleHold : C.pistolHold), C.masks.upper, 0.14); }
-    else if (g.equip.hand === 'geiger' && C.pistolHold && !P.dead && !P.swimming && !P.climb && !P.sleeping && !g.build.mode) { const pt = !!(act.block && !blocked && !P.sprinting); P.aiming = pt; P.anim.setOverlay(pt ? C.pistolAim : C.pistolHold, C.masks.upper, 0.18); } // contador Geiger apontado como uma pistola
-    else P.anim.setOverlay(null, null, 0.2);
+    else if (g.equip.hand === 'geiger' && C.pistolHold && !P.dead && !P.swimming && !P.climb && !P.ladder && !P.sleeping && !g.build.mode) { const pt = !!(act.block && !blocked && !P.sprinting); P.aiming = pt; P.anim.setOverlay(pt ? C.pistolAim : C.pistolHold, C.masks.upper, 0.18); } // contador Geiger apontado como uma pistola
+    else if (g.grenades && g.grenades.charge && C.throwHold && !P.dead) { P.aiming = true; P.anim.setOverlay(C.throwHold, C.masks.upper, 0.12); } // granada: braço erguido enquanto segura o botão
+    else { if (P.aiming && !g.grenades?.charge) P.aiming = false; P.anim.setOverlay(null, null, 0.2); }
     // inclinação do tronco acompanhando a mira (para cima/baixo) e recuo visual
     this.recoilV = Math.max(0, this.recoilV - dt * 6);
     const I = P.assets.skel.index;
@@ -101,7 +102,7 @@ export class Firearms {
 
   fire() {
     const g = this.g, P = g.player, id = this.gunId, gun = this.gun, cam = g.cam;
-    if (gun.direct) g.inv.remove(gun.ammo, 1); else this.mags[id] = this.mag(id) - 1; this.cool = gun.rate; this.shots++;
+    if (g.admin && g.admin.on.ammo) { /* munição infinita (modo deus) */ } else if (gun.direct) g.inv.remove(gun.ammo, 1); else this.mags[id] = this.mag(id) - 1; this.cool = gun.rate; this.shots++;
     const moving = Math.hypot(P.vel[0], P.vel[2]);
     const spread = (this.aiming ? gun.spread : gun.hipSpread) * (1 + this.bloom * 2.2 + moving * 0.12 + (P.crouch ? -0.35 : 0) + (P.onGround ? 0 : 1.5));
     const dir0 = this._rayDir();
@@ -110,6 +111,7 @@ export class Firearms {
     const t0 = Math.max(0, (piv[0] - e[0]) * dir0[0] + (piv[1] - e[1]) * dir0[1] + (piv[2] - e[2]) * dir0[2]);
     const origin = [e[0] + dir0[0] * t0, e[1] + dir0[1] * t0, e[2] + dir0[2] * t0];
     const mz = this.muzzle();
+    if (g.net && g.net.active) g.net.onShot(origin, dir0, gun.sound);
     if (gun.grapple) { g.grapple.fire(origin, dir0, mz, gun); g.audio.play('harpoon'); cam.pitch = clamp(cam.pitch - gun.recoil, -1.15, 1.2); this.recoilV = Math.min(1.5, this.recoilV + 0.3); return; }
     // balística: cada bala/flecha é um projétil físico. Sai da boca do cano rumo ao ponto sob a mira
     // e cai com a gravidade: de longe é preciso mirar acima do alvo (calibres mais rápidos caem menos)
@@ -134,7 +136,7 @@ export class Firearms {
     cam.shake = Math.max(cam.shake, gun.pellets > 1 ? 0.35 : 0.12); this.recoilV = Math.min(1.5, this.recoilV + gun.recoil * 12);
     this.bloom = Math.min(1.5, this.bloom + (gun.auto ? 0.18 : 0.35));
     // o barulho do tiro atrai androides num raio grande
-    g.creatures.hearShot && g.creatures.hearShot(P.pos, gun.pellets > 1 ? 70 : gun.bolt ? 140 : 85);
+    if (g.noise) g.noise(P.pos, gun.pellets > 1 ? 70 : gun.bolt ? 140 : 85, 'tiro'); else g.creatures.hearShot(P.pos, gun.pellets > 1 ? 70 : gun.bolt ? 140 : 85);
   }
 
   // Raio contra criaturas (esferas por osso, região do corpo) e contra o mundo (terreno/colisores)

@@ -3,6 +3,7 @@ import { MeshBuilder, M, hex, shade } from '../engine/mesh.js';
 import { rng, mat4 } from '../engine/math.js';
 import { interiorLayout } from './interiors.js';
 import { suburbHouseMesh, hospitalMesh } from './houses.js';
+import { facadeExtras, ladderSpec, ladderMesh } from './town.js';
 
 import { ATLAS, UV_SOLID } from './textures.js';
 const leafCol = (base) => (y, r) => shade(base, 0.8 + r() * 0.35 + y * 0.015);
@@ -139,7 +140,8 @@ export function crateMesh() {
 export function buildingMesh(b) {
   if (b.style === 'suburb') return suburbHouseMesh(b); if (b.style === 'hospital2') return hospitalMesh(b);
   const mb = new MeshBuilder(); const r = rng(b.seed); const colliders = []; const glass = [];
-  const STY = { house: [hex(0xc9b896), hex(0xd2c3a3), hex(0xb9a888), hex(0xcfc0a0), hex(0xa8b4a0), hex(0xc8a890), hex(0xb0b8c0), hex(0xe0d8c8)], apartment: [hex(0xa8a296), hex(0xb89a82), hex(0x9aa0a4), hex(0xc0b4a0)], warehouse: [hex(0x7f8a90), hex(0x8a8f86)], barracks: [hex(0x6b6a50), hex(0x75735a)], bunker: [hex(0x8a8a86)], office: [hex(0xa29c90)], hospital: [hex(0xe8e6e0), hex(0xdcdad4)], pharmacy: [hex(0xe4e2da), hex(0xd8dcd0)], lab: [hex(0xd0d2d4), hex(0xc4c8cc)], hangar: [hex(0x5d6248), hex(0x6a6e54)] };
+  const STY = { house: [hex(0xc9b896), hex(0xd2c3a3), hex(0xb9a888), hex(0xcfc0a0), hex(0xa8b4a0), hex(0xc8a890), hex(0xb0b8c0), hex(0xe0d8c8)], apartment: [hex(0xa8a296), hex(0xb89a82), hex(0x9aa0a4), hex(0xc0b4a0)], warehouse: [hex(0x7f8a90), hex(0x8a8f86)], barracks: [hex(0x6b6a50), hex(0x75735a)], bunker: [hex(0x8a8a86)], office: [hex(0xa29c90)], hospital: [hex(0xe8e6e0), hex(0xdcdad4)], pharmacy: [hex(0xe4e2da), hex(0xd8dcd0)], lab: [hex(0xd0d2d4), hex(0xc4c8cc)], hangar: [hex(0x5d6248), hex(0x6a6e54)], shop: [hex(0xd8c9a8), hex(0xcdbb98), hex(0xe2d6bc)], garage: [hex(0xc8ccd0), hex(0xb8bec4)], church: [hex(0xeeebe4), hex(0xe6e2d8)] };
+  if (b.style === 'apartment') STY.apartment.push(hex(0xa8402e), hex(0x9a3a2a), hex(0x4a5e8a), hex(0x52668e));
   const pal = STY[b.style] || [hex(0x9a958a), hex(0xa89a80), hex(0x8a8a88), hex(0x9a8a78)]; const base = pal[Math.floor(r() * pal.length)];
   mb.flex = b.style === 'warehouse' || b.style === 'hangar' ? 0.5 : 0.93; // galpão: metal corrugado; demais: alvenaria/concreto
   // pé-direito alto (4 m) para a câmera em terceira pessoa caber dentro das construções
@@ -157,9 +159,8 @@ export function buildingMesh(b) {
       const off = -wl.len / 2 + bl * (k + 0.5);
       const lx = wl.axis === 'x' ? off : wl.cx, lz = wl.axis === 'x' ? wl.cz : off;
       const sx = wl.axis === 'x' ? bl : T, sz = wl.axis === 'x' ? T : bl;
-      let hTop = b.floors * FH;
-      if (r() < b.decay) hTop = Math.max(0, hTop - (0.6 + r() * 2.8) * (1 + r()));
-      if (r() < b.decay * 0.25) hTop = r() * 1.2;
+      // paredes sempre inteiras até o teto (o prédio tem estrutura; a decadência fica só na cor/sujeira)
+      const hTop = b.floors * FH; r(); r();
       tops.push(hTop);
       const c = shade(base, 0.88 + r() * 0.2);
       const isDoor = wi === doorWall && k === doorBay;
@@ -207,9 +208,10 @@ export function buildingMesh(b) {
   // lajes
   for (let f = 1; f <= b.floors; f++) {
     const y = f * FH; const holes = r() < b.decay + 0.2;
-    for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) { if (holes && r() < 0.45) continue; if (f === b.floors && r() < b.decay) continue;
-      panel((i - 0.5) * W / 2, y - 0.25, (j - 0.5) * D / 2, W / 2, 0.25, D / 2, shade(base, 0.75));
-      const [qx, qz] = toW((i - 0.5) * W / 2, (j - 0.5) * D / 2); colliders.push({ type: 'box', x: qx, z: qz, y0: b.y + y - 0.3, y1: b.y + y, hx: W / 4, hz: D / 4, rot: b.rot, camOnly: true }); }
+    const roofF = f === b.floors; // a laje do teto é sempre inteira (e dá para andar em cima); as de entre andares podem ter buracos
+    for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) { if (!roofF && holes && r() < 0.45) continue; if (roofF) r();
+      panel((i - 0.5) * W / 2, y - (roofF ? 0.35 : 0.25), (j - 0.5) * D / 2, W / 2 + (roofF ? 0.02 : 0), roofF ? 0.35 : 0.25, D / 2 + (roofF ? 0.02 : 0), shade(base, 0.75));
+      const [qx, qz] = toW((i - 0.5) * W / 2, (j - 0.5) * D / 2); colliders.push({ type: 'box', x: qx, z: qz, y0: b.y + y - 0.3, y1: b.y + y, hx: W / 4, hz: D / 4, rot: b.rot, camOnly: !roofF || b.roof === 'gable', platform: roofF && b.roof !== 'gable' }); }
   }
   if (b.roof === 'gable') { // telhado de duas águas com oitões
     const th = 0.55, half = D / 2 + 0.5, rise = half * Math.tan(th), yb = b.floors * FH; mb.flex = 0.93; const tile = [hex(0x8a3f2a), hex(0x6e4a36), hex(0x5a5a5e)][Math.floor(r() * 3)];
@@ -217,7 +219,16 @@ export function buildingMesh(b) {
       for (let k = 0; k < 6; k++) mb.box(M(0, yb + rise * (1 - (k + 0.5) / 6) + 0.14, sgn * half * (k + 0.5) / 6, 0, 1, sgn * th), W + 0.84, 0.03, 0.05, shade(tile, 0.75)); }
     for (const sx of [-1, 1]) { const x = sx * W / 2; const a = mb.vert([x, yb, -D / 2], [sx, 0, 0], base), bb = mb.vert([x, yb, D / 2], [sx, 0, 0], base), c = mb.vert([x, yb + rise, 0], [sx, 0, 0], base); if (sx > 0) mb.tri(a, c, bb); else mb.tri(a, bb, c); }
     mb.flex = 0.93; }
-  else if ((b.style === 'house' || b.style === 'apartment') && b.decay < 0.3) { const yt = b.floors * FH; for (const [cx, cz, sx2, sz2] of [[0, D / 2, W + 0.3, 0.25], [0, -D / 2, W + 0.3, 0.25], [W / 2, 0, 0.25, D], [-W / 2, 0, 0.25, D]]) panel(cx, yt, cz, sx2, 0.5, sz2, shade(base, 0.9)); panel(0, yt - 0.02, 0, W + 0.35, 0.08, D + 0.35, trimC); }
+  else if (b.style !== 'warehouse' && b.style !== 'hangar') { const yt = b.floors * FH; // teto plano: platibanda, laje com acabamento e casa de máquinas/caixa d'água
+    if (b.floors >= 2 || W * D > 90) { const cc = shade(base, 0.82); const hw = Math.min(2.6, W * 0.22), hd = Math.min(2.4, D * 0.22); const hx0 = -W / 2 + hw / 2 + 1.0, hz0 = -D / 2 + hd / 2 + 1.0;
+      panel(hx0, yt, hz0, hw, 2.3, hd, cc); panel(hx0, yt + 2.3, hz0, hw + 0.25, 0.15, hd + 0.25, shade(cc, 0.8)); mb.box(M(hx0 + hw / 2 + 0.02, yt + 1.0, hz0), 0.05, 2.0, 0.9, hex(0x4a4a48));
+      const [hwx, hwz] = toW(hx0, hz0); colliders.push({ type: 'box', x: hwx, z: hwz, y0: b.y + yt, y1: b.y + yt + 2.45, hx: hw / 2, hz: hd / 2, rot: b.rot });
+      const tx = W / 2 - 1.6, tz = D / 2 - 1.6; for (const [px, pz] of [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6]]) mb.box(M(tx + px, yt + 0.55, tz + pz), 0.1, 1.1, 0.1, hex(0x5a5a58));
+      mb.cylinder(M(tx, yt + 1.1, tz), 0.85, 0.85, 1.3, 12, hex(0x3a5a8a)); const [twx, twz] = toW(tx, tz); colliders.push({ type: 'cyl', x: twx, z: twz, r: 0.9, y0: b.y + yt, y1: b.y + yt + 2.4 });
+      if (W > 9) { mb.box(M(0, yt + 0.4, -D / 2 + 1.4), 1.2, 0.8, 0.9, hex(0x9a9c9e)); mb.box(M(0, yt + 0.4, -D / 2 + 1.84), 0.9, 0.6, 0.02, hex(0x3a3c3e)); } }
+    for (const [cx, cz, sx2, sz2] of [[0, D / 2, W + 0.3, 0.25], [0, -D / 2, W + 0.3, 0.25], [W / 2, 0, 0.25, D], [-W / 2, 0, 0.25, D]]) {
+      const [px, pz] = toW(cx, cz); colliders.push({ type: 'box', x: px, z: pz, y0: b.y + yt, y1: b.y + yt + 0.9, hx: sx2 / 2, hz: sz2 / 2, rot: b.rot, noClimb: true }); }
+    const yt0 = yt; for (const [cx, cz, sx2, sz2] of [[0, D / 2, W + 0.3, 0.25], [0, -D / 2, W + 0.3, 0.25], [W / 2, 0, 0.25, D], [-W / 2, 0, 0.25, D]]) panel(cx, yt, cz, sx2, 0.9, sz2, shade(base, 0.9)); panel(0, yt - 0.02, 0, W + 0.35, 0.08, D + 0.35, trimC); }
   else if (b.style === 'warehouse') { mb.flex = 0.5; for (let k = 0; k < 8; k++) mb.box(M(-W / 2 + (k + 0.5) * W / 8, b.floors * FH + 0.05, 0), 0.12, 0.2, D + 0.3, shade(base, 0.7)); }
   mb.flex = 0.93;
   panel(0, 0, 0, W - 0.2, 0.12, D - 0.2, hex(0x6a645a));
@@ -241,6 +252,13 @@ export function buildingMesh(b) {
     else { const yb = b.floors * FH - 0.6; for (let k = 0; k < 16; k++) { const t = -0.5 + (k + 0.5) / 16; mb.setColor(k % 2 ? hex(0x1a1a1a) : hex(0xf0c419), 0.93); mb.box(M(ax ? t * W : sx0, yb, ax ? sz0 : t * D), ax ? W / 16 : 0.06, 0.35, ax ? 0.06 : D / 16, k % 2 ? hex(0x1a1a1a) : hex(0xf0c419)); }
       mb.setColor(hex(0xf0c419), 0.93); mb.box(M(sx0, 3.0, sz0), ax ? 1.1 : 0.06, 1.1, ax ? 0.06 : 1.1, hex(0xf0c419)); mb.setColor(hex(0x111111), 0.93); for (let k = 0; k < 3; k++) { const a = k * 2.094 + Math.PI / 2; mb.box(M(sx0 + (ax ? Math.cos(a) * 0.22 : 0), 3.0 + Math.sin(a) * 0.22, sz0 + (ax ? 0 : Math.cos(a) * 0.22)), ax ? 0.2 : 0.07, 0.2, ax ? 0.07 : 0.2, hex(0x111111)); } }
     mb.flex = 0.93; }
+  if (b.style === 'shop' || b.style === 'garage' || b.style === 'church') for (const [lx, lz, hx, hz, top] of facadeExtras(mb, b, FH)) { const [wx, wz] = toW(lx, lz); colliders.push({ type: 'box', x: wx, z: wz, y0: b.y - 1, y1: b.y + top, hx, hz, rot: b.rot }); }
+  { const LS = ladderSpec(b); if (LS) { ladderMesh(mb, LS); colliders.push({ type: 'box', x: b.x, z: b.z, y0: b.y + LS.top - 0.3, y1: b.y + LS.top, hx: W / 2, hz: D / 2, rot: b.rot, platform: true }); } }
+  if (b.style === 'apartment' && b.decay < 0.3) { // sacadas com guarda-corpo na frente dos prédios
+    const dwl = walls[doorWall], ax = dwl.axis === 'x'; const sg = ax ? Math.sign(dwl.cz) : Math.sign(dwl.cx); const L = ax ? W : D; const n = Math.max(1, Math.floor(L / 4.5));
+    for (let f = 1; f < b.floors; f++) for (let k = 0; k < n; k++) { if (tops[0] < (f + 1) * FH - 0.5) continue; const c = -L / 2 + (k + 0.5) * L / n; const o = (ax ? D : W) / 2 + 0.65; const px = ax ? c : sg * o, pz = ax ? sg * o : c;
+      mb.setColor(shade(base, 0.8), 0.93); mb.box(M(px, f * FH + 0.05, pz), ax ? 2.4 : 1.3, 0.16, ax ? 1.3 : 2.4, shade(base, 0.8)); mb.setColor(hex(0x2a2a2a), 0.5);
+      mb.box(M(px + (ax ? 0 : sg * 0.62), f * FH + 0.6, pz + (ax ? sg * 0.62 : 0)), ax ? 2.4 : 0.05, 0.9, ax ? 0.05 : 2.4, hex(0x2a2a2a)); } }
   const data = mb.build();
   // transformar para o mundo
   const m = mat4.compose([b.x, b.y, b.z], b.rot);
@@ -270,9 +288,19 @@ export function siteMesh(kind, o) {
     mb.setColor(hex(0xf0c419), 0.93); mb.box(M(0, 3.2, 0), 7.4, 0.5, 0.2, hex(0xf0c419)); for (let k = 0; k < 8; k++) { mb.setColor(hex(0x1a1a1a), 0.93); mb.box(M(-3.3 + k * 0.95, 3.2, 0.11, 0, 1, 0, 0.6), 0.25, 0.5, 0.02, hex(0x1a1a1a)); } }
   else if (kind === 'booth') { ST(hex(0x6a6c54)); mb.box(M(0, 1.3, 0), 2.4, 2.6, 2.4, hex(0x6a6c54)); mb.setColor(hex(0x8ab0c0), 0.5); for (const s of [-1, 1]) mb.box(M(s * 1.21, 1.6, 0), 0.02, 0.9, 1.6, hex(0x8ab0c0)); mb.box(M(0, 1.6, 1.21), 1.6, 0.9, 0.02, hex(0x8ab0c0));
     ST(hex(0x4a4c3c)); mb.box(M(0, 2.75, 0), 2.8, 0.2, 2.8, hex(0x4a4c3c)); }
-  else if (kind === 'tent') { FB(olive); const W = 5.0, L = 4.6, H = 2.3; for (const s of [-1, 1]) mb.box(M(s * W / 4, H / 2, 0, 0, 1, 0, s * -0.86), Math.hypot(W / 2, H) + 0.1, 0.06, L, shade(olive, s > 0 ? 1 : 0.88));
-    { const z = -L / 2; const a = mb.vert([-W / 2, 0, z], [0, 0, -1], olive), bb = mb.vert([W / 2, 0, z], [0, 0, -1], olive), c = mb.vert([0, H, z], [0, 0, -1], olive); mb.tri(a, c, bb); }
-    { const z = L / 2, n = [0, 0, 1], V = (x, y) => mb.vert([x, y, z], n, olive); const A = V(-W / 2, 0), B = V(-0.55, 0), C = V(-0.55, 1.7), D = V(0.55, 1.7), E = V(0.55, 0), F = V(W / 2, 0), T = V(0, H); // frente com abertura para entrar
+  else if (kind === 'hut') { // cabana de madeira (troncos, telhado de duas águas, porta e janelinha) — 3,6 × 3,2 m
+    const lg = hex(0x6a4c30), lgD = hex(0x4e3622), rf = hex(0x4a3a2a), W = 3.6, D = 3.2, H = 2.2; WD(lg);
+    const logX = (y, z, len, rr, c) => mb.cylinder(M(-len / 2, y, z, 0, 1, 0, -Math.PI / 2), rr, rr, len, 7, c), logZ = (x, y, len, rr, c) => mb.cylinder(M(x, y, -len / 2, 0, 1, Math.PI / 2, 0), rr, rr, len, 7, c);
+    for (let k = 0; k < 8; k++) { const y = 0.14 + k * 0.27, c = k % 2 ? lg : lgD; logX(y, D / 2, W + 0.3, 0.14, c); logX(y + 0.13, -D / 2, W + 0.3, 0.14, c); for (const s of [-1, 1]) logZ(s * W / 2, y + 0.06, D + 0.3, 0.14, c); }
+    for (const s of [-1, 1]) for (let k = 0; k < 4; k++) logZ(s * W / 2, H + 0.12 + k * 0.24, (D + 0.3) * (1 - (k + 0.5) / 4.4), 0.12, lgD);
+    WD(rf); for (const s of [-1, 1]) mb.box(mat4.mul(mat4.create(), M(0, H + 0.62, s * D * 0.29), M(0, 0, 0, 0, 1, s * 0.55, 0)), W + 0.8, 0.08, D * 0.68, rf);
+    mb.box(M(0, H + 1.12, 0), W + 0.85, 0.12, 0.14, lgD);
+    WD(hex(0x3a2a1a)); mb.box(M(0.6, 0.9, D / 2 + 0.16), 0.85, 1.75, 0.06, hex(0x3a2a1a)); MT(hex(0x8a8a80)); mb.box(M(0.3, 0.95, D / 2 + 0.2), 0.05, 0.05, 0.05, hex(0x8a8a80));
+    mb.setColor(hex(0x101418), 0.4); mb.box(M(-0.9, 1.25, D / 2 + 0.16), 0.6, 0.45, 0.04, hex(0x101418)); WD(lgD); mb.box(M(-0.9, 1.0, D / 2 + 0.2), 0.75, 0.06, 0.12, lgD);
+    WD(hex(0x5a4a3a)); mb.box(M(0, 0.03, D / 2 + 0.55), 1.6, 0.06, 0.6, hex(0x5a4a3a)); }
+  else if (kind === 'tent') { const olive2 = o.civ ? [hex(0x3a5a8a), hex(0x8a5a2a), hex(0x6a6a3a), hex(0x8a3a2a)][Math.floor(r() * 4)] : olive; FB(olive2); const W = 5.0, L = 4.6, H = 2.3; for (const s of [-1, 1]) mb.box(M(s * W / 4, H / 2, 0, 0, 1, 0, s * -0.86), Math.hypot(W / 2, H) + 0.1, 0.06, L, shade(olive2, s > 0 ? 1 : 0.88));
+    { const z = -L / 2; const a = mb.vert([-W / 2, 0, z], [0, 0, -1], olive2), bb = mb.vert([W / 2, 0, z], [0, 0, -1], olive2), c = mb.vert([0, H, z], [0, 0, -1], olive2); mb.tri(a, c, bb); }
+    { const z = L / 2, n = [0, 0, 1], V = (x, y) => mb.vert([x, y, z], n, olive2); const A = V(-W / 2, 0), B = V(-0.55, 0), C = V(-0.55, 1.7), D = V(0.55, 1.7), E = V(0.55, 0), F = V(W / 2, 0), T = V(0, H); // frente com abertura para entrar
       mb.tri(A, B, C); mb.tri(A, C, T); mb.tri(C, D, T); mb.tri(D, F, T); mb.tri(E, F, D); } WD(hex(0x5a4430)); mb.box(M(0, H + 0.02, 0), 0.08, 0.08, L + 0.3, hex(0x5a4430)); }
   else if (kind === 'barrel') { const c = [hex(0xd0a020), hex(0x3a6a3a), hex(0x8a3a2a)][Math.floor(r() * 3)]; MT(c); mb.cylinder(M(), 0.32, 0.32, 0.9, 14, c); for (const y of [0.25, 0.65]) mb.cylinder(M(0, y, 0), 0.335, 0.335, 0.04, 14, shade(c, 0.7));
     mb.setColor(hex(0x111111), 0.02); for (let k = 0; k < 3; k++) { const a = k * 2.094; mb.box(M(Math.cos(a) * 0.07, 0.55 + Math.sin(a) * 0.07, 0.33), 0.07, 0.07, 0.01, hex(0x111111)); } }
@@ -469,9 +497,21 @@ export function pieceMesh(type) {
     case 'door':
       for (let i = 0; i < 5; i++) mb.box(M(0.52 - 0.105 - i * 0.21, 1.1, 0), 0.2, 2.2, 0.08, i % 2 ? wood : shade(wood, 0.9));
       mb.box(M(0.52 - 0.52, 0.5, 0.05), 1.0, 0.12, 0.04, woodD); mb.box(M(0, 1.7, 0.05), 1.0, 0.12, 0.04, woodD); mb.box(M(-0.4 + 0.4, 1.0, 0.09), 0.06, 0.12, 0.06, hex(0x333333)); break;
+    case 'gtrap': { // duas estacas, fio esticado e a granada presa numa delas
+      mb.flex = 0.63; for (const sx of [-1.2, 1.2]) mb.cylinder(M(sx, -0.05, 0), 0.03, 0.02, 0.4, 5, woodD); mb.flex = 0.5; mb.box(M(0, 0.12, 0), 2.4, 0.008, 0.008, hex(0xb8b4a8));
+      mb.flex = 0.86; for (let k = 0; k < 4; k++) mb.cylinder(M(-1.12, 0.06 + k * 0.022, 0.05), 0.033 + Math.sin((k + 0.5) / 4 * Math.PI) * 0.01, 0.033 + Math.sin((k + 1) / 4 * Math.PI) * 0.01, 0.021, 8, hex(0x4a5236)); mb.flex = 0.5; mb.cylinder(M(-1.12, 0.15, 0.05), 0.012, 0.012, 0.03, 6, hex(0x8a8e92)); break; }
     case 'chest':
       mb.box(M(0, 0.32, 0), 1.0, 0.55, 0.6, wood); mb.box(M(0, 0.66, 0), 1.04, 0.14, 0.64, shade(wood, 0.9));
       for (const x of [-0.42, 0.42]) mb.box(M(x, 0.4, 0), 0.06, 0.74, 0.66, hex(0x3a3a3a)); mb.box(M(0, 0.55, 0.32), 0.12, 0.14, 0.03, hex(0xb59a3a)); break;
+    case 'collector': { // coletor de chuva: barril azul, funil de lona preso em 4 varas, visor de nível na lateral
+      const blue = hex(0x2a5a9a); mb.flex = 0.86; mb.cylinder(M(0, 0, 0), 0.45, 0.45, 1.0, 14, blue); for (const y of [0.2, 0.8]) mb.cylinder(M(0, y, 0), 0.465, 0.465, 0.05, 14, shade(blue, 0.8));
+      mb.flex = 0.63; for (const [x, z] of [[0.62, 0.62], [-0.62, 0.62], [0.62, -0.62], [-0.62, -0.62]]) mb.cylinder(M(x, 0, z), 0.04, 0.035, 1.45, 5, woodD);
+      mb.flex = 0.83; mb.cylinder(M(0, 1.0, 0), 0.22, 0.88, 0.38, 12, hex(0x4a6a8a), false);
+      mb.flex = 0.5; mb.box(M(0, 0.5, 0.465), 0.09, 0.82, 0.02, hex(0x1a1e22)); break; }
+    case 'composter': { // composteira: caixa de ripas com o composto escuro dentro
+      mb.flex = 0.63; for (let k = 0; k < 5; k++) { const y = 0.12 + k * 0.2; for (const z of [-0.52, 0.52]) mb.box(M(0, y, z), 1.5, 0.14, 0.06, k % 2 ? wood : woodD); for (const x of [-0.72, 0.72]) mb.box(M(x, y, 0), 0.06, 0.14, 1.08, k % 2 ? woodD : wood); }
+      for (const [x, z] of [[0.72, 0.52], [-0.72, 0.52], [0.72, -0.52], [-0.72, -0.52]]) mb.box(M(x, 0.5, z), 0.1, 1.05, 0.1, woodD);
+      mb.flex = 0.93; mb.box(M(0, 0.45, 0), 1.36, 0.06, 0.98, hex(0x3a2a1c)); for (let i = 0; i < 7; i++) mb.rock(M(-0.45 + (i % 4) * 0.3, 0.5, -0.25 + Math.floor(i / 4) * 0.5), 0.14, 0, 0.4, [hex(0x4a3424), hex(0x5a6a2a), hex(0x6a4a2a)][i % 3], r); break; }
     case 'planter': { // canteiro: caixa de tábuas com terra e mudas
       mb.box(M(0, 0.2, 0), 1.9, 0.4, 1.2, wood); for (const z of [-0.6, 0.6]) mb.box(M(0, 0.22, z), 1.94, 0.44, 0.06, woodD); for (const x of [-0.95, 0.95]) mb.box(M(x, 0.22, 0), 0.06, 0.44, 1.24, woodD);
       mb.box(M(0, 0.41, 0), 1.78, 0.04, 1.08, hex(0x4a3424)); for (let i = 0; i < 6; i++) { const x = -0.6 + (i % 3) * 0.6, z = i < 3 ? -0.25 : 0.25; for (let k = 0; k < 4; k++) { const a = k * 1.6 + i; mb.box(M(x + Math.cos(a) * 0.05, 0.52, z + Math.sin(a) * 0.05, a, 1, 0.5), 0.1, 0.2, 0.02, leaf); }
@@ -583,6 +623,11 @@ export function furniture(mb, p, T, r) {
     case 'shelfwall': { const L = 3.2; B(0, 1.0, 0, L, 2.0, 0.4, white, 0.5); for (let k = 0; k < 5; k++) for (let j = 0; j < 11; j++) B(-L / 2 + 0.2 + j * 0.28, 0.3 + k * 0.38, 0.08, 0.18, 0.2, 0.16, [hex(0xffffff), hex(0xe86a40), hex(0x60c060), hex(0x5080d0), hex(0xf0d040)][(k + j) % 5], 0.83); return [L, 2.0, 0.4]; }
     case 'labbench': B(0, 0.45, 0, 2.4, 0.9, 0.9, hex(0xd8dadc), 0.5); B(0, 0.92, 0, 2.5, 0.05, 1.0, hex(0x1e2022), 0.93); for (let k = 0; k < 4; k++) { const x = -0.9 + k * 0.45; C(x, 0.95, 0.2, 0.05, 0.16, [hex(0x60e0a0), hex(0x60a0f0), hex(0xf0e060), hex(0xe06060)][k], 0.02, 8); } B(0.6, 1.1, -0.25, 0.5, 0.35, 0.35, hex(0x9aa0a6), 0.5); return [2.4, 1.0, 0.9];
     case 'labcabinet': B(0, 1.0, 0, 1.0, 2.0, 0.5, hex(0x8a9096), 0.5); B(0, 1.0, 0.252, 0.012, 1.85, 0.01, hex(0x3a3a3a)); for (let k = 0; k < 6; k++) B(-0.45 + k * 0.18, 1.85, 0.255, 0.09, 0.14, 0.01, k % 2 ? hex(0x111111) : hex(0xf0c419), 0.93); return [1.0, 2.0, 0.5];
+    case 'workbench': B(0, 0.45, 0, 2.6, 0.9, 0.8, hex(0x6a4a30)); B(0, 0.92, 0, 2.7, 0.06, 0.86, hex(0x3a3a3c), 0.5); B(0, 1.5, -0.38, 2.6, 1.1, 0.04, hex(0x8a8070)); for (let k = 0; k < 6; k++) B(-1.0 + k * 0.4, 1.4 + (k % 2) * 0.2, -0.34, 0.06, 0.32, 0.04, [steel, hex(0xc03020), hex(0xe0b020)][k % 3], 0.5); B(0.8, 1.02, 0.1, 0.4, 0.14, 0.24, hex(0xc03020), 0.5); return [2.6, 0.95, 0.8];
+    case 'tirerack': B(0, 0.9, 0, 2.4, 1.8, 0.5, hex(0x4a4c50), 0.5); for (let k = 0; k < 2; k++) for (let j = 0; j < 4; j++) { mb.setColor(hex(0x1c1c1e), 0.7); mb.cylinder(mat4.mul(mat4.create(), T, M(-0.9 + j * 0.6, 0.35 + k * 0.85, 0, 0, 1, Math.PI / 2)), 0.32, 0.32, 0.22, 10, hex(0x1c1c1e)); } return [2.4, 1.8, 0.5];
+    case 'drums': for (const [x, z, c] of [[-0.35, 0, hex(0xc03020)], [0.35, 0, hex(0x2a5a9a)], [0, 0.55, hex(0x3a6a3a)]]) C(x, 0, z, 0.3, 0.88, c, 0.5, 12); return [1.2, 0.9, 1.0];
+    case 'pew': B(0, 0.42, 0, 2.6, 0.08, 0.45, wood); B(0, 0.78, -0.2, 2.6, 0.6, 0.06, wood); for (const s of [-1, 1]) B(s * 1.25, 0.42, 0, 0.08, 0.84, 0.5, shade(wood, 0.8)); return [2.6, 0.9, 0.5];
+    case 'altar': B(0, 0.5, 0, 2.0, 1.0, 0.9, hex(0xe8e4da), 0.93); B(0, 1.01, 0, 2.1, 0.04, 1.0, hex(0xc8a848), 0.83); B(0, 1.6, -0.3, 0.08, 1.0, 0.08, hex(0xc8a848), 0.5); B(0, 1.85, -0.3, 0.5, 0.08, 0.08, hex(0xc8a848), 0.5); for (const s of [-1, 1]) C(s * 0.7, 1.03, 0.1, 0.04, 0.3, hex(0xf4ecd8), 0.02, 6); return [2.0, 1.05, 0.9];
     case 'fumehood': B(0, 1.1, 0, 1.5, 2.2, 0.8, hex(0xc8ccd0), 0.5); B(0, 1.3, 0.402, 1.3, 0.8, 0.01, hex(0x9ab8c8), 0.5); B(0, 0.9, 0.2, 1.4, 0.04, 0.5, hex(0x1e2022), 0.93); return [1.5, 2.2, 0.8];
   }
   return null;

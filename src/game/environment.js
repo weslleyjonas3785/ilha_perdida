@@ -25,7 +25,7 @@ export class Environment {
     { const isDay = this.time > 0.25 && this.time < 0.75; this.time += dt / (isDay ? 4800 : 1800); } if (this.time >= 1) { this.time -= 1; this.day++; this.game.onNewDay && this.game.onNewDay(); }
     this.weatherT -= dt;
     if (this.weatherT <= 0) {
-      const r = Math.random(); const opts = r < 0.38 ? 'limpo' : r < 0.6 ? 'nublado' : r < 0.72 ? 'neblina' : r < 0.92 ? 'chuva' : 'tempestade';
+      const r = Math.random(); const opts = r < 0.36 ? 'limpo' : r < 0.55 ? 'nublado' : r < 0.65 ? 'neblina' : r < 0.9 ? 'chuva' : 'tempestade';
       this.weather = this.next; this.next = opts; this.blend = 0; this.weatherT = 150 + Math.random() * 240;
     }
     this.blend = Math.min(1, this.blend + dt / 25);
@@ -127,6 +127,11 @@ export class FX {
         if (this.game.world.caveAt(x, z)) continue;
         r.particle(x, y, z, 0.018, 0.75 * b, 0.8 * b, 0.9 * b, 0.55, 22);
       }
+      // respingos no chão
+      const fr = Math.floor(t * 9); const ns = Math.floor(rain * 160);
+      for (let i = 0; i < ns; i++) { const hx = Math.sin(i * 91.7 + fr * 3.17) * 43758.5453, hz = Math.sin(i * 47.3 + fr * 1.71) * 24634.6345; const fx = hx - Math.floor(hx), fz = hz - Math.floor(hz);
+        const x = camPos[0] + (fx - 0.5) * 30, z = camPos[2] + (fz - 0.5) * 30; const gy = Math.max(this.game.world.height(x, z), 0); if (this.game.world.caveAt(x, z)) continue;
+        r.particle(x, gy + 0.05, z, 0.05 + fx * 0.04, 0.8 * b, 0.85 * b, 0.95 * b, 0.35); }
     }
   }
 }

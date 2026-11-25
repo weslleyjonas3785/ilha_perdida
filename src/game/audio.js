@@ -15,8 +15,8 @@ export class GameAudio {
     this.amb.water = this._loop(this.noise, 'bandpass', 350);
     this.applyVolumes();
     // sons de tiro gravados (arquivos): pistola, fuzil de assalto, escopeta e fuzil de precisão
-    this.samples = {}; this.sampleGain = { pistol: 1.5, rifle: 1.0, shotgun: 0.95, sniper: 1.0 };
-    for (const k of ['pistol', 'rifle', 'shotgun', 'sniper', 'skill', 'mechastep', 'spindown']) fetch(`assets/audio/${k}.mp3`).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)).then((buf) => { this.samples[k] = buf; }).catch(() => {});
+    this.samples = {}; this.sampleGain = { pistol: 1.5, rifle: 1.0, shotgun: 0.95, sniper: 1.0, tinnitus: 0.7, smokegren: 1.0 };
+    for (const k of ['pistol', 'rifle', 'shotgun', 'sniper', 'skill', 'mechastep', 'spindown', 'tinnitus', 'smokegren']) fetch(`assets/audio/${k}.mp3`).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)).then((buf) => { this.samples[k] = buf; }).catch(() => {});
   }
   _sample(name, o) { const c = this.ctx, buf = this.samples && this.samples[name]; if (!buf) return false; const s = c.createBufferSource(); s.buffer = buf; s.playbackRate.value = (o.rate || 1) * (0.97 + Math.random() * 0.06);
     const g = c.createGain(); g.gain.value = (o.vol ?? 1) * (this.sampleGain[name] || 1); s.connect(g); g.connect(this.sfx); s.start(); return true; }
@@ -32,6 +32,11 @@ export class GameAudio {
   applyVolumes() { if (!this.ctx) return; this.master.gain.value = this.vol.master; this.sfx.gain.value = this.vol.sfx; this.music.gain.value = this.musicOn ? this.vol.music : 0; this.ambG.gain.value = this.vol.ambient; }
   _loop(buf, type, freq) { const c = this.ctx; const s = c.createBufferSource(); s.buffer = buf; s.loop = true; const f = c.createBiquadFilter(); f.type = type; f.frequency.value = freq; const g = c.createGain(); g.gain.value = 0; s.connect(f); f.connect(g); g.connect(this.ambG); s.start(); return { s, f, g }; }
   _env(g, t, a, peak, dec) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + dec); }
+  // motor do veículo em laço: dente-de-serra grave + harmônico + ronco filtrado; rotação pela velocidade
+  engineStart() { const c = this.ctx; if (!c || this._eng) return; const o1 = c.createOscillator(), o2 = c.createOscillator(), lp = c.createBiquadFilter(), g = c.createGain(); o1.type = 'sawtooth'; o2.type = 'square'; lp.type = 'lowpass'; lp.frequency.value = 420; lp.Q.value = 2;
+    g.gain.value = 0; o1.connect(lp); o2.connect(lp); lp.connect(g); g.connect(this.sfx); o1.frequency.value = 42; o2.frequency.value = 21; o1.start(); o2.start(); g.gain.linearRampToValueAtTime(0.07, c.currentTime + 0.6); this._eng = { o1, o2, lp, g }; }
+  engineSet(rpm, load) { const e = this._eng; if (!e) return; const t = this.ctx.currentTime, f = 40 + rpm * 120 + load * 8; e.o1.frequency.setTargetAtTime(f, t, 0.12); e.o2.frequency.setTargetAtTime(f * 0.5, t, 0.12); e.lp.frequency.setTargetAtTime(380 + rpm * 900 + load * 300, t, 0.15); e.g.gain.setTargetAtTime(0.05 + rpm * 0.05 + load * 0.03, t, 0.2); }
+  engineStop() { const e = this._eng; if (!e) return; const t = this.ctx.currentTime; e.g.gain.setTargetAtTime(0, t, 0.15); e.o1.stop(t + 0.8); e.o2.stop(t + 0.8); this._eng = null; }
   _noise(t, dur, type, freq, q, peak, dest = this.sfx, a = 0.004) {
     const c = this.ctx; const s = c.createBufferSource(); s.buffer = this.noise; const f = c.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(freq, t); f.Q.value = q;
     const g = c.createGain(); this._env(g, t, a, peak, dur); s.connect(f); f.connect(g); g.connect(dest); s.start(t, Math.random() * 1.5); s.stop(t + a + dur + 0.05); return f;
@@ -62,6 +67,16 @@ export class GameAudio {
         else if (s === 'snow') this._noise(t, 0.13, 'bandpass', 900, 0.8, 0.15 * v);
         break; }
       case 'jump': this._noise(t, 0.12, 'bandpass', 600, 1, 0.08); break;
+      case 'ladder': this._tone(t, 'triangle', 620 + R() * 120, 540, 0.08, 0.1 * v); this._noise(t, 0.05, 'bandpass', 2400, 3, 0.12 * v); break; // degrau de metal
+      case 'ladderSlide': this._noise(t, 0.5, 'bandpass', 3200 + R() * 600, 6, 0.16 * v); this._tone(t, 'sawtooth', 900, 700, 0.45, 0.025 * v); break;
+      case 'pin': this._tone(t, 'triangle', 2600, 2200, 0.05, 0.12 * v); this._noise(t + 0.06, 0.04, 'highpass', 4000, 1, 0.1 * v); this._tone(t + 0.12, 'square', 1300, 900, 0.04, 0.05 * v); break; // pino puxado + alavanca
+      case 'flashbang': this._noise(t, 0.45, 'highpass', 900, 0.5, 1.2 * v, this.sfx, 0.001); this._tone(t, 'sine', 120, 40, 0.4, 0.9 * v); break;
+      case 'horn': for (let i = 0; i < 10; i++) { const d = i * 0.6; this._tone(t + d, 'sawtooth', 420, 400, 0.45, 0.22 * v); this._tone(t + d, 'square', 840, 820, 0.45, 0.06 * v); } break; // buzina da granada barulhenta
+      case 'shout': { const c = this.ctx, f0 = (o.f0 || 170) * (0.9 + R() * 0.2), dur = 0.5 + R() * 0.2; const src = c.createOscillator(); src.type = 'sawtooth'; src.frequency.setValueAtTime(f0 * 1.3, t); src.frequency.linearRampToValueAtTime(f0 * 1.5, t + 0.12); src.frequency.exponentialRampToValueAtTime(f0, t + dur);
+        const out = c.createGain(); out.gain.setValueAtTime(0.0001, t); out.gain.exponentialRampToValueAtTime(0.35 * v, t + 0.03); out.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        const f1 = c.createBiquadFilter(); f1.type = 'bandpass'; f1.frequency.value = 800; f1.Q.value = 4; const f2 = c.createBiquadFilter(); f2.type = 'bandpass'; f2.frequency.value = 1250; f2.Q.value = 5; src.connect(f1); src.connect(f2); f1.connect(out); f2.connect(out); out.connect(this.sfx); src.start(t); src.stop(t + dur + 0.05); break; }
+      case 'butcher': this._noise(t, 0.12, 'lowpass', 900, 0.8, 0.35 * v); this._noise(t + 0.05, 0.18, 'bandpass', 500, 2, 0.25 * v); this._tone(t, 'sine', 160, 70, 0.12, 0.2 * v); break;
+      case 'swapWeapon': this._noise(t, 0.12, 'bandpass', 1500, 1.5, 0.12 * v); this._tone(t + 0.08, 'square', 700, 500, 0.04, 0.05 * v); break;
       case 'land': this._tone(t, 'sine', 90, 45, 0.15, 0.3 * v); this._noise(t, 0.1, 'lowpass', 500, 0.7, 0.25 * v); break;
       case 'climb': this._noise(t, 0.2, 'lowpass', 900, 0.6, 0.15); this._noise(t + 0.3, 0.1, 'lowpass', 700, 0.6, 0.15); break;
       case 'swing': { const f = this._noise(t, 0.18, 'bandpass', 500, 2, 0.12); f.frequency.exponentialRampToValueAtTime(2500, t + 0.15); break; }
@@ -78,6 +93,10 @@ export class GameAudio {
       case 'unscrew': for (let i = 0; i < 6; i++) this._noise(t + i * 0.055, 0.02, 'highpass', 3500 + R() * 1500, 2, 0.12 * v); this._noise(t + 0.34, 0.05, 'bandpass', 900, 2, 0.15 * v); break;
       case 'pillShake': for (let i = 0; i < 5; i++) this._noise(t + i * 0.05 + R() * 0.02, 0.025, 'bandpass', 4000 + R() * 2000, 4, 0.12 * v); break;
       case 'blister': this._noise(t, 0.05, 'highpass', 2500, 1, 0.35 * v); this._noise(t + 0.03, 0.08, 'bandpass', 5000, 2, 0.2 * v); this._tone(t, 'triangle', 1400, 700, 0.03, 0.12 * v); break;
+      case 'vomit': { for (let i = 0; i < 3; i++) { const d = i * 0.45; this._tone(t + d, 'sawtooth', 160 - i * 15, 70, 0.32, 0.18 * v); this._noise(t + d + 0.05, 0.35, 'bandpass', 500, 1.2, 0.35 * v); this._noise(t + d + 0.25, 0.25, 'lowpass', 900, 0.7, 0.25 * v); } break; }
+      case 'sizzle': this._noise(t, 0.9, 'highpass', 3500 + R() * 1500, 0.6, 0.09 * v, this.sfx, 0.05); this._noise(t + 0.2, 0.5, 'bandpass', 6000, 2, 0.05 * v); break;
+      case 'cooked': this._noise(t, 0.6, 'highpass', 2800, 0.5, 0.2 * v, this.sfx, 0.01); this._tone(t + 0.05, 'sine', 880, 870, 0.12, 0.06 * v); this._tone(t + 0.2, 'sine', 1320, 1310, 0.16, 0.05 * v); break;
+      case 'trapArm': this._tone(t, 'square', 1800, 1700, 0.04, 0.05 * v); this._noise(t + 0.05, 0.08, 'highpass', 3000, 1, 0.08 * v); this._tone(t + 0.15, 'triangle', 600, 400, 0.08, 0.08 * v); break;
       case 'swallow': this._tone(t, 'sine', 220, 110, 0.18, 0.22 * v); this._noise(t + 0.02, 0.12, 'lowpass', 400, 1, 0.1 * v); break;
       case 'cloth': for (let i = 0; i < 3; i++) this._noise(t + i * 0.09, 0.12, 'bandpass', 900 + R() * 600, 0.8, 0.12 * v); break;
       case 'wash': for (let i = 0; i < 8; i++) this._noise(t + i * 0.12 + R() * 0.05, 0.15, 'bandpass', 600 + R() * 1200, 0.7, 0.18 * v); break;
@@ -89,6 +108,8 @@ export class GameAudio {
       case 'punch': this._tone(t, 'sine', 130, 60, 0.1, 0.4); this._noise(t, 0.06, 'lowpass', 1200, 0.7, 0.4); break;
       case 'hit': this._tone(t, 'sine', 160, 70, 0.12, 0.45); this._noise(t, 0.08, 'bandpass', 1500, 1, 0.35); break;
       case 'block': this._noise(t, 0.08, 'bandpass', 2200, 3, 0.35); this._tone(t, 'triangle', 800, 600, 0.1, 0.12); break;
+      case 'engineStart': for (let i = 0; i < 4; i++) this._tone(t + i * 0.11, 'sawtooth', 60 + i * 12, 45, 0.09, 0.08 * v); this._noise(t, 0.5, 'lowpass', 500, 1, 0.08 * v); break;
+      case 'pour': for (let i = 0; i < 4; i++) this._noise(t + i * 0.07 + R() * 0.03, 0.08, 'bandpass', 700 + R() * 900, 4, 0.06 * v); break;
       case 'groan': { // gemido de dor: voz (dente-de-serra com vibrato) passando por formantes de vogal "a/é", queda de tom
         const c = this.ctx, k = o.big ? 1 : 0.75, f0 = (o.f0 || 150) * (0.92 + R() * 0.16), dur = (o.big ? 0.62 : 0.42) + R() * 0.12;
         const src = c.createOscillator(); src.type = 'sawtooth'; src.frequency.setValueAtTime(f0 * 1.18, t); src.frequency.linearRampToValueAtTime(f0, t + 0.08); src.frequency.exponentialRampToValueAtTime(f0 * 0.72, t + dur);

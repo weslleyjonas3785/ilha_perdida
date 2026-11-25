@@ -88,6 +88,7 @@ in vec2 v_uv; uniform sampler2D u_tex;
 #endif
 uniform sampler2DShadow u_shadow;
 uniform vec3 u_sunDir, u_sunCol, u_ambSky, u_ambGround, u_fogCol, u_camPos, u_scatterCol;
+uniform float u_fogMul;
 uniform float u_fogDensity, u_fogHeight, u_alpha, u_emissive, u_shadowOn, u_time, u_wet, u_rim, u_detail;
 uniform vec4 u_tint;
 uniform vec4 u_plPos[${MAX_PL}]; uniform vec4 u_plCol[${MAX_PL}]; uniform int u_plCount;
@@ -234,7 +235,7 @@ void main(){
   float fogAmt = 1.0 - exp(-dist * u_fogDensity * mix(1.0, hf, 0.6));
   float sunAmt = pow(max(dot(normalize(ray), u_sunDir), 0.0), 8.0);
   vec3 fogC = u_fogCol + u_scatterCol * sunAmt;
-  col = mix(col, fogC, clamp(fogAmt, 0.0, 1.0));
+  col = mix(col, fogC, clamp(fogAmt * u_fogMul, 0.0, 1.0));
   o = vec4(col, u_alpha * u_tint.a);
 }`;
 

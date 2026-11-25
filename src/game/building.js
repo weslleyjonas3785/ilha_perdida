@@ -5,6 +5,7 @@ import { pieceMesh } from './props.js';
 import { mat4, quat } from '../engine/math.js';
 import { WATER } from './world.js';
 import * as MX from './machines.js';
+import { structShapes, STYPES, FLAG_GAP } from './struct.js';
 const MACHINE_MESH = { printer: MX.printerMesh, panel: MX.panelMesh, solar: MX.solarMesh, wind: MX.windTowerMesh, waterwheel: MX.wheelFrameMesh, battery: MX.batteryMesh };
 
 const G = 3;
@@ -12,7 +13,7 @@ let PID = 1;
 export class BuildSystem {
   constructor(game) {
     this.game = game; this.pieces = []; this.meshes = {}; this.mode = null; this.rotStep = 0; this.ghost = null;
-    for (const t of ['campfire', 'tent', 'shelter', 'wall', 'floor', 'chest', 'bench', 'door']) this.meshes[t] = game.renderer.createMesh(pieceMesh(t === 'door' ? 'doorframe' : t));
+    for (const t of ['campfire', 'tent', 'shelter', 'wall', 'floor', 'chest', 'bench', 'door', 'planter', 'collector', 'composter', 'gtrap']) this.meshes[t] = game.renderer.createMesh(pieceMesh(t === 'door' ? 'doorframe' : t));
     this.doorLeaf = game.renderer.createMesh(pieceMesh('door'));
     for (const [t, fn] of Object.entries(MACHINE_MESH)) this.meshes[t] = game.renderer.createMesh(fn());
   }
@@ -66,6 +67,7 @@ export class BuildSystem {
       if (g.physics.insideXZ(s.type === 'box' ? { ...s, cos: Math.cos(s.rot), sin: Math.sin(s.rot) } : s, P.pos[0], P.pos[2], 0.36) && s.y1 > P.pos[1] + 0.1 && s.y0 < P.pos[1] + 1.8) { reason = 'Você está no caminho'; break; }
     }
     if (!reason && Math.hypot(x - P.pos[0], z - P.pos[2]) > 6) reason = 'Longe demais';
+    if (!reason && type === 'flag' && g.struct && g.struct.foreignFlagNear(x, z, FLAG_GAP)) reason = 'Perto demais da bandeira de outro jogador';
     const afford = g.inv.has(def.cost);
     this.ghost = { type, x, y, z, rot, water, valid: !reason && afford, reason: reason || (afford ? null : 'Recursos insuficientes') };
     g.ui.buildStatus(this.ghost);
@@ -76,13 +78,14 @@ export class BuildSystem {
     const gh = this.ghost, g = this.game; if (!gh) return;
     if (!gh.valid) { g.ui.toast(gh.reason, 'warn'); g.audio.play('error'); return; }
     const def = PIECES[gh.type]; if (!g.inv.pay(def.cost)) { g.ui.toast('Recursos insuficientes', 'warn'); return; }
-    const np = this.add({ type: gh.type, x: gh.x, y: gh.y, z: gh.z, rot: gh.rot, data: gh.type === 'planter' ? { grow: g._clock() + 0.25 } : undefined }); { const R = 2.4; for (const t of g.world.trees) if (t.felled && Math.hypot(t.x - gh.x, t.z - gh.z) < R) g.blockedTrees.add(t.id); } // árvore cortada aqui não renasce if (np.data && gh.type === 'waterwheel') np.data.water = gh.water;
+    const np = this.add({ type: gh.type, x: gh.x, y: gh.y, z: gh.z, rot: gh.rot, data: gh.type === 'flag' ? { owner: g.struct ? g.struct.myId() : 'me' } : gh.type === 'planter' ? { grow: g._clock() + 0.25 } : gh.type === 'collector' ? { water: 0 } : gh.type === 'composter' ? { dirt: 0, food: 0 } : undefined }); { const R = 2.4; for (const t of g.world.trees) if (t.felled && Math.hypot(t.x - gh.x, t.z - gh.z) < R) g.blockedTrees.add(t.id); } // árvore cortada aqui não renasce if (np.data && gh.type === 'waterwheel') np.data.water = gh.water;
     if (def.power) g.ui.toast(def.power === 'hub' ? 'Ligue aparelhos e fontes ao painel com fio de cobre (E no aparelho → Puxar fio)' : 'Ligue com fio de cobre a um painel elétrico (E no aparelho → Puxar fio)', 'info');
     g.audio.play('build'); g.fx.burst([gh.x, gh.y + 0.3, gh.z], 18, [0.55, 0.42, 0.28], 2.5, 0.7, 0.07);
     g.ui.toast(`${def.icon} ${def.name} construído`, 'ok'); g.stats.built++;
     if (!g.inv.has(def.cost)) this.cancel();
   }
   _shapes(type, x, y, z, rot) {
+    if (STYPES[type] || type === 'flag') return structShapes(type, x, y, z, rot);
     const c = Math.cos(rot), s = Math.sin(rot); const L = (lx, lz) => [x + lx * c + lz * s, z - lx * s + lz * c];
     const box = (lx, lz, hx, hz, y0, y1, extra = {}) => { const [px, pz] = L(lx, lz); return { type: 'box', x: px, z: pz, hx, hz, rot, y0: y + y0, y1: y + y1, ...extra }; };
     switch (type) {
@@ -93,8 +96,11 @@ export class BuildSystem {
       case 'floor': return [box(0, 0, 1.5, 1.5, -3, 0.2, { platform: true })];
       case 'door': return [box(-1.05, 0, 0.45, 0.22, -0.05, 2.7, { noClimb: true }), box(1.05, 0, 0.45, 0.22, -0.05, 2.7, { noClimb: true }), box(0, 0, 0.65, 0.22, 2.3, 2.7), box(0, 0, 0.6, 0.1, 0, 2.25, { leaf: true, noClimb: true })];
       case 'chest': return [box(0, 0, 0.52, 0.32, -0.05, 0.74)];
+      case 'gtrap': return [box(0, 0, 1.2, 0.1, -0.05, 0.3, { ghost: true, noClimb: true })];
       case 'bench': return [box(0, 0, 0.95, 0.48, -0.05, 1.0)];
       case 'planter': return [box(0, 0, 0.95, 0.6, -0.05, 0.45)];
+      case 'collector': return [{ type: 'cyl', x, z, r: 0.5, y0: y - 0.1, y1: y + 1.0 }];
+      case 'composter': return [box(0, 0, 0.77, 0.57, -0.05, 1.0)];
       case 'printer': return [box(0, 0, 0.48, 0.38, -0.05, 1.05)];
       case 'panel': return [box(0, 0, 0.32, 0.18, -0.05, 1.7)];
       case 'solar': return [box(0, 0, 0.7, 0.5, -0.05, 1.3)];
@@ -105,14 +111,15 @@ export class BuildSystem {
     return [];
   }
   add(p) {
-    const g = this.game; const piece = { id: PID++, type: p.type, x: p.x, y: p.y, z: p.z, rot: p.rot, lit: p.lit ?? (p.type === 'campfire'), open: !!p.open, items: p.items || null, openAng: p.open ? 1.6 : 0, data: p.data ? JSON.parse(JSON.stringify(p.data)) : null };
+    const g = this.game; const piece = { id: PID++, uid: p.uid, type: p.type, x: p.x, y: p.y, z: p.z, rot: p.rot, lit: p.lit ?? (p.type === 'campfire'), open: !!p.open, items: p.items || null, openAng: p.open ? 1.6 : 0, data: p.data ? JSON.parse(JSON.stringify(p.data)) : null };
     if (piece.type === 'chest' && !piece.items) piece.items = [];
     piece.model = mat4.fromTRS(mat4.create(), [p.x, p.y, p.z], quat.fromEuler(0, p.rot, 0), [1, 1, 1]);
     piece.colliders = this._shapes(piece.type, p.x, p.y, p.z, p.rot).map((s) => { s.piece = piece; if (s.leaf && piece.open) s.ghost = true; return g.physics.add(s); });
-    this.pieces.push(piece); if (g.power) g.power.init(piece); return piece;
+    this.pieces.push(piece); if (g.power) g.power.init(piece); if (g.struct) g.struct.onAdded(piece); return piece;
   }
   remove(piece, refund = true) {
-    const g = this.game; if (refund && g.power && piece.data) g.power.onRemove(piece); for (const c of piece.colliders) g.physics.remove(c); this.pieces.splice(this.pieces.indexOf(piece), 1); if (g.power) g.power.dirty = true;
+    const g = this.game; if (g.struct) g.struct.onRemoved(piece); if (refund && g.power && piece.data && PIECES[piece.type].power) g.power.onRemove(piece); for (const c of piece.colliders) g.physics.remove(c); this.pieces.splice(this.pieces.indexOf(piece), 1); if (g.power) g.power.dirty = true;
+    if (refund && piece.type === 'campfire' && piece.data && Array.isArray(piece.data.cook)) { const d = piece.data; for (const s of [...d.fuel, ...d.out]) if (s && s.qty > 0) g.dropItem(s.id, s.qty, [piece.x, piece.y, piece.z]); for (const c of d.cook) if (c) g.dropItem(c.id, 1, [piece.x, piece.y, piece.z]); piece.data = null; }
     if (refund) { for (const [id, n] of Object.entries(PIECES[piece.type].cost)) { const k = Math.ceil(n / 2); const added = g.inv.add(id, k); if (added < k) g.dropItem(id, k - added, [piece.x, piece.y, piece.z]); } }
     if (piece.items) for (const s of piece.items) if (s) g.dropItem(s[0], s[1], [piece.x, piece.y + 0.3, piece.z]);
   }
@@ -123,12 +130,12 @@ export class BuildSystem {
   }
   toggleDoor(p) { p.open = !p.open; for (const c of p.colliders) if (c.leaf) c.ghost = p.open; this.game.audio.play('door');
     if (!p.open) { const P = this.game.player; for (const c of p.colliders) if (c.leaf && this.game.physics.insideXZ(c, P.pos[0], P.pos[2], 0.36)) { p.open = true; c.ghost = true; this.game.ui.toast('Saia da porta para fechá-la', 'warn'); } } }
-  update2(dt) { for (const p of this.pieces) if (p.type === 'door') { const t = p.open ? 1.6 : 0; p.openAng += (t - p.openAng) * Math.min(1, dt * 6); } }
+  update2(dt) { for (const p of this.pieces) if (p.type === 'door' || p.type === 's_doorway' || p.type === 's_hatch') { const t = p.open ? 1.6 : 0; p.openAng += (t - p.openAng) * Math.min(1, dt * 6); } }
   renderItems(items) {
     const g = this.game, r = g.renderer;
     for (const p of this.pieces) {
       if (!r.visible(p.x, p.y + 1, p.z, 4) && g.renderer.shadowsEnabled === false) continue;
-      items.push({ mesh: this.meshes[p.type], model: p.model, sphere: [p.x, p.y + 1, p.z, 4] });
+      if (!this.meshes[p.type]) continue; items.push({ mesh: this.meshes[p.type], model: p.model, sphere: [p.x, p.y + 1, p.z, 4] });
       if (p.type === 'door') { const m = mat4.mul(mat4.create(), p.model, mat4.fromTRS(mat4.create(), [-0.52, 0, 0], quat.fromEuler(0, -p.openAng, 0), [1, 1, 1])); mat4.mul(m, m, mat4.fromTRS(mat4.create(), [0.52, 0, 0], [0, 0, 0, 1], [1, 1, 1])); items.push({ mesh: this.doorLeaf, model: m, sphere: [p.x, p.y + 1, p.z, 3] }); }
     }
     if (this.mode && this.ghost) {
@@ -138,6 +145,6 @@ export class BuildSystem {
       if (gh.type === 'door') items.push({ mesh: this.doorLeaf, model: m, alpha: 0.45, tint, shadow: false, cull: false });
     }
   }
-  serialize() { return this.pieces.map((p) => ({ type: p.type, x: +p.x.toFixed(3), y: +p.y.toFixed(3), z: +p.z.toFixed(3), rot: +p.rot.toFixed(4), lit: p.lit, open: p.open, items: p.items, data: p.data || undefined })); }
-  load(arr) { for (const p of [...this.pieces]) this.remove(p, false); for (const p of arr || []) if (PIECES[p.type]) { if (p.items) p.items = p.items.filter((s) => !s || ITEMS[s[0]]); this.add(p); } }
+  serialize() { return this.pieces.map((p) => ({ uid: p.uid, type: p.type, x: +p.x.toFixed(3), y: +p.y.toFixed(3), z: +p.z.toFixed(3), rot: +p.rot.toFixed(4), lit: p.lit, open: p.open, items: p.items, data: p.data || undefined })); }
+  load(arr) { for (const p of [...this.pieces]) this.remove(p, false); for (const p of arr || []) if (PIECES[p.type]) { if (p.data && p.data.owner === 'me' && this.game.net) p.data.owner = this.game.net.pid(); if (p.items) p.items = p.items.filter((s) => !s || ITEMS[s[0]]); this.add(p); } }
 }
