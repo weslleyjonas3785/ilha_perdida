@@ -150,6 +150,8 @@ export const ITEMS = {
   soap: { name: 'Sabonete líquido', icon: '🧴', stack: 3, type: 'misc', desc: 'Lave itens contaminados num rio ou lago (perto da água, botão E).' },
   antidote: { name: 'Antídoto', icon: '🧪', stack: 5, type: 'medical', heal: 5, cure: ['poison'], desc: 'Neutraliza veneno de escorpião.' },
 };
+// ícones desenhados a partir dos próprios modelos 3D (tools/gun_icons.py): armas de fogo e ferramentas/armas brancas
+for (const [k, it] of Object.entries(ITEMS)) if (!it.img && it.type === 'tool') { if (it.tool === 'gun') it.img = 'gun_' + k; else if (['axe', 'scrapaxe', 'pickaxe', 'spear', 'scrapspear', 'shockspear', 'knife', 'scrapknife', 'torch', 'hammer', 'c4'].includes(k)) it.img = 'tool_' + k; }
 
 // Fabricação (combinação de materiais). station: null | 'bench' | 'fire'
 export const RECIPES = [

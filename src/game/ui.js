@@ -135,7 +135,7 @@ export class UI {
     this.strip.style.transform = `translateX(${(this.strip.parentElement.clientWidth / 2) - (deg + 360) * this.pxPerDeg}px)`;
     const hm = $('homeMark'); if (g.home) { const a = Math.atan2(g.home[0] - P.pos[0], -(g.home[2] - P.pos[2])) * 180 / Math.PI; const hd = ((a % 360) + 360) % 360; hm.style.display = ''; hm.style.left = (hd + 360) * this.pxPerDeg + 'px'; } else hm.style.display = 'none';
     for (let i = 0; i < 8; i++) { const id = g.quick[i], n = id ? g.inv.count(id) : 0, s = id ? { id, qty: n } : null, el = this.hslots[i]; const ic = el.querySelector('.ic'); const key = id ? id + (n ? '' : '0') : ''; if (ic.dataset.k !== key) { ic.innerHTML = id ? this._icon(id) : ''; ic.dataset.k = key; } el.classList.toggle('empty', !!id && !n); el.querySelector('.q').textContent = n > 1 ? n : ''; el.classList.toggle('eq', !!id && g.equip.hand === id); el.title = s ? ITEMS[s.id].name : ''; }
-    const hand = g.equip.hand; $('handIcon').textContent = hand ? ITEMS[hand].icon : '✊'; $('handName').textContent = hand ? (hand === 'jerrycan' ? `${ITEMS[hand].name} (${g.jerryFuel.toFixed(1)}/${g.vehicles.jerryCap()} L)` : ITEMS[hand].name) : 'Mãos';
+    const hand = g.equip.hand; if (this._handK !== hand) { this._handK = hand; $('handIcon').innerHTML = hand ? this._icon(hand) : '✊'; } $('handName').textContent = hand ? (hand === 'jerrycan' ? `${ITEMS[hand].name} (${g.jerryFuel.toFixed(1)}/${g.vehicles.jerryCap()} L)` : ITEMS[hand].name) : 'Mãos';
     if (!g.vehicles.driving && !$('driveHud').classList.contains('hidden')) $('driveHud').classList.add('hidden');
     // munição, retícula (abre com a dispersão) e marcador de acerto
     const F = g.guns, gun = F && F.gun; const am = $('ammo'); am.classList.toggle('hidden', !gun);
@@ -306,7 +306,7 @@ export class UI {
     for (const r of RECIPES) { if (FIRE.isCookRecipe(r)) continue; // assar é na grelha da fogueira (E na fogueira)
       const it = ITEMS[r.out]; const sk = SKILL_OF[r.id], skOk = g.hasSkillFor(r.id); const stOk = !r.station || (r.station === 'bench' && bench) || (r.station === 'fire' && fire); const can = skOk && stOk && g.inv.has(r.cost);
       const d = document.createElement('div'); d.className = 'recipe' + (stOk && skOk ? '' : ' locked') + (skOk ? '' : ' noskill');
-      d.innerHTML = `<div class="ic">${it.icon}</div><div><div class="nm">${it.name}${r.station ? ` <span class="muted">· requer ${r.station === 'bench' ? 'bancada' : 'fogueira acesa'}</span>` : ''}</div><div class="muted">${it.desc}</div>${skOk ? '' : `<div class="lk">🔒 Precisa da habilidade ${g.skillName(sk)}</div>`}<div class="cost">${costText(r.cost, g.inv)}</div></div>`;
+      d.innerHTML = `<div class="ic">${this._icon(r.out)}</div><div><div class="nm">${it.name}${r.station ? ` <span class="muted">· requer ${r.station === 'bench' ? 'bancada' : 'fogueira acesa'}</span>` : ''}</div><div class="muted">${it.desc}</div>${skOk ? '' : `<div class="lk">🔒 Precisa da habilidade ${g.skillName(sk)}</div>`}<div class="cost">${costText(r.cost, g.inv)}</div></div>`;
       const b = document.createElement('button'); b.textContent = !skOk ? '🔒' : r.station === 'fire' ? 'Cozinhar' : 'Fabricar'; b.disabled = !can; b.dataset.recipe = r.id; b.onclick = () => { g.craft(r); this.refresh(); }; d.appendChild(b); list.appendChild(d);
     }
   }
