@@ -7,11 +7,11 @@ const KEY = 'ilha_touch_layout_v1';
 // posição padrão: centro em fração da tela (x, y) e escala
 export const TOUCH_DEFAULT = {
   joy: [0.12, 0.72, 1], inventory: [0.05, 0.44, 0.9], attack: [0.17, 0.42, 1.15], pin: [0.28, 0.36, 0.85],
-  block: [0.79, 0.5, 1], jump: [0.91, 0.5, 1], interact: [0.79, 0.73, 1], crouch: [0.91, 0.73, 1], reload: [0.9, 0.93, 0.9],
+  block: [0.79, 0.5, 1], jump: [0.91, 0.5, 1], interact: [0.79, 0.73, 1], crouch: [0.91, 0.73, 1], reload: [0.9, 0.93, 0.9], slide: [0.79, 0.93, 0.9],
   sprint: [0.68, 0.82, 0.95], shoulder: [0.68, 0.6, 0.85], unequip: [0.5, 0.68, 0.8],
   mic: [0.68, 0.2, 0.8], map: [0.8, 0.2, 0.8], build: [0.86, 0.2, 0.8], pause: [0.92, 0.2, 0.8], gear: [0.74, 0.2, 0.8], rotate: [0.6, 0.86, 0.9], cancel: [0.6, 0.66, 0.9],
 };
-const NAMES = { joy: 'Joystick', inventory: 'Mochila', attack: 'Atirar', pin: 'Pino', block: 'Mirar', jump: 'Pular', interact: 'Usar', crouch: 'Agachar', reload: 'Recarregar', sprint: 'Correr', shoulder: 'Ombro', unequip: 'Mãos', mic: 'Voz', map: 'Mapa', build: 'Construir', pause: 'Pausa', gear: 'Engrenagem', rotate: 'Girar', cancel: 'Sair' };
+const NAMES = { joy: 'Joystick', inventory: 'Mochila', attack: 'Atirar', pin: 'Pino', block: 'Mirar', jump: 'Pular', interact: 'Usar', crouch: 'Agachar', slide: 'Deslizar', reload: 'Recarregar', sprint: 'Correr', shoulder: 'Ombro', unequip: 'Mãos', mic: 'Voz', map: 'Mapa', build: 'Construir', pause: 'Pausa', gear: 'Engrenagem', rotate: 'Girar', cancel: 'Sair' };
 export function isMobileDevice() {
   if (typeof window === 'undefined') return false; if (window.__FORCE_MOBILE) return true; if (window.__TEST_RES && !window.__FORCE_MOBILE) return false;
   const ua = navigator.userAgent || ''; const uaMobile = /Android|iPhone|iPad|iPod|Mobile|Silk|Kindle|Opera Mini|IEMobile/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);

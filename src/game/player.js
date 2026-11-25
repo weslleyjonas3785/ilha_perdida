@@ -53,7 +53,9 @@ export class Player {
 
     // carrinho: correndo (Shift) e apertando C, escorrega no chão. No plano dura pouco; em descida continua enquanto a ladeira empurrar.
     const hsNow = Math.hypot(this.vel[0], this.vel[2]);
-    if (act.crouch && !this.slide && this.onGround && !this.swimming && !this.climb && act.sprint && hsNow > 5.2 && !this.anim.busy) {
+    // botão DESLIZAR (celular): escorrega estando em movimento rápido (correndo)
+    if (act.slide && !(hsNow > 4.2) && !this.slide) { if (!this._slideTip || this._slideTip < Date.now()) { this._slideTip = Date.now() + 4000; g.ui.toast('Corra para deslizar (CORRER ou trava de corrida no joystick)', 'info'); } }
+    if ((act.crouch || act.slide) && !this.slide && this.onGround && !this.swimming && !this.climb && (act.sprint || act.slide) && hsNow > (act.slide ? 4.2 : 5.2) && !this.anim.busy) {
       const d = [this.vel[0] / hsNow, this.vel[2] / hsNow]; this.slide = { dir: d, s: Math.max(hsNow, 7.2) + 1.8, t: 0, air: 0, lastSprint: !!act.sprint }; this.crouch = true; st.stamina = Math.max(0, st.stamina - 6); g.audio.play('land', { vol: 0.5 });
     } else if (act.crouch && !this.swimming && !this.slide) { if (this.crouch) { if (this._canStand()) this.crouch = false; } else this.crouch = true; }
     if (this.slide) return this._slideStep(dt, act);

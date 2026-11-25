@@ -264,6 +264,7 @@ Todos entram na mesma VPN (Radmin VPN, Hamachi, ZeroTier…) ou na mesma rede de
 ## Celular (navegador)
 - Abrindo o jogo no celular/tablet, ele detecta sozinho e mostra os controles de toque (no computador eles não aparecem): joystick fixo (W/A/S/D), MOCHILA, ATIRAR, MIRAR, PULAR, USAR, AGACHAR, RECARREGAR, CORRER (liga/desliga), OMBRO, PINO da granada, MÃOS, MAPA, CONSTRUIR e PAUSA. Arrastar o dedo no resto da tela gira a câmera; a barra 1–8 embaixo seleciona o item com um toque.
 - No primeiro toque o jogo entra em tela cheia e trava na horizontal (Android/Chrome). Se o celular estiver em pé (ou o navegador não deixar travar, como no iPhone), aparece o aviso para girar.
+- Botão **DESLIZAR**: correndo (CORRER ou trava de corrida), o personagem dá o carrinho/deslize, igual a apertar C correndo no PC.
 - Com arma de fogo na mão, o botão USAR vira uma bala (ATIRAR). O botão grande da esquerda é só o desenho de uma bala.
 - Puxar a bola do joystick para cima e arrastar além do círculo trava a corrida (aparece o cadeado CORRER); o personagem segue correndo ao soltar, e tocar no joystick de novo destrava.
 - ⚙ Engrenagem → **Modificar controles**: o jogo para e abre a tela com todos os botões (inclusive Girar/Sair da construção). Toque num botão para escolher, arraste para mudar de lugar, use − / + (ou a barra) para o tamanho dele, e ajuste o tamanho de todos e a transparência. **Salvar** grava do jeito que ficou (no aparelho); **Cancelar** desfaz; **Restaurar padrão** volta ao original. O painel pode ser arrastado pelo título.

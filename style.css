@@ -556,3 +556,4 @@ body.tedit #mobile .tctl { z-index: 2; }
 #tEdit { width: min(360px, 40vw); } .tEditHead { cursor: move; touch-action: none; } .tEditHead b::after { content: '  ✥'; color: #9aa6b4; font-weight: 400; }
 .mapHelp .hmob { display: none; } body.mobile .mapHelp .hmob { display: inline; } body.mobile .mapHelp .hpc { display: none; }
 #mapCanvas { touch-action: none; }
+body.mobile [data-id=slide] i { color: #7fe3ff; }

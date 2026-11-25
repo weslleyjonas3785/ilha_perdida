@@ -98,7 +98,7 @@ export class Input {
       sprint: k('ShiftLeft') || k('ShiftRight') || (this.enabled && !!this.touch.sprintOn && this.touch.joyId !== null) || runLocked,
       walk: k('AltLeft'), mic: h('CapsLock') || this.btnHit('mic'),
       jump: h('Space') || this.btnHit('jump'),
-      crouch: h('KeyC') || this.btnHit('crouch'), // agachar só no C (Ctrl ficou livre)
+      crouch: h('KeyC') || this.btnHit('crouch'), slide: this.btnHit('slide'), // agachar só no C (Ctrl ficou livre)
       interact: h('KeyE') || this.btnHit('interact'),
       use: h('KeyF') || (this.enabled && this.mouse.leftPressed && (this.locked || this.touchActive || this.clickUse)) || this.btnHit('attack'),
       useHeld: k('KeyF') || (this.enabled && this.mouse.left && (this.locked || this.clickUse)) || this.btn('attack'),
