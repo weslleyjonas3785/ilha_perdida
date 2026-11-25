@@ -453,3 +453,16 @@ body.scoped #prompt { display: none; }
 #pieceHp .nm{font:700 12px Barlow,system-ui,sans-serif;color:#fff;text-shadow:0 1px 3px #000;margin-bottom:3px;white-space:nowrap}
 #pieceHp .bar{width:140px;height:9px;border-radius:5px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.55);overflow:hidden;margin:0 auto}
 #pieceHp .bar i{display:block;height:100%;transition:width .15s}
+
+/* inventário: área "Próximo" (loot no chão perto) */
+.nearBox{margin-top:10px;border-top:1px solid rgba(255,255,255,.12);padding-top:6px}
+.nearBox .hbtitle{display:flex;align-items:center;gap:8px}.nearBox .nearAll{margin-left:auto;padding:3px 10px;font-size:12px}
+.nearGrid{display:flex;flex-wrap:wrap;gap:5px;min-height:50px;padding:6px;border-radius:6px;background:rgba(0,0,0,.25);border:1px dashed rgba(255,255,255,.16)}
+.nearItem{position:relative;width:46px;height:46px;border-radius:5px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.nearItem:hover{background:rgba(255,210,120,.18);border-color:#ffd27a}.nearItem .ic{font-size:24px;display:flex}.nearItem .ic img{width:40px;height:40px;object-fit:contain}
+.nearItem .q{position:absolute;right:3px;bottom:1px;font-size:11px;color:#fff;text-shadow:0 1px 2px #000}.nearItem .rb{position:absolute;left:2px;top:0;font-style:normal;font-size:11px;color:#c6ff3a}
+.nearItem.rad{border-color:rgba(198,255,58,.5)}.nearEmpty{padding:10px}
+/* lupa nos móveis/caixas que ainda têm loot */
+#lootMarks{position:fixed;inset:0;pointer-events:none;z-index:30}
+#lootMarks .lm{position:absolute;transform:translate(-50%,-50%);border-radius:50%;background:rgba(12,16,22,.72);border:2px solid rgba(255,214,110,.9);box-shadow:0 0 8px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center}
+#lootMarks .lm svg{width:62%;height:62%}

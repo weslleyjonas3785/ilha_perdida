@@ -287,7 +287,7 @@ export class Game {
       else if (this.state === 'menu') this._menuCamera(dt);
       else if (this.state === 'create') this._createCamera(dt);
       else if (this.state === 'dead') { this.player.update(dt, {}, this.cam.yaw); this.cam.update(dt, this.player, this.physics); this.creatures.update(dt); this.env.update(dt); }
-      this.render(dt); this.frameMs = performance.now() - tf0; this.maxFrameMs = Math.max(this.maxFrameMs || 0, this.frameMs);
+      this.render(dt); this._lootMarks(dt); this.frameMs = performance.now() - tf0; this.maxFrameMs = Math.max(this.maxFrameMs || 0, this.frameMs);
     } catch (e) { console.error(e); if (!this._errShown) { this._errShown = true; this.ui.toast('Erro: ' + e.message, 'warn'); } }
     this.input.endFrame();
   }
@@ -1022,6 +1022,38 @@ export class Game {
     if (this.struct) this.struct.blast(p, R, o.dmg || 40, o.kind);
     if (o.wreck) this.wreck(p, o.wreck);
   }
+  // lupa em cima dos móveis/caixas/carros que ainda têm loot (some depois de vasculhar)
+  _lootMarks(dt) {
+    let box = this._lmBox; if (!box) { box = document.createElement('div'); box.id = 'lootMarks'; document.body.appendChild(box); this._lmBox = box; this._lmEls = []; this._lmList = []; this._lmT = 0; }
+    const P = this.player, off = this.state !== 'playing' || this.ui.anyOpen || P.dead || this.menuMode;
+    if (off) { for (const el of this._lmEls) el.style.display = 'none'; return; }
+    this._lmT -= dt; if (this._lmT <= 0) { this._lmT = 0.3; const w = this.world, R = 18, e = this.cam.eye || [P.pos[0], P.pos[1] + 1.6, P.pos[2]], cand = [];
+      if (!this._lmCars) this._lmCars = w.props.filter((q) => q.kind === 'car');
+      const test = (o, y, kind) => { const d = Math.hypot(o.x - P.pos[0], o.z - P.pos[2]); if (d > R) return; const t = [o.x, y, o.z], L = Math.hypot(t[0] - e[0], t[1] - e[1], t[2] - e[2]); if (this.physics.rayFree(e, t, 0.05) * L < L - 1.6) return; cand.push({ o, y, d, kind }); };
+      for (const o of w.crates) { if (o.looted || Math.abs(o.x - P.pos[0]) > R || Math.abs(o.z - P.pos[2]) > R) continue; test(o, (o.y ?? w.height(o.x, o.z)) + (o.furn ? 1.35 : 1.0), 'crate'); }
+      for (const o of this._lmCars) { if (o.looted || Math.abs(o.x - P.pos[0]) > R || Math.abs(o.z - P.pos[2]) > R) continue; test(o, (o.y ?? w.height(o.x, o.z)) + 1.9, 'car'); }
+      cand.sort((a, b) => a.d - b.d); this._lmList = cand.slice(0, 24); }
+    const VP = this.renderer.viewProj, W = window.innerWidth, H = window.innerHeight; let n = 0;
+    const svg = '<svg viewBox="0 0 24 24" fill="none" stroke="#ffd66e" stroke-width="2.6" stroke-linecap="round"><circle cx="10" cy="10" r="6.2"/><path d="M14.6 14.6 L20.5 20.5"/></svg>';
+    for (const c of this._lmList) { if (c.o.looted) continue; const x = c.o.x, y = c.y, z = c.o.z; const cw = VP[3] * x + VP[7] * y + VP[11] * z + VP[15]; if (cw <= 0.2) continue;
+      const sx = ((VP[0] * x + VP[4] * y + VP[8] * z + VP[12]) / cw * 0.5 + 0.5) * W, sy = (1 - ((VP[1] * x + VP[5] * y + VP[9] * z + VP[13]) / cw * 0.5 + 0.5)) * H; if (sx < -40 || sy < -40 || sx > W + 40 || sy > H + 40) continue;
+      let el = this._lmEls[n]; if (!el) { el = document.createElement('div'); el.className = 'lm'; el.innerHTML = svg; box.appendChild(el); this._lmEls.push(el); }
+      const sz = Math.max(18, Math.min(34, 420 / (c.d + 6))); el.style.display = ''; el.style.left = sx.toFixed(0) + 'px'; el.style.top = sy.toFixed(0) + 'px'; el.style.width = el.style.height = sz.toFixed(0) + 'px'; el.style.opacity = c.d > 14 ? (1 - (c.d - 14) / 4).toFixed(2) : '1'; n++; }
+    for (let i = n; i < this._lmEls.length; i++) this._lmEls[i].style.display = 'none';
+  }
+  // loot no chão perto do jogador (para a área "Próximo" do inventário)
+  nearLoot(R = 3.2) { const P = this.player.pos, out = []; const PICK = { stick: 'stick', stone: 'stone', fiber: 'fiber', mushroom: 'mushroom', crystal: 'crystal' }, PN = { fiber: 3 };
+    for (const d of this.drops) { if (Math.hypot(d.x - P[0], d.z - P[2]) > R || Math.abs((d.y ?? P[1]) - P[1]) > 2.5) continue; d.items.forEach((it, i) => { if (ITEMS[it[0]]) out.push({ src: 'drop', d, id: it[0], n: it[1], rad: !!it[2], ref: it }); }); }
+    for (const o of this.world.pickups) { if (o.taken || Math.abs(o.x - P[0]) > R || Math.abs(o.z - P[2]) > R || Math.hypot(o.x - P[0], o.z - P[2]) > R) continue; const id = PICK[o.kind]; if (id) out.push({ src: 'pick', o, id, n: PN[o.kind] || 1, rad: false }); }
+    for (const a of this.arrows) if (a.stuck && Math.hypot(a.p[0] - P[0], a.p[2] - P[2]) < R) out.push({ src: 'arrow', a, id: 'arrow', n: 1, rad: false });
+    return out; }
+  takeNear(e, quiet) { const it = ITEMS[e.id]; if (!it) return 0;
+    if (e.src === 'drop') { const d = e.d, i = d.items.indexOf(e.ref); if (i < 0 || !this.drops.includes(d)) return 0; const k = this.inv.add(e.id, e.n, { rad: e.rad || this.world.toxicAt(d.x, d.z) > 0.2 }); if (!k) { if (!quiet) this.ui.toast('Inventário cheio', 'warn'); return 0; }
+      if (k < e.n) e.ref[1] = e.n - k; else d.items.splice(i, 1); if (!d.items.length) { this.drops.splice(this.drops.indexOf(d), 1); if (d.death) this.deathPos = null; } if (!quiet) { this.ui.toast(`+${k} ${it.icon} ${it.name}${e.rad ? ' ☢' : ''}`, 'ok'); this.audio.play('pickup'); } this._autoQuick && this._autoQuick(e.id); return k; }
+    if (e.src === 'pick') { const o = e.o; if (o.taken) return 0; if (this.inv.room(e.id) < 1) { if (!quiet) this.ui.toast('Inventário cheio', 'warn'); return 0; } const n = e.id === 'stick' ? 1 + (Math.random() < 0.4) : e.n; this.give(e.id, n, quiet); if (o.kind === 'fiber' && Math.random() < 0.4) this.give('leaf', 1, true);
+      o.taken = true; o.regrowAt = this.env.day + (o.kind === 'crystal' ? 4 : 1); if (o._grp) o._grp.dirty(o); if (!quiet) this.audio.play('pickup'); return n; }
+    if (e.src === 'arrow') { const i = this.arrows.indexOf(e.a); if (i < 0 || this.inv.room('arrow') < 1) return 0; this.arrows.splice(i, 1); this.give('arrow', 1, quiet); return 1; }
+    return 0; }
   // dentro da fumaça densa a tela fica cinza (não dá para ver nada)
   _smokeOv() { const e = this.cam.eye; if (!e || !this.blasts) return; const d = this.blasts.clouds.length ? this.blasts.densityAt(e[0], e[1], e[2]) : 0; let el = this._sov; if (!el) { el = document.createElement('div'); el.id = 'smokeOv'; document.body.appendChild(el); this._sov = el; } const o = (d * 0.94).toFixed(2); if (el._o !== o) { el._o = o; el.style.opacity = o; } }
   // clarão da explosão na tela (quem está olhando, sem nada na frente)

@@ -128,6 +128,7 @@ export class UI {
   update(dt) {
     const g = this.game, P = g.player, st = P.stats;
     this.hudT -= dt; if (this.hudT > 0) return; this.hudT = 0.1;
+    if (this.open === 'inv' && this.curTab === 'inv' && (this._nearT = (this._nearT || 0) - 0.1) <= 0) { this._nearT = 0.4; this.renderNear(); }
     if (this.open === 'power') this.renderPower();
     for (const k of ['hp', 'hunger', 'thirst', 'energy', 'stamina']) { const b = this.bars[k]; const v = Math.max(0, st[k]); b.fill.style.width = v + '%'; b.val.textContent = Math.round(v); b.el.classList.toggle('low', v < 20); }
     const e = g.env; const h = e.hours; $('clockDay').textContent = 'Dia ' + e.day; $('clockTime').textContent = String(Math.floor(h)).padStart(2, '0') + ':' + String(Math.floor((h % 1) * 60)).padStart(2, '0'); $('clockWeather').textContent = (e.isNight ? '☾ ' : '☀ ') + e.label;
@@ -214,6 +215,17 @@ export class UI {
   _icon(id) { const it = ITEMS[id]; if (id === 'nvg' && !(this.game.equip.nvgCell > 0)) return `<img class="iimg" draggable="false" src="assets/icons/nvg_off.png" alt="">`; return it.img ? `<img class="iimg" draggable="false" src="assets/icons/${it.img}.png" alt="">` : `<span class="iemo">${it.icon}</span>`; }
   _slotEl(s, i, onClick, sel) { const d = document.createElement('div'); d.className = 'slot' + (sel ? ' sel' : '') + (s && s.rad ? ' rad' : ''); d.innerHTML = s ? `${this._icon(s.id)}<span class="q">${s.qty > 1 ? s.qty : ''}</span>` : ''; if (s) d.title = ITEMS[s.id].name + (s.rad ? ' (contaminado)' : ''); d.onclick = onClick; return d; }
   // inventário em grade: bolsos + mochila; cada item ocupa células conforme o tamanho
+  // "Próximo": o que está no chão perto do jogador (loot largado, mochilas, galhos, pedras…). Clique pega; "Pegar tudo" pega o que couber
+  renderNear(force) {
+    const g = this.game, box = $('invNear'); if (!box) return; const L = g.nearLoot(); const sig = L.map((e) => e.id + ':' + e.n + ':' + (e.rad ? 1 : 0)).join('|');
+    if (!force && box._sig === sig) return; box._sig = sig;
+    box.innerHTML = `<h3 class="hbtitle">Próximo <span class="muted">— no chão perto de você${L.length ? ' · clique para pegar' : ''}</span>${L.length > 1 ? '<button class="nearAll">Pegar tudo</button>' : ''}</h3>`;
+    const grid = document.createElement('div'); grid.className = 'nearGrid';
+    if (!L.length) grid.innerHTML = '<div class="muted small nearEmpty">Nada no chão por perto.</div>';
+    L.forEach((e, i) => { const it = ITEMS[e.id]; if (!it) return; const d = document.createElement('div'); d.className = 'nearItem' + (e.rad ? ' rad' : ''); d.title = `${it.name}${e.n > 1 ? ' ×' + e.n : ''}${e.rad ? ' — contaminado por radiação' : ''} · clique para pegar`;
+      d.innerHTML = `<span class="ic">${this._icon(e.id)}</span>${e.n > 1 ? `<b class="q">${e.n}</b>` : ''}${e.rad ? '<i class="rb">☢</i>' : ''}`; d.onclick = () => { g.takeNear(L[i]); this.click(); this.refresh(); }; grid.appendChild(d); });
+    box.appendChild(grid); const all = box.querySelector('.nearAll'); if (all) all.onclick = () => { for (const e of g.nearLoot()) g.takeNear(e, true); g.audio.play('pickup'); this.refresh(); };
+  }
   renderInv() {
     const g = this.game, inv = g.inv, C = 46;
     // boneco com os espaços de roupa ao redor (chapéu, camisa, colete, luvas, calça, sapatos) + R.A.T, mochila, mão e 2 armas nas costas
@@ -248,6 +260,7 @@ export class UI {
       wrap.appendChild(gr); box.appendChild(wrap); });
     { const kg = g.carryKg ?? inv.kg(); $('invCap').classList.toggle('heavy', kg > 25); }
     $('invCap').textContent = `Peso: ${(g.carryKg ?? inv.kg()).toFixed(1)} kg${(g.carryKg ?? 0) > 25 ? ' (pesado: você fica mais lento)' : ' / 25 kg sem perder velocidade'} · Ocupado: ${inv.used()}/${inv.size} células${inv.contaminated() ? ` · ☢ ${inv.contaminated()} item(ns) contaminado(s): lave num rio com sabonete líquido` : ''} · arraste para mover · ESPAÇO (ou R) gira ao arrastar`;
+    this.renderNear();
     const det = $('invDetail'); const s = this.sel !== null ? inv.slots[this.sel] : null;
     if (!s) { det.innerHTML = '<p class="muted">Clique num item para ver as ações. Arraste itens dentro da grade para organizar, ou para a barra rápida (1–6) para usar pela tecla.</p>'; return; }
     const it = ITEMS[s.id]; const idx = this.sel; const [w, h] = inv.dims(s);

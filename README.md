@@ -156,6 +156,8 @@ Otimizações:
 - **Barulhenta:** 3 s depois de jogada toca a **sirene** (som próprio) por **7 s**, que vai abaixando até parar. Robôs correm até ela atirando; **sentinelas e o mecha jogam bombas** nela. NPCs que ouvem vão procurar no barulho; dos que já tinham te visto, só alguns vão — os outros continuam atrás de você.
 - **C4:** a mais forte — **20 m** de raio: derruba árvores, quebra rochas, mata animais e robôs (o mecha aguenta 3 C4), abre cratera funda, quebra vidros e deixa **chamas no chão**.
 - **Construções:** levam dano de **tiro** (madeira aguenta ~30 tiros de fuzil; pedra e metal quase não sentem), **granadas/foguetes** e **C4**, com **barra de vida** sobre a peça atingida. C4: galhos/madeira e tudo o que foi construído no raio (bancadas, baús, fogueiras, máquinas) **cai na hora**; **pedra** (o dobro da vida da madeira) aguenta **1 C4** e cai na 2ª; **metal** aguenta **2** e cai na **3ª**.
+- **Inventário (Tab) → Próximo:** mostra o loot que está no chão perto de você (mochilas, armas largadas, galhos, pedras, flechas…); clique num item para pegar ou em **Pegar tudo**.
+- **Lupa:** móveis, caixas e carros que ainda têm loot mostram uma **lupa** em cima; depois de vasculhar, ela some.
 - **Barra rápida:** mostra a **quantidade** dos itens que acumulam; quando acaba, o item **sai do slot**.
 
 ## Painel do dono do mundo (Ctrl + Shift + F1)
@@ -425,6 +427,7 @@ python3 tests/play20.py  # 22 verificações: rodovia central e ramais (asfalto/
 python3 tests/play21.py  # 33 verificações: bifes, cidades grandes, tosse/infecção, escadas, barulho, barra 1-2/3/4-8,
                          # NPCs (acampamentos, militares, briga com robôs, picotar) e as 4 granadas de mão
 python3 tests/play25.py  # 19 verificações: projeto (roda com 11 peças, encaixes, animação), bandeira (área), martelo (reparar, upar até metal, girar, demolir com metade), peças sem apoio caem, explosão, salvar
+python3 tests/play29.py  # 5 verificações: área Próximo no inventário (pegar e pegar tudo) e lupa nos móveis com loot
 python3 tests/play28.py  # 9 verificações: quantidade no slot, fragmentação (fogo, clarão, cratera), luz (4 s + embaçado), fumaça densa 15 s, barulhenta, C4 (20 m) e dano nas construções
 python3 tests/play27.py  # 14 verificações: painel do dono (Ctrl+Shift+F1): dropar itens/NPCs/robôs/animais, lista, modo deus, voar, esqueletos, teleporte, console
 python3 tests/play26.py  # 20 verificações: multiplayer com dois navegadores (o teste liga o server.mjs sozinho): busca por IP, senha, avatares, mundo, criaturas, PvP
