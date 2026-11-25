@@ -15,8 +15,18 @@ export class GameAudio {
     this.amb.water = this._loop(this.noise, 'bandpass', 350);
     this.applyVolumes();
     // sons de tiro gravados (arquivos): pistola, fuzil de assalto, escopeta e fuzil de precisão
-    this.samples = {}; this.sampleGain = { pistol: 1.5, rifle: 1.0, shotgun: 0.95, sniper: 1.0, tinnitus: 0.7, smokegren: 1.0 };
-    for (const k of ['pistol', 'rifle', 'shotgun', 'sniper', 'skill', 'mechastep', 'spindown', 'tinnitus', 'smokegren']) fetch(`assets/audio/${k}.mp3`).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)).then((buf) => { this.samples[k] = buf; }).catch(() => {});
+    this.samples = {}; this.sampleGain = { pistol: 1.5, rifle: 1.0, shotgun: 0.95, sniper: 1.0, tinnitus: 0.7, smokegren: 1.0, barulhenta: 1.0 };
+    for (const k of ['pistol', 'rifle', 'shotgun', 'sniper', 'skill', 'mechastep', 'spindown', 'tinnitus', 'smokegren', 'barulhenta']) fetch(`assets/audio/${k}.mp3`).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)).then((buf) => { this.samples[k] = buf; }).catch(() => {});
+  }
+  // som longo posicional que segue a distância/direção do jogador e pode ser abaixado aos poucos (sirene da granada barulhenta)
+  voice(name, o = {}) {
+    const c = this.ctx, buf = this.samples && this.samples[name]; if (!c || c.state !== 'running' || !buf) return null;
+    const s = c.createBufferSource(); s.buffer = buf; s.loop = !!o.loop; const g = c.createGain(); g.gain.value = 0; const pan = c.createStereoPanner(); s.connect(g); g.connect(pan); pan.connect(this.sfx); s.start();
+    const v = { base: (o.vol ?? 1) * (this.sampleGain[name] || 1), at: o.at, max: o.max || 150, mul: 1, done: false,
+      update: () => { if (v.done) return; let fall = 1, p = 0; const L = v.at && this.listener && this.listener(); if (L) { const dx = v.at[0] - L.eye[0], dz = v.at[2] - L.eye[2], d = Math.hypot(dx, dz); fall = d > v.max ? 0 : Math.pow(1 - d / v.max, 1.3); p = Math.max(-1, Math.min(1, -Math.sin(Math.atan2(dx, dz) - L.yaw) * Math.min(1, d / 3))); }
+        g.gain.setTargetAtTime(v.base * fall * v.mul, c.currentTime, 0.05); pan.pan.setTargetAtTime(p, c.currentTime, 0.05); },
+      stop: (fade = 0.3) => { if (v.done) return; v.done = true; g.gain.setTargetAtTime(0, c.currentTime, Math.max(0.02, fade / 4)); setTimeout(() => { try { s.stop(); s.disconnect(); g.disconnect(); pan.disconnect(); } catch (e) { /* já parou */ } }, fade * 1000 + 200); } };
+    s.onended = () => { v.done = true; }; v.update(); return v;
   }
   _sample(name, o) { const c = this.ctx, buf = this.samples && this.samples[name]; if (!buf) return false; const s = c.createBufferSource(); s.buffer = buf; s.playbackRate.value = (o.rate || 1) * (0.97 + Math.random() * 0.06);
     const g = c.createGain(); g.gain.value = (o.vol ?? 1) * (this.sampleGain[name] || 1); s.connect(g); g.connect(this.sfx); s.start(); return true; }

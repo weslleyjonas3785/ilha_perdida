@@ -296,7 +296,9 @@ export class CreatureManager {
     if (c.kind === 'mecha') { const f = c.state === 'firing'; if (c._wasFiring && !f && !c.dead) g.audio.play('spindown', { at: c.pos, max: 80 }); c._wasFiring = f; c.engaged = !c.dead && (canSee || ((c.state === 'chase' || c.state === 'spinup' || c.state === 'firing' || c.state === 'attack') && (c.seenT || 0) < 3)); }
     if (def.gatling) { const spinning = c.state === 'spinup' || c.state === 'firing'; c.spinSpeed += ((spinning ? 34 : 0) - c.spinSpeed) * Math.min(1, dt * (spinning ? 1.6 : 0.8)); c.spinAng += c.spinSpeed * dt;
       if (c.state !== 'firing') { c.heat = Math.max(0, c.heat - dt * 0.12); if (c.overheated && c.heat < 0.15) c.overheated = false; } }
-    switch (c.state) {
+    // granada barulhenta: corre até a sirene (a não ser que esteja vendo o jogador de perto)
+    if (c.hornT > 0 && c.hornGoal && !(canSee && dist < 18)) { c.hornT -= dt; const hx = c.hornGoal[0] - c.pos[0], hz = c.hornGoal[1] - c.pos[2], hd = Math.hypot(hx, hz); faceYaw = Math.atan2(hx, hz); moveSpeed = hd > 11 ? def.run : 0; if (c.hornT <= 0) { c.state = 'search'; c.lastSeen = c.hornGoal.slice(); c.timer = 8; c.hornGoal = null; } c.state = c.state === 'firing' ? 'chase' : c.state; }
+    else switch (c.state) {
       case 'roar': faceYaw = toP; if (c.timer <= 0) { if (def.gatling && !c.overheated) { c.state = 'spinup'; c.timer = 1.1; g.audio.play('spinup', { vol: clamp(1.3 - dist / 40, 0.3, 1) }); } else c.state = 'chase'; } break;
       case 'spinup': faceYaw = toP; if (c.timer <= 0) { c.state = 'firing'; c.fireT = 0; c.losT = 0; } break;
       case 'firing': {

@@ -115,7 +115,7 @@ export class Net {
   sendHitTo(peerId, dmg, opt = {}, src = null) { this.send({ to: peerId, t: 'hit', dmg: +dmg.toFixed(1), ranged: !!opt.ranged, shot: !!opt.shot, melee: !!opt.melee, src: src && src.def ? src.def.name : (this.g.look?.name || 'Jogador'), sp: src && src.pos ? src.pos.map((v) => +v.toFixed(2)) : null }); }
   _remoteShot(o) { const g = this.g; const p = this.peers.get(o.from); const at = p && p.av ? [p.av.pos[0], p.av.pos[1] + 1.4, p.av.pos[2]] : o.o; g.audio.play(o.snd || 'rifle', { at, max: 260 }); if (o.o && o.d) { const end = [o.o[0] + o.d[0] * 60, o.o[1] + o.d[1] * 60, o.o[2] + o.d[2] * 60]; g.fx.tracer && g.fx.tracer(o.o, end); g.gunLight = { pos: at, t: 0.05 }; } }
   onShot(origin, dir, sound) { if (this.mode) this.send({ to: 'all', t: 'shot', o: origin.map((v) => +v.toFixed(2)), d: dir.map((v) => +v.toFixed(3)), snd: sound }); }
-  onBoom(p, o) { if (this.mode) this.send({ to: 'all', t: 'boom', p: p.map((v) => +v.toFixed(2)), o: { r: o.r, kind: o.kind } }); }
+  onBoom(p, o) { if (this.mode) this.send({ to: 'all', t: 'boom', p: p.map((v) => +v.toFixed(2)), o: { r: o.r, kind: o.kind, vis: o.vis, crater: o.crater, flash: o.flash } }); }
 
   // ---------- dano em criaturas/avatares que não são meus ----------
   onDamage(c, dmg, yaw, kind) {

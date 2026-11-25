@@ -149,6 +149,15 @@ Otimizações:
 - **Atualiza sozinho:** ao abrir, o arquivo confere o `version.json` publicado no GitHub (Pages e, se falhar, o raw do repositório). Se houver versão mais nova, baixa e abre a nova; sem internet, roda a cópia que está dentro dele. Para abrir sem atualizar: `?noupdate`.
 - **Mouse:** clicar no jogo trava o mouse (a setinha some e o mouse gira a câmera). Se o site não deixar travar, o jogo entra sozinho no modo "mouse livre", que funciona igual. Esc solta.
 
+## Explosões, granadas e dano nas construções
+- **Fragmentação:** bola de fogo low-poly com estilhaços de fogo, brasas, terra voando e fumaça escura; clarão forte na tela de quem está olhando; **abre cratera no chão** e fere todos num raio de 9 m.
+- **Luz:** quem está perto e olhando fica com a **tela branca por 4 s** e zumbido; depois a visão volta **embaçada aos poucos** (3 s).
+- **Fumaça:** nuvem **densa e baixa** (altura de uma pessoa) de bolas cinza que cobre só a área onde caiu (**~8 m**) e dura **15 s**; dentro dela não se vê nada (a tela fica cinza) e os robôs não te enxergam.
+- **Barulhenta:** 3 s depois de jogada toca a **sirene** (som próprio) por **7 s**, que vai abaixando até parar. Robôs correm até ela atirando; **sentinelas e o mecha jogam bombas** nela. NPCs que ouvem vão procurar no barulho; dos que já tinham te visto, só alguns vão — os outros continuam atrás de você.
+- **C4:** a mais forte — **20 m** de raio: derruba árvores, quebra rochas, mata animais e robôs (o mecha aguenta 3 C4), abre cratera funda, quebra vidros e deixa **chamas no chão**.
+- **Construções:** levam dano de **tiro** (madeira aguenta ~30 tiros de fuzil; pedra e metal quase não sentem), **granadas/foguetes** e **C4**, com **barra de vida** sobre a peça atingida. C4: galhos/madeira e tudo o que foi construído no raio (bancadas, baús, fogueiras, máquinas) **cai na hora**; **pedra** (o dobro da vida da madeira) aguenta **1 C4** e cai na 2ª; **metal** aguenta **2** e cai na **3ª**.
+- **Barra rápida:** mostra a **quantidade** dos itens que acumulam; quando acaba, o item **sai do slot**.
+
 ## Painel do dono do mundo (Ctrl + Shift + F1)
 Só aparece para quem criou o mundo (no jogo solo sempre; no multiplayer só para o dono que hospeda — os amigos não abrem).
 - **DROPAR:** todos os itens do jogo por categoria (armas, munição, saúde, comida, roupas, materiais…) e também **NPCs, robôs e animais**. Escolha a quantidade e o destino (**aos seus pés**, **onde está mirando** ou **perto de um jogador**). Dá para montar uma **lista** e **Dropar tudo** de uma vez.
@@ -416,6 +425,7 @@ python3 tests/play20.py  # 22 verificações: rodovia central e ramais (asfalto/
 python3 tests/play21.py  # 33 verificações: bifes, cidades grandes, tosse/infecção, escadas, barulho, barra 1-2/3/4-8,
                          # NPCs (acampamentos, militares, briga com robôs, picotar) e as 4 granadas de mão
 python3 tests/play25.py  # 19 verificações: projeto (roda com 11 peças, encaixes, animação), bandeira (área), martelo (reparar, upar até metal, girar, demolir com metade), peças sem apoio caem, explosão, salvar
+python3 tests/play28.py  # 9 verificações: quantidade no slot, fragmentação (fogo, clarão, cratera), luz (4 s + embaçado), fumaça densa 15 s, barulhenta, C4 (20 m) e dano nas construções
 python3 tests/play27.py  # 14 verificações: painel do dono (Ctrl+Shift+F1): dropar itens/NPCs/robôs/animais, lista, modo deus, voar, esqueletos, teleporte, console
 python3 tests/play26.py  # 20 verificações: multiplayer com dois navegadores (o teste liga o server.mjs sozinho): busca por IP, senha, avatares, mundo, criaturas, PvP
 python3 tests/play23.py  # 9 verificações: granada (F puxa o pino, barra de força verde/amarelo/vermelho, braço erguido, arremesso perto/médio/longe), mochila nas costas

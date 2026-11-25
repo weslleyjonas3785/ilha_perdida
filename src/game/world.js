@@ -378,6 +378,8 @@ export class World {
   // ---------- cavar (picareta): baixa um vértice da grade de 3 m; refaz os blocos tocados ----------
   digVertex(x, z) { const gi = Math.round((x + HALF) / CELL), gj = Math.round((z + HALF) / CELL); return { gi, gj, x: -HALF + gi * CELL, z: -HALF + gj * CELL, d: this.digs.get(digKey(gi, gj)) || 0 }; }
   isDug(x, z) { if (!this.digs.size) return false; const fx = (x + HALF) / CELL, fz = (z + HALF) / CELL, i = Math.floor(fx), j = Math.floor(fz); return !!(this.digs.get(digKey(i, j)) || this.digs.get(digKey(i + 1, j)) || this.digs.get(digKey(i, j + 1)) || this.digs.get(digKey(i + 1, j + 1))); }
+  // várias de uma vez (cratera de explosão): refaz cada bloco do terreno uma vez só
+  setDigs(list) { const out = new Set(); for (const [gi, gj, d] of list) { const k = digKey(gi, gj); if (d > 0) this.digs.set(k, Math.min(6, d)); else this.digs.delete(k); for (const di of [-1, 0, 1]) for (const dj of [-1, 0, 1]) { const ti = clamp(Math.floor((gi + di) / TC), 0, TILES - 1), tj = clamp(Math.floor((gj + dj) / TC), 0, TILES - 1); out.add(tj * TILES + ti); } } for (const k of out) this.refreshTile(k); }
   setDig(gi, gj, d) { const k = digKey(gi, gj); if (d > 0) this.digs.set(k, d); else this.digs.delete(k); this._refreshAround(gi, gj); }
   _refreshAround(gi, gj) { const out = new Set(); for (const di of [-1, 0, 1]) for (const dj of [-1, 0, 1]) { const ti = clamp(Math.floor((gi + di) / TC), 0, TILES - 1), tj = clamp(Math.floor((gj + dj) / TC), 0, TILES - 1); out.add(tj * TILES + ti); }
     for (const k of out) this.refreshTile(k); return out; }

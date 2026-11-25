@@ -42,6 +42,7 @@ import { Environment, FX } from './environment.js';
 import { GameAudio } from './audio.js';
 import { SmokeSignals } from './smoke.js';
 import { Admin } from './admin.js';
+import { Blasts } from './blasts.js';
 import * as STR from './struct.js';
 import { Net } from './net.js';
 import { UI } from './ui.js';
@@ -89,7 +90,7 @@ export class Game {
     this.settings = Object.assign(defaults, saved); this.settings.v = 2;
     this.renderer = new Renderer(canvas); this.audio = new GameAudio(); { const A = this.audio, orig = A.play.bind(A); A.play = (name, o = {}) => { const res = orig(name, o); const R = NOISE_R[name]; if (R && !o.at && !o.noNoise && this.player && !this.player.dead && this.state === 'playing') this.noise(this.player.pos, name === 'step' ? R * (o.vol ?? 1) : R, name === 'step' ? 'passo' : name); return res; }; } this.audio.listener = () => this.cam ? { eye: this.cam.eye, yaw: Math.atan2(this.cam.target[0] - this.cam.eye[0], this.cam.target[2] - this.cam.eye[2]) } : null; this.ui = new UI(this); this.input = new Input(canvas, this.ui);
     this.cam = new ThirdPersonCamera(); this.env = new Environment(this); this.fx = new FX(this);
-    this.guns = new Firearms(this); this.npcs = new NPCManager(this); this.fires = new FIRE.Campfires(this); this.convoys = new Convoys(this); this.grenades = new Grenades(this); this.smoke = new SmokeSignals(this); this.admin = new Admin(this); this.struct = new STR.StructSystem(this); this.net = new Net(this); this.inv = new GridInventory(); this._bigPockets = typeof window !== 'undefined' && !!window.__TEST_BIG_POCKETS; this.quick = Array(8).fill(null); this.inv.onChange = () => { this.syncHand && this.equip && this.syncHand(); if (this.ui.open) this.ui.refresh(); }; this.inv.onAdd = (id) => { this._autoQuick(id); this._toBack && this._toBack(id); };
+    this.guns = new Firearms(this); this.npcs = new NPCManager(this); this.fires = new FIRE.Campfires(this); this.convoys = new Convoys(this); this.grenades = new Grenades(this); this.smoke = new SmokeSignals(this); this.admin = new Admin(this); this.blasts = new Blasts(this); this.struct = new STR.StructSystem(this); this.net = new Net(this); this.inv = new GridInventory(); this._bigPockets = typeof window !== 'undefined' && !!window.__TEST_BIG_POCKETS; this.quick = Array(8).fill(null); this.inv.onChange = () => { this.syncHand && this.equip && this.syncHand(); if (this.ui.open) this.ui.refresh(); }; this.inv.onAdd = (id) => { this._autoQuick(id); this._toBack && this._toBack(id); };
     this.equip = this.freshEquip(); this._applyBack(); this.attach = {}; this.home = null; this.drops = []; this.logs = []; this.falling = []; this.projectiles = []; this.arrows = []; this.clouds = []; this.stats = { built: 0, kills: 0 };
     this.lastFire = [0, 0]; this.saveT = 60; this.grassCells = new Map(); this.menuT = 0; this.playTime = 0;
     this.input.wantLock = true;
@@ -349,7 +350,7 @@ export class Game {
     P.update(dt, pa, this.cam.yaw);
     this.cam.aimT = this.guns.aimT; this.cam.update(dt, P, this.physics);
     { const st = this.world.siteAt(P.pos[0], P.pos[2]); const k = st ? st.kind : null; if (k !== this._siteK) { this._siteK = k; if (st) this.ui.toast(`📍 ${st.name}`, 'info'); } }
-    this.env.update(dt); this.creatures.update(dt); this.npcs.update(dt); this.grenades.update(dt); this.smoke.update(dt); this.admin.tick(dt); this.struct.update(dt); this.fires.update(dt); this.convoys.update(dt); this._trapTick(dt); if (this.ui.open === 'fire' && this.ui.fire) { this._fireUiT = (this._fireUiT || 0) - dt; if (this._fireUiT <= 0) { this._fireUiT = 0.25; this.ui.renderFire(); } } this._updateButcher(dt); this.ui.flash && this.ui.flash(this.grenades.flashT); this.build.update2(dt); this.power.update(dt); this.grapple.update(dt); this.geiger.update(dt);
+    this.env.update(dt); this.creatures.update(dt); this.npcs.update(dt); this.grenades.update(dt); this.blasts.update(dt); this.smoke.update(dt); this.admin.tick(dt); this.struct.update(dt); this.fires.update(dt); this.convoys.update(dt); this._trapTick(dt); if (this.ui.open === 'fire' && this.ui.fire) { this._fireUiT = (this._fireUiT || 0) - dt; if (this._fireUiT <= 0) { this._fireUiT = 0.25; this.ui.renderFire(); } } this._updateButcher(dt); this.ui.flash && this.ui.flash(this.grenades.flashT); this._smokeOv(); this.build.update2(dt); this.power.update(dt); this.grapple.update(dt); this.geiger.update(dt);
     if (this._reading) { this._reading.t += dt; this.ui.readProgress(Math.min(1, this._reading.t / this._reading.T)); if (this.player.dead) this._reading = null; }
     this._updateClouds(dt); this._survival(dt); this._updateFalling(dt); this._updateProjectiles(dt); this._updateArrows(dt); this._updateC4(dt); this._updateWebs(dt); this._interactPrompt();
     this.saveT -= dt; if (this.saveT <= 0) { this.saveT = 60; this.saveGame(false); }
@@ -501,9 +502,9 @@ export class Game {
     this.c4s.push(b); this.audio.play('c4arm'); this.ui.toast(a.c ? `🧨 C4 grudado em ${a.c.def.name}! 10 s — afaste-se` : '🧨 C4 armado: 10 s — afaste-se!', 'warn'); }
   _updateC4(dt) { for (const b of this.c4s) { if (b.c) { if (b.c.dead && b.c.deadTime > 0.1) { b.c = null; } else if (b.c) { b.p = [b.c.pos[0] + b.off[0], b.c.pos[1] + b.off[1], b.c.pos[2] + b.off[2]]; } }
       b.t -= dt; b.beep -= dt; if (b.beep <= 0) { b.beep = Math.max(0.12, b.t / 10); this.audio.play('beep', { at: b.p, max: 40 }); } if (b.t <= 0) { b.done = true; this.bigExplosion(b.p); } } this.c4s = this.c4s.filter((b) => !b.done); }
-  bigExplosion(p) { const P = this.player; this.explode(p, null, { r: 7, dmg: 420, playerDmg: 140, pr: 6, kind: 'c4' });
-    for (const pc of [...this.build.pieces]) { const d = Math.hypot(pc.x - p[0], pc.z - p[2]); if (d < 3.2 && Math.abs(pc.y - p[1]) < 4) this.build.remove(pc, false); }
-    for (const b of this.stream.buckets.values()) if (b.glass) for (const gp of b.glass) if (!gp.broken && Math.hypot(gp.x - p[0], gp.y - p[1], gp.z - p[2]) < 14) this.breakGlass(gp);
+  // C4: a mais forte — 20 m: mata bichos e robôs (menos os muito resistentes), derruba árvores, quebra rochas, cava cratera e destrói construções de madeira
+  bigExplosion(p) { const P = this.player; this.explode(p, null, { r: 20, dmg: 1500, playerDmg: 280, pr: 16, kind: 'c4', cause: 'explosão de C4', vis: 'c4', crater: [7.5, 2.4], wreck: 20 });
+    for (const b of this.stream.buckets.values()) if (b.glass) for (const gp of b.glass) if (!gp.broken && Math.hypot(gp.x - p[0], gp.y - p[1], gp.z - p[2]) < 30) this.breakGlass(gp);
     this.cam.shake = Math.max(this.cam.shake, Math.max(0.3, 1.4 - Math.hypot(P.pos[0] - p[0], P.pos[2] - p[2]) / 30)); }
   playerDie(cause, finished) {
     const P = this.player; P.stats.hp = 0; P.die(finished); document.getElementById('fade').classList.remove('on'); if (finished) this.addBloodPool(P.pos[0], P.pos[2], P.yaw); this.state = 'dead'; this.build.cancel(); this.ui.closePanels(true); this.input.exitLock(); this.audio.play('death');
@@ -889,7 +890,7 @@ export class Game {
     this.net.onLoot(c, true); this.creatures.remove(c); this.audio.play('butcher'); this.ui.toast('🥩 Corpo picotado: mochila, roupas, armas, carne e ossos ficaram no chão', 'ok'); }
   // armadilha de granada: quem passar pelo fio (jogador, NPC ou bicho do chão) detona 1 s depois
   _trapTick(dt) { const P = this.player; for (const p of [...this.build.pieces]) { if (p.type !== 'gtrap') continue; p.age = (p.age || 0) + dt;
-      if (p.fuse !== undefined) { p.fuse -= dt; if (p.fuse <= 0) { this.build.remove(p, false); this.explode([p.x, p.y + 0.2, p.z], null, { r: 8, dmg: 130, playerDmg: 95, pr: 7.5, kind: 'grenade', cause: 'armadilha de granada' }); this.noise([p.x, p.y, p.z], 120, 'explosão'); } continue; }
+      if (p.fuse !== undefined) { p.fuse -= dt; if (p.fuse <= 0) { this.build.remove(p, false); this.explode([p.x, p.y + 0.2, p.z], null, { r: 9, dmg: 150, playerDmg: 100, pr: 8, kind: 'grenade', cause: 'armadilha de granada', vis: 'frag', crater: [4.5, 0.9], flash: 1 }); this.noise([p.x, p.y, p.z], 120, 'explosão'); } continue; }
       if (p.age < 3) continue; const c = Math.cos(p.rot), sn = Math.sin(p.rot); const ax = p.x - 1.2 * c, az = p.z + 1.2 * sn, bx = p.x + 1.2 * c, bz = p.z - 1.2 * sn;
       const hit = (q, r) => { const [d] = segDistG(q[0], q[2], ax, az, bx, bz); return d < r && Math.abs(q[1] - p.y) < 1.2; };
       let trig = !P.dead && hit(P.pos, 0.45); if (!trig) for (const cr of this.creatures.list) if (!cr.dead && !cr.flyer && !cr.def.flyer && hit(cr.pos, (cr.def.radius || 0.4) + 0.1)) { trig = true; break; }
@@ -1009,15 +1010,36 @@ export class Game {
   }
   explode(p, src, o = {}) {
     const P = this.player; if (!o.fxOnly && this.net && this.net.active && !(src && src.netProxy)) this.net.onBoom(p, o); this.audio.play('explosion', { vol: Math.max(0.3, 1 - Math.hypot(p[0] - P.pos[0], p[2] - P.pos[2]) / 60) });
-    this.fx.burst(p, 40, [1, 0.55, 0.15], 7, 0.6, 0.14, 4); this.fx.burst(p, 25, [0.3, 0.3, 0.3], 3, 1.6, 0.25, -1.5); this.fx.burst(p, 16, [0.35, 0.3, 0.25], 5, 1.0, 0.06);
-    const d = Math.hypot(p[0] - P.pos[0], p[1] - (P.pos[1] + 0.9), p[2] - P.pos[2]);
-    this.cam.shake = Math.max(this.cam.shake, Math.max(0, 1 - d / 25));
-    if (o.fxOnly) { this.blastLight = { pos: p.slice(), t: 0.35 }; return; }
+    const big = o.vis === 'c4'; if (o.vis && this.blasts) { this.blasts.boom(o.vis, p); this.fx.burst(p, big ? 40 : 18, [1, 0.7, 0.3], big ? 14 : 9, 0.5, 0.06, 6); } else { this.fx.burst(p, 40, [1, 0.55, 0.15], 7, 0.6, 0.14, 4); this.fx.burst(p, 25, [0.3, 0.3, 0.3], 3, 1.6, 0.25, -1.5); this.fx.burst(p, 16, [0.35, 0.3, 0.25], 5, 1.0, 0.06); }
+    if (big) this.audio.play('explosion', { vol: 1 }); const d = Math.hypot(p[0] - P.pos[0], p[1] - (P.pos[1] + 0.9), p[2] - P.pos[2]);
+    this.cam.shake = Math.max(this.cam.shake, Math.max(0, (big ? 1.6 : o.vis ? 1.2 : 1) - d / (big ? 70 : o.vis ? 35 : 25)));
+    this.blastLight = o.vis ? { pos: [p[0], p[1] + 1.5, p[2]], t: big ? 0.9 : 0.5, max: big ? 0.9 : 0.5, range: big ? 70 : 34, col: big ? [14, 7, 2.2] : [9, 4.8, 1.5] } : { pos: p.slice(), t: 0.35 };
+    if (o.flash || big) this.boomFlash(p, big ? 1 : 0.75);
+    if (o.crater) this.crater(p, o.crater[0], o.crater[1]);
+    if (o.fxOnly) return;
     const pr = o.pr || 4, R = o.r || 3.5; const cover = (q) => { const e = [p[0], p[1] + 0.3, p[2]]; const L = Math.hypot(q[0] - e[0], q[1] - e[1], q[2] - e[2]); return this.physics.rayFree(q, e, 0.02, null) * L < L - 0.8; }; if (!P.dead && d < pr && !cover([P.pos[0], P.pos[1] + 1.0, P.pos[2]])) { if (src) this.playerHit((o.playerDmg || 34) * (1 - d / pr) + 6, src, { ranged: true }); else this.damage((o.playerDmg || 34) * (1 - d / pr) + 6, o.cause || 'explosão de C4'); this.knockback(Math.atan2(P.pos[0] - p[0], P.pos[2] - p[2]), 12 * (1 - d / pr)); }
-    for (const c of this.creatures.list) { if (c === src || c.dead) continue; const dc = Math.hypot(c.pos[0] - p[0], c.pos[2] - p[2]); if (dc < R && !cover([c.pos[0], c.pos[1] + 0.6, c.pos[2]])) this.creatures.damage(c, (o.dmg || 40) * (1 - dc / R * 0.7), Math.atan2(c.pos[0] - p[0], c.pos[2] - p[2]), o.kind); }
-    if (this.struct) this.struct.blast(p, R, o.dmg || 40);
-    this.blastLight = { pos: p.slice(), t: 0.35 };
+    for (const c of this.creatures.list) { if (c === src || c.dead) continue; const dc = Math.hypot(c.pos[0] - p[0], c.pos[2] - p[2]); if (dc < R && (o.vis === 'c4' || !cover([c.pos[0], c.pos[1] + 0.6, c.pos[2]]))) this.creatures.damage(c, (o.dmg || 40) * (1 - dc / R * 0.7), Math.atan2(c.pos[0] - p[0], c.pos[2] - p[2]), o.kind); }
+    if (this.struct) this.struct.blast(p, R, o.dmg || 40, o.kind);
+    if (o.wreck) this.wreck(p, o.wreck);
   }
+  // dentro da fumaça densa a tela fica cinza (não dá para ver nada)
+  _smokeOv() { const e = this.cam.eye; if (!e || !this.blasts) return; const d = this.blasts.clouds.length ? this.blasts.densityAt(e[0], e[1], e[2]) : 0; let el = this._sov; if (!el) { el = document.createElement('div'); el.id = 'smokeOv'; document.body.appendChild(el); this._sov = el; } const o = (d * 0.94).toFixed(2); if (el._o !== o) { el._o = o; el.style.opacity = o; } }
+  // clarão da explosão na tela (quem está olhando, sem nada na frente)
+  boomFlash(p, s) { const P = this.player, e = this.cam.eye || [P.pos[0], P.pos[1] + 1.6, P.pos[2]]; const d = Math.hypot(p[0] - e[0], p[2] - e[2]); if (d > 90 * s) return;
+    const q = [p[0], p[1] + 1, p[2]]; if (this.physics.rayFree(e, q, 0.05) < 0.9) return; const ang = Math.abs(((Math.atan2(p[0] - e[0], p[2] - e[2]) - this.cam.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI); const look = ang < 0.7 ? 1 : ang < 1.4 ? 0.55 : 0.2;
+    const k = Math.min(1, s * look * Math.max(0.15, 1 - d / (90 * s))); let el = document.getElementById('boomOv'); if (!el) { el = document.createElement('div'); el.id = 'boomOv'; document.body.appendChild(el); }
+    el.style.transition = 'none'; el.style.opacity = k.toFixed(2); void el.offsetWidth; el.style.transition = `opacity ${(0.35 + s * 0.6).toFixed(2)}s ease-out`; el.style.opacity = '0'; }
+  // cratera: o chão afunda em volta da explosão (não mexe em estradas, prédios, construções, água e cavernas)
+  crater(p, R, depth) { const w = this.world, C = 3, seen = new Set(), list = []; const n = Math.ceil(R / C) + 1;
+    for (let i = -n; i <= n; i++) for (let j = -n; j <= n; j++) { const v = w.digVertex(p[0] + i * C, p[2] + j * C); const key = v.gi + ',' + v.gj; if (seen.has(key)) continue; seen.add(key); const dd = Math.hypot(v.x - p[0], v.z - p[2]); if (dd > R) continue;
+      const h = w.height(v.x, v.z); if (h < 0.4 || w.caveAt(v.x, v.z) || (w.onRoad && w.onRoad(v.x, v.z, 2.5)) || (w.bldAt && w.bldAt(v.x, v.z)) || this.build.pieces.some((q) => Math.hypot(q.x - v.x, q.z - v.z) < 3.4)) continue;
+      const add = depth * (1 - Math.pow(dd / R, 2)); if (add < 0.08) continue; list.push([v.gi, v.gj, Math.min(6, v.d + add)]); }
+    if (!list.length) return; w.setDigs(list); this._dropGrass(p[0], p[2], R + 1); const P = this.player; if (Math.hypot(P.pos[0] - p[0], P.pos[2] - p[2]) < R + 2) P.onGround = false; }
+  // C4: derruba árvores e quebra rochas no raio
+  wreck(p, R) { const w = this.world; let t = 0, r = 0;
+    for (const tr of w.trees) { if (tr.felled || Math.abs(tr.x - p[0]) > R || Math.abs(tr.z - p[2]) > R) continue; const d = Math.hypot(tr.x - p[0], tr.z - p[2]); if (d > R) continue; if (!tr.collider) { tr.felled = true; tr.regrowAt = this.env.day + 3; continue; } this._fellTree(tr, Math.atan2(tr.x - p[0], tr.z - p[2])); t++; }
+    for (const o of w.rocks) { if (o.mined || Math.abs(o.x - p[0]) > R || Math.abs(o.z - p[2]) > R || Math.hypot(o.x - p[0], o.z - p[2]) > R * 0.8) continue; o.mined = true; o.regrowAt = this.env.day + 3; if (o.collider) o.collider.ghost = true; if (o._grp) o._grp.dirty(o); this.fx.burst([o.x, o.y + 0.5, o.z], 20, [0.55, 0.53, 0.5], 6, 1.0, 0.1); r++; }
+    if (t + r) this.audio.play('rockbreak', { at: p, vol: 0.9 }); }
   structCost(type) { return STR.costOf(type, 0); }
   buildAvatarMesh(look) { return buildPlayerMesh(this.playerAssets.skel, { ...LOOK_DEFAULT, ...look }); }
   // multiplayer: entrar no mundo do dono (fotografia do mundo) — o personagem de cada um fica salvo no próprio navegador
@@ -1111,12 +1133,12 @@ export class Game {
     if (this.arrows.length > 160) { const i = this.arrows.findIndex((a) => a.stuck); this.arrows.splice(i >= 0 ? i : 0, 1); } }
   // impacto do foguete / granada
   _boom(a, p) { const q = [p[0], p[1] + 0.1, p[2]];
-    if (a.boom === 'rocket') this.explode(q, null, { r: 5.5, dmg: 170, playerDmg: 85, pr: 5, kind: 'rocket', cause: 'foguete' });
+    if (a.boom === 'rocket') this.explode(q, null, { r: 5.5, dmg: 170, playerDmg: 85, pr: 5, kind: 'rocket', cause: 'foguete', vis: 'frag', crater: [3.5, 0.7], flash: 1 });
     else if (a.btype === 'gren_gas') { this.audio.play('steam', { at: q }); this.fx.burst(q, 18, [0.4, 0.7, 0.2], 3, 0.8, 0.2, -0.5); this.clouds.push({ p: q, r: 5, t: 12, max: 12, kind: 'gas', emit: 0 }); }
     else if (a.btype === 'gren_smoke') { this.audio.play('steam', { at: q }); this.fx.burst(q, 18, [0.7, 0.7, 0.72], 3, 0.8, 0.2, -0.5); this.clouds.push({ p: q, r: 6.5, t: 20, max: 20, kind: 'smoke', emit: 0 }); }
-    else this.explode(q, null, { r: 4.5, dmg: 75, playerDmg: 45, pr: 4.2, kind: 'grenade', cause: 'granada' }); }
+    else this.explode(q, null, { r: 4.5, dmg: 75, playerDmg: 45, pr: 4.2, kind: 'grenade', cause: 'granada', vis: 'frag', crater: [3, 0.5], flash: 1 }); }
   _updateClouds(dt) { const P = this.player; this.clouds = (this.clouds || []).filter((c) => (c.t -= dt) > 0);
-    for (const c of this.clouds) { const f = Math.min(1, c.t / 3); c.emit -= dt; if (c.emit <= 0) { c.emit = 0.06; for (let k = 0; k < 3; k++) { const a = Math.random() * 6.283, d = Math.sqrt(Math.random()) * c.r * 0.9; const col = c.kind === 'gas' ? [0.42 + Math.random() * 0.1, 0.68, 0.22] : [0.66, 0.66, 0.68];
+    for (const c of this.clouds) { const f = Math.min(1, c.t / 3); c.emit -= dt; if (c.emit <= 0 && !c.noFx) { c.emit = 0.06; for (let k = 0; k < 3; k++) { const a = Math.random() * 6.283, d = Math.sqrt(Math.random()) * c.r * 0.9; const col = c.kind === 'gas' ? [0.42 + Math.random() * 0.1, 0.68, 0.22] : [0.66, 0.66, 0.68];
           this.fx.parts.push({ p: [c.p[0] + Math.cos(a) * d, c.p[1] + Math.random() * 1.6, c.p[2] + Math.sin(a) * d], v: [(Math.random() - 0.5) * 0.4, 0.15, (Math.random() - 0.5) * 0.4], life: 3.2 * f + 0.5, max: 3.2 * f + 0.5, col, size: 1.1 + Math.random() * 0.6, grav: -0.03, smoke: true }); } }
       if (c.kind === 'gas') { if (!P.dead && Math.hypot(P.pos[0] - c.p[0], P.pos[2] - c.p[2]) < c.r && Math.abs(P.pos[1] - c.p[1]) < 3 && !this.equip.suit) { this._gasT = (this._gasT || 0) - dt; if (this._gasT <= 0) { this._gasT = 1; this.damage(5, 'gás tóxico', true); this.audio.play('cough'); this.cam.shake = Math.max(this.cam.shake, 0.15); } }
         for (const k of this.creatures.list) if (!k.dead && !k.def.heavyArmor && Math.hypot(k.pos[0] - c.p[0], k.pos[2] - c.p[2]) < c.r) { k._gasT = (k._gasT || 0) - dt; if (k._gasT <= 0) { k._gasT = 1; this.creatures.damage(k, k.def.robot ? 6 : 12, 0, 'gas'); } } } } }
@@ -1149,6 +1171,7 @@ export class Game {
           if (a.arrow && Math.random() < 0.5) { const gy = this.world.height(a.p[0], a.p[2]); keep.push({ p: [a.p[0], gy + 0.05, a.p[2]], v: [d[0], -0.3, d[2]], stuck: true, arrow: true, life: 120 }); }
           break;
         }
+        if (hit.col && hit.col.piece && this.struct) this.struct.shot(hit.col.piece, a.dmg * (a.arrow ? 0.4 : 1), hit.p);
         this.guns._impact(hit);
         if (a.arrow) { this.audio.play('arrowHit', { vol: 0.7 }); if (Math.random() < 0.85) { a.stuck = true; a.life = 120; a.v = d; keep.push(a); } }
       }
@@ -1230,7 +1253,7 @@ export class Game {
     this.stream.siteItems(items);
     if (!this.menuMode) { this._renderExtras(items, eye); this._renderBlood(items); }
     for (const c of this.caveMeshes) items.push({ mesh: c.mesh, sphere: [c.c.x, c.c.y + 3, c.c.z, c.c.R + 8], doubleSided: true });
-    this.build.renderItems(items); this.power.render(items); this.grapple.render(items); this.geiger.render(items); this.grenades.render(items); this.fires.render(items); this.smoke.render(items, eye); this.struct.render(items, eye); this._renderSheet(items); if (!this._porterMesh) this._porterMesh = this.renderer.createMesh(porterLoadMesh()); this.convoys.render(items, this._porterMesh); this.npcs.render(items, eye, (wid) => { const id = { club: 'scrapaxe', knife: 'scrapknife' }[wid] || wid; return this.tools[id]; });
+    this.build.renderItems(items); this.power.render(items); this.grapple.render(items); this.geiger.render(items); this.grenades.render(items); this.fires.render(items); this.smoke.render(items, eye); this.blasts.render(items); this.struct.render(items, eye); this._renderSheet(items); if (!this._porterMesh) this._porterMesh = this.renderer.createMesh(porterLoadMesh()); this.convoys.render(items, this._porterMesh); this.npcs.render(items, eye, (wid) => { const id = { club: 'scrapaxe', knife: 'scrapknife' }[wid] || wid; return this.tools[id]; });
     if (P.rig) { if (!this.rigMeshes) this.rigMeshes = { mag: r.createMesh(magMesh()), shell: r.createMesh(MXS.shellMesh()), bolt: this.grapple.boltMesh }; P.rig.render(items, this.rigMeshes); }
     const I = mat4.create();
     for (const f of this.falling) { const t = f.t; const ax = [Math.cos(f.dir), 0, -Math.sin(f.dir)]; const s = Math.sin(f.a / 2); const q = [ax[0] * s, 0, ax[2] * s, Math.cos(f.a / 2)];
@@ -1312,7 +1335,7 @@ export class Game {
       for (let k = 0; k < 4; k++) r.particle(b.p[0] - n[0] * (0.4 + k * 0.12), b.p[1] - n[1] * (0.4 + k * 0.12), b.p[2] - n[2] * (0.4 + k * 0.12), 0.16 - k * 0.03, 1.4, 0.7 - k * 0.1, 0.2, 1 - k * 0.2);
       lights.push({ pos: b.p.slice(), range: 7, col: [3, 1.4, 0.4], d: Math.hypot(b.p[0] - eye[0], b.p[2] - eye[2]) }); }
     if (this.gunLight && this.gunLight.t > 0) { this.gunLight.t -= dt; lights.push({ pos: this.gunLight.pos, range: 9, col: [7, 4.5, 1.8], d: 0 }); }
-    if (this.blastLight && this.blastLight.t > 0) { this.blastLight.t -= dt; lights.push({ pos: this.blastLight.pos, range: 18, col: [6, 3, 1], d: 0 }); }
+    if (this.blastLight && this.blastLight.t > 0) { this.blastLight.t -= dt; const BL = this.blastLight, k = BL.max ? Math.min(1, BL.t / BL.max * 1.6) : 1; lights.push({ pos: BL.pos, range: BL.range || 18, col: (BL.col || [6, 3, 1]).map((v) => v * k), d: 0 }); }
     lights.sort((a, b) => a.d - b.d); r.pointLights = lights.slice(0, 8);
     const night = this.env.isNight ? 1 : 0;
     if (!inCave) this.fx.toxicHaze(dt, eye, TOXIC, (x, z) => this.world.height(x, z));

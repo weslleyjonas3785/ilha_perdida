@@ -445,3 +445,11 @@ body.scoped #prompt { display: none; }
 @media (max-width:760px){.admCols{grid-template-columns:1fr}.admSide{width:110px}}
 
 #handIcon .iimg{width:30px;height:30px;object-fit:contain;vertical-align:middle}#handIcon .iemo{font-size:inherit}
+
+/* explosões: clarão na tela, fumaça densa e barra de vida das construções */
+#boomOv{position:fixed;inset:0;z-index:58;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 50%,rgba(255,255,240,1) 0%,rgba(255,226,150,.96) 35%,rgba(255,150,60,.85) 75%,rgba(255,110,30,.7) 100%)}
+#smokeOv{position:fixed;inset:0;z-index:39;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 50%,rgba(120,122,126,.9),rgba(92,94,98,1))}
+#pieceHp{position:fixed;z-index:45;transform:translate(-50%,-100%);pointer-events:none;text-align:center;display:none}
+#pieceHp .nm{font:700 12px Barlow,system-ui,sans-serif;color:#fff;text-shadow:0 1px 3px #000;margin-bottom:3px;white-space:nowrap}
+#pieceHp .bar{width:140px;height:9px;border-radius:5px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.55);overflow:hidden;margin:0 auto}
+#pieceHp .bar i{display:block;height:100%;transition:width .15s}
