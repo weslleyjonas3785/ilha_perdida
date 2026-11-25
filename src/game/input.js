@@ -6,13 +6,13 @@ export class Input {
     this.touch = { joyId: null, joyOrigin: [0, 0], joyVec: [0, 0], camId: null, camLast: [0, 0], buttons: new Set(), btnPressed: new Set() };
     window.addEventListener('keydown', (e) => {
       if (e.repeat) { if (['Tab', 'Space'].includes(e.code)) e.preventDefault(); return; }
-      this.keys.add(e.code); this.pressed.add(e.code);
+      this.keys.add(e.code); this.pressed.add(e.code); if (e.code === 'CapsLock') this._capsT = performance.now();
       if (['Tab', 'Space', 'ControlLeft', 'ControlRight', 'AltLeft'].includes(e.code) || (e.ctrlKey && ['KeyW', 'KeyS', 'KeyD', 'KeyA'].includes(e.code))) e.preventDefault();
     });
-    window.addEventListener('keyup', (e) => this.keys.delete(e.code));
+    window.addEventListener('keyup', (e) => { this.keys.delete(e.code); if (e.code === 'CapsLock' && performance.now() - (this._capsT || 0) > 900) this.pressed.add('CapsLock'); }); // Mac: desligar o Caps Lock só manda keyup
     window.addEventListener('blur', () => { this.keys.clear(); this.mouse.left = this.mouse.right = false; });
     canvas.addEventListener('mousedown', (e) => {
-      if (!this.locked && !this.touchActive && this.wantLock) { if (this.noLock) this._freeOn(); else this.requestLock(); }
+      if (!this.locked && !this.touchActive && !this.mobile && this.wantLock) { if (this.noLock) this._freeOn(); else this.requestLock(); }
       if (e.button === 0) { this.mouse.left = true; this.mouse.leftPressed = true; } if (e.button === 2) { this.mouse.right = true; this.mouse.rightPressed = true; }
     });
     window.addEventListener('mouseup', (e) => { if (e.button === 0) this.mouse.left = false; if (e.button === 2) this.mouse.right = false; });
@@ -38,36 +38,45 @@ export class Input {
   exitLock() { if (document.pointerLockElement) document.exitPointerLock(); if (this.free) { this.free = false; this.locked = false; this.canvas.style.cursor = ''; if (this.onUnlock) this.onUnlock(); } }
   _initTouch(ui) {
     const zone = ui.touchZone, joy = ui.joy, knob = ui.joyKnob; const T = this.touch;
-    const start = (e) => {
+    let move = null; const start = (e) => {
       this.touchActive = true; document.body.classList.add('touch');
       for (const t of e.changedTouches) {
         if (t.target.closest && t.target.closest('.tbtn')) continue;
-        if (t.clientX < window.innerWidth * 0.42 && T.joyId === null) {
-          T.joyId = t.identifier; T.joyOrigin = [t.clientX, t.clientY]; T.joyVec = [0, 0];
+        const jr = this.mobile && joy.getBoundingClientRect(); const inJoy = jr && Math.hypot(t.clientX - (jr.left + jr.width / 2), t.clientY - (jr.top + jr.height / 2)) < jr.width * 0.85;
+        if (this.mobile && inJoy && T.joyId === null) { // celular: joystick fixo (posição configurável)
+          T.joyId = t.identifier; T.joyOrigin = [jr.left + jr.width / 2, jr.top + jr.height / 2]; T.joyR = jr.width * 0.42; T.autoRun = false; T.runLock = false; joy.classList.add('active'); move({ changedTouches: [t], preventDefault() {} });
+        } else if (!this.mobile && t.clientX < window.innerWidth * 0.42 && T.joyId === null) {
+          T.joyId = t.identifier; T.joyOrigin = [t.clientX, t.clientY]; T.joyVec = [0, 0]; T.joyR = 55;
           joy.style.left = t.clientX - 60 + 'px'; joy.style.top = t.clientY - 60 + 'px'; joy.classList.add('active'); knob.style.transform = 'translate(0px,0px)';
         } else if (T.camId === null) { T.camId = t.identifier; T.camLast = [t.clientX, t.clientY]; }
       }
       e.preventDefault();
     };
-    const move = (e) => {
+    move = (e) => {
       for (const t of e.changedTouches) {
-        if (t.identifier === T.joyId) { let dx = t.clientX - T.joyOrigin[0], dy = t.clientY - T.joyOrigin[1]; const l = Math.hypot(dx, dy), m = 55; if (l > m) { dx *= m / l; dy *= m / l; }
-          T.joyVec = [dx / m, dy / m]; knob.style.transform = `translate(${dx}px,${dy}px)`; }
+        if (t.identifier === T.joyId) { let dx = t.clientX - T.joyOrigin[0], dy = t.clientY - T.joyOrigin[1]; const l = Math.hypot(dx, dy), m = T.joyR || 55;
+          // celular: puxar a bola para cima e arrastar além do círculo trava a corrida (o personagem segue correndo ao soltar)
+          if (this.mobile) { const up = -dy / m, side = Math.abs(dx) / m; T.runNear = up > 1.05 && side < 0.8; T.runLock = up > 1.7 && side < 0.9; }
+          if (l > m) { dx *= m / l; dy *= m / l; }
+          T.joyVec = [dx / m, dy / m]; const k = this.mobile ? 1 / (parseFloat(joy.dataset.sc) || 1) : 1; knob.style.transform = `translate(${dx * k}px,${dy * k}px)`; }
         else if (t.identifier === T.camId) { this.mouse.dx += (t.clientX - T.camLast[0]) * 1.3; this.mouse.dy += (t.clientY - T.camLast[1]) * 1.3; T.camLast = [t.clientX, t.clientY]; }
       }
       e.preventDefault();
     };
-    const end = (e) => { for (const t of e.changedTouches) { if (t.identifier === T.joyId) { T.joyId = null; T.joyVec = [0, 0]; joy.classList.remove('active'); knob.style.transform = 'translate(0px,0px)'; } if (t.identifier === T.camId) T.camId = null; } };
+    const end = (e) => { for (const t of e.changedTouches) { if (t.identifier === T.joyId) { T.joyId = null; T.joyVec = [0, 0]; T.sprintOn = false; T.autoRun = !!T.runLock; T.runNear = false; joy.classList.remove('active'); knob.style.transform = 'translate(0px,0px)'; } if (t.identifier === T.camId) T.camId = null; } };
+    joy.addEventListener('touchstart', (e) => { if (this.mobile) { start(e); e.stopPropagation(); } }, { passive: false }); joy.addEventListener('touchmove', (e) => { if (this.mobile) move(e); }, { passive: false }); joy.addEventListener('touchend', (e) => end(e)); joy.addEventListener('touchcancel', (e) => end(e));
     zone.addEventListener('touchstart', start, { passive: false }); zone.addEventListener('touchmove', move, { passive: false });
     zone.addEventListener('touchend', end); zone.addEventListener('touchcancel', end);
     for (const b of ui.touchButtons) {
-      const act = b.dataset.act;
-      b.addEventListener('touchstart', (e) => { this.touchActive = true; document.body.classList.add('touch'); T.buttons.add(act); T.btnPressed.add(act); b.classList.add('down'); e.preventDefault(); e.stopPropagation(); }, { passive: false });
-      const up = (e) => { T.buttons.delete(act); b.classList.remove('down'); e.preventDefault(); };
+      // no celular, com arma na mão o botão USAR vira ATIRAR (bala)
+      const cur = () => (b.dataset.act === 'interact' && document.body.classList.contains('gunUse') ? 'attack' : b.dataset.act);
+      const press = () => { const act = cur(); b._act = act; T.buttons.add(act); T.btnPressed.add(act); if (act === 'sprint') T.sprintOn = !T.sprintOn; };
+      b.addEventListener('touchstart', (e) => { this.touchActive = true; document.body.classList.add('touch'); press(); b.classList.add('down'); e.preventDefault(); e.stopPropagation(); }, { passive: false });
+      const up = (e) => { T.buttons.delete(b._act || cur()); b.classList.remove('down'); e.preventDefault(); };
       b.addEventListener('touchend', up); b.addEventListener('touchcancel', up);
       // permite testar os botões com mouse também
-      b.addEventListener('mousedown', (e) => { T.buttons.add(act); T.btnPressed.add(act); e.stopPropagation(); });
-      b.addEventListener('mouseup', () => T.buttons.delete(act));
+      b.addEventListener('mousedown', (e) => { press(); e.stopPropagation(); });
+      b.addEventListener('mouseup', () => T.buttons.delete(b._act || cur()));
     }
   }
   down(code) { return this.enabled && this.keys.has(code); }
@@ -80,22 +89,24 @@ export class Input {
     let mx = (k('KeyD') || k('ArrowRight') ? 1 : 0) - (k('KeyA') || k('ArrowLeft') ? 1 : 0);
     let mz = (k('KeyW') || k('ArrowUp') ? 1 : 0) - (k('KeyS') || k('ArrowDown') ? 1 : 0);
     let analog = 1;
-    if (this.touch.joyId !== null && this.enabled) { mx = this.touch.joyVec[0]; mz = -this.touch.joyVec[1]; analog = Math.min(1, Math.hypot(mx, mz)); }
+    const runLocked = this.enabled && (this.touch.autoRun || (this.touch.joyId !== null && this.touch.runLock));
+    if (this.touch.autoRun && this.touch.joyId === null && this.enabled) { mx = 0; mz = 1; analog = 1; } // corrida travada
+    else if (this.touch.joyId !== null && this.enabled) { mx = this.touch.joyVec[0]; mz = -this.touch.joyVec[1]; analog = Math.min(1, Math.hypot(mx, mz)); }
     else { const l = Math.hypot(mx, mz); if (l > 1) { mx /= l; mz /= l; } }
     return {
       mx, mz, analog,
-      sprint: k('ShiftLeft') || k('ShiftRight') || this.btn('sprint'),
-      walk: k('AltLeft') || k('CapsLock'),
+      sprint: k('ShiftLeft') || k('ShiftRight') || (this.enabled && !!this.touch.sprintOn && this.touch.joyId !== null) || runLocked,
+      walk: k('AltLeft'), mic: h('CapsLock') || this.btnHit('mic'),
       jump: h('Space') || this.btnHit('jump'),
       crouch: h('KeyC') || this.btnHit('crouch'), // agachar só no C (Ctrl ficou livre)
       interact: h('KeyE') || this.btnHit('interact'),
       use: h('KeyF') || (this.enabled && this.mouse.leftPressed && (this.locked || this.touchActive || this.clickUse)) || this.btnHit('attack'),
       useHeld: k('KeyF') || (this.enabled && this.mouse.left && (this.locked || this.clickUse)) || this.btn('attack'),
-      pin: h('KeyF'), throwHeld: (this.enabled && this.mouse.left && (this.locked || this.clickUse)) || this.btn('attack'), touchUse: this.touchActive && this.btnHit('attack'),
+      pin: h('KeyF') || this.btnHit('pin'), throwHeld: (this.enabled && this.mouse.left && (this.locked || this.clickUse)) || this.btn('attack'), touchUse: this.touchActive && this.btnHit('attack'),
       block: (this.enabled && this.mouse.right) || this.btn('block'), shoulder: h('KeyQ') || this.btnHit('shoulder'),
       inventory: h('Tab') || this.btnHit('inventory'), map: h('KeyM') || this.btnHit('map'), equipment: h('KeyI'), nvg: h('KeyN'), build: h('KeyB') || this.btnHit('build'),
       pause: h('Escape') || h('KeyP') || this.btnHit('pause'), rotate: h('KeyR') || this.btnHit('rotate'), reload: h('KeyR') || this.btnHit('reload'), demolish: h('KeyX'), ammoNext: h('KeyT'),
-      slot: [1, 2, 3, 4, 5, 6, 7, 8].find((n) => h('Digit' + n)) || 0, unequip: h('Digit0') || h('KeyH'),
+      slot: [1, 2, 3, 4, 5, 6, 7, 8].find((n) => h('Digit' + n)) || 0, unequip: h('Digit0') || h('KeyH') || this.btnHit('unequip'),
       cancel: h('Escape') || (this.enabled && this.mouse.rightPressed) || this.btnHit('cancel'),
     };
   }

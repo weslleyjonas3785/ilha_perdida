@@ -68,6 +68,7 @@ export class Net {
       case 'cloot': if (this.host) { const c = g.creatures.list.find((q) => q.uid === o.nid); if (c) { if (o.butch) { g.creatures.remove(c); break; } if (o.searched) { c.searched = true; if (c.loadout) { c.loadout.weapon = []; c.loadout.misc = []; } } else c.looted = true; } } break;
       case 'shot': this._remoteShot(o); break;
       case 'noise': if (this.host) { const pr = this.peers.get(o.from); const P0 = g.player; const px = pr && this.proxyFor(pr); if (px) g.player = px; try { g.noise(o.p, o.r, o.k); } finally { g.player = P0; } } break;
+      case 'vc': if (g.voice) g.voice.onRemote(o); break;
       case 'boom': g.explode(o.p, null, { ...o.o, fxOnly: true }); break;
       case 'pc': this._applyPieces(o); break;
       case 'dr': this._applyDrops(o); break;

@@ -5,6 +5,8 @@
 import { mat4, quat, angleDiff, dampAngle, clamp } from '../engine/math.js';
 import { WATER } from './world.js';
 import { GUNS } from './weapons.js';
+import { GunRig } from './gunrig.js';
+const RIG_MODEL = { rifle: 'rifle', shotgun: 'shotgun', pistol: 'pistol' };
 
 // visuais (paleta do personagem chibi): civis e militares das referências
 export const NPC_LOOKS = {
@@ -23,16 +25,17 @@ export const NPC_LOOKS = {
   ],
 };
 // armas: dano, cadência, alcance; corpo-a-corpo (melee) ou de fogo
-const W = {
+export const NPC_WEAPONS = {
   rifle: { gun: true, dmg: 9, cd: 0.16, burst: 4, pause: 1.6, range: 45, acc: 0.55, sound: 'rifle', ammo: 'ammo555' },
   pistol: { gun: true, dmg: 8, cd: 0.7, burst: 1, pause: 0.9, range: 28, acc: 0.45, sound: 'pistol', ammo: 'ammo42' },
   shotgun: { gun: true, dmg: 22, cd: 1.2, burst: 1, pause: 1.2, range: 16, acc: 0.65, sound: 'shotgun', ammo: 'shells' },
   knife: { melee: true, dmg: 14, cd: 0.9, reach: 1.6 }, axe: { melee: true, dmg: 20, cd: 1.3, reach: 1.9 }, club: { melee: true, dmg: 15, cd: 1.1, reach: 1.8 },
 };
+const W = NPC_WEAPONS;
 const ITEM_OF = { rifle: 'rifle', pistol: 'pistol', shotgun: 'shotgun', knife: 'knife', axe: 'axe', club: null };
 
 export class NPCManager {
-  constructor(game) { this.g = game; this.timer = 0; this.blindFx = 0; }
+  constructor(game) { this.g = game; this.timer = 0; this.blindFx = 0; this.weapons = NPC_WEAPONS; }
   // ---------- aparecimento: acampamentos e bases militares perto do jogador ----------
   populate(dt) {
     if (this.g.netClient) return;
@@ -125,14 +128,25 @@ export class NPCManager {
   blind(c, t) { c.blindT = Math.max(c.blindT || 0, t); c.target = null; c.state = 'search'; c.timer = t + 4; }
   _fire(c, T, d) {
     const g = this.g, P = g.player, Wp = c.W; c.burst++; if (c.burst >= Wp.burst) { c.burst = 0; c.fireCd = Wp.pause + Math.random() * 0.6; } else c.fireCd = Wp.cd;
-    const mz = this.muzzle(c); const isP = c.target === 'player'; const moving = isP ? Math.hypot(P.vel[0], P.vel[2]) > 2 : (c.target.speed || 0) > 1;
+    const mz = this.muzzle(c); c._recoil = 1; const isP = c.target === 'player'; const moving = isP ? Math.hypot(P.vel[0], P.vel[2]) > 2 : (c.target.speed || 0) > 1;
     let hit = Math.random() < Wp.acc * clamp(1.15 - d / (Wp.range * 1.3), 0.2, 1) * (moving ? 0.7 : 1) * (isP && P.crouch ? 0.8 : 1) * (g.smokeBlocks && g.smokeBlocks(mz, [T[0], T[1] + 1.2, T[2]]) ? 0.1 : 1);
     const aim = [T[0] + (hit ? 0 : (Math.random() - 0.5) * 2.5), T[1] + (isP ? 1.2 : 0.8) + (hit ? 0 : (Math.random() - 0.3) * 1.5), T[2] + (hit ? 0 : (Math.random() - 0.5) * 2.5)];
     g.fx.tracer(mz, aim); g.fx.burst(mz, 3, [3, 2, 1], 1.5, 0.08, 0.03, 0); g.audio.play(Wp.sound, { at: c.pos, vol: 0.9, max: 160 });
     if (g.noise) g.noise(c.pos, 70, 'tiro', c);
     if (hit) { if (isP) g.playerHit(Wp.dmg * (c.weapon === 'shotgun' && d > 9 ? 0.5 : 1), c, { ranged: true }); else this.hitRobot(c.target, Wp.dmg * 1.4, c); }
   }
-  muzzle(c) { const I = c.skel.index; const m = mat4.mul(mat4.create(), c.model, c.anim.world[I.handR]); const h = mat4.transformPoint(m, [0, -0.1, 0]); return [h[0] + Math.sin(c.yaw) * 0.6, h[1] + 0.05, h[2] + Math.cos(c.yaw) * 0.6]; }
+  // empunhadura com as duas mãos (mesma IK do jogador): mão direita no punho, esquerda no guarda-mão; mira no alvo
+  rigStep(c, dt) {
+    const g = this.g; if (!c.npc || !c.W || !c.W.gun || c.dead || c.fainted > 0 || !RIG_MODEL[c.weapon]) { c._rigOn = false; return; }
+    const e = g.cam && g.cam.eye; if (e && Math.hypot(c.pos[0] - e[0], c.pos[2] - e[2]) > 95) { c._rigOn = false; return; }
+    if (!c._rig) { const prx = { assets: { skel: c.skel }, toolModel: mat4.create(), game: g }; Object.defineProperties(prx, { anim: { get: () => c.anim }, model: { get: () => c.model }, pos: { get: () => c.pos } }); c._rigP = prx; c._rig = new GunRig(prx); }
+    const T = c.target === 'player' ? g.player.pos : c.target && c.target.pos ? c.target.pos : null; const aim = !!T && !(c.blindT > 0);
+    c._aimT = clamp((c._aimT || 0) + (aim ? dt / 0.25 : -dt / 0.4), 0, 1); c._recoil = Math.max(0, (c._recoil || 0) - dt * 6);
+    let pitch = 0.15; if (T) { const d = Math.hypot(T[0] - c.pos[0], T[2] - c.pos[2]) || 1; const ty = T[1] + (c.target === 'player' ? 1.1 : 0.8); pitch = clamp(Math.atan2(c.pos[1] + (c.mount ? 0.95 : 1.45) - ty, d), -1, 1.1); }
+    c._rig.set({ active: true, model: RIG_MODEL[c.weapon], aimT: c._aimT, pitch, recoil: c._recoil, sprint: (c.speed || 0) > 3.5 && !aim, reload: null });
+    c._rigOn = c._rig.apply(dt);
+  }
+  muzzle(c) { if (c._rigOn && c._rigP && GUNS[c.weapon]) return mat4.transformPoint(c._rigP.toolModel, GUNS[c.weapon].muzzle); const I = c.skel.index; const m = mat4.mul(mat4.create(), c.model, c.anim.world[I.handR]); const h = mat4.transformPoint(m, [0, -0.1, 0]); return [h[0] + Math.sin(c.yaw) * 0.6, h[1] + 0.05, h[2] + Math.cos(c.yaw) * 0.6]; }
   hitRobot(r, dmg, src) { const CM = this.g.creatures, st = r.state, ls = r.lastSeen; CM.damage(r, dmg, Math.atan2(r.pos[0] - src.pos[0], r.pos[2] - src.pos[2]), 'npc'); if (!r.dead) { r.state = st === 'wander' || st === 'return' ? 'wander' : st; r.lastSeen = ls; r.npcFoe = src; } }
   // movimento com desvio de obstáculos (mesma lógica das criaturas) e animação de andar/correr
   _move(c, dt, speed, face, dist) {
@@ -170,7 +184,7 @@ export class NPCManager {
   render(items, eye, meshFor) {
     for (const c of this.g.creatures.list) { if (!c.npc || c.dead || !c.weapon) continue; if (Math.hypot(c.pos[0] - eye[0], c.pos[2] - eye[2]) > 120) continue;
       const mesh = meshFor(c.weapon); if (!mesh) continue; const I = c.skel.index; const hm = mat4.mul(mat4.create(), c.model, c.anim.world[I.handR]); const hp = mat4.transformPoint(hm, [0, -0.08, 0]);
-      let model; if (c.W.gun) { const aiming = !!c.target; model = mat4.compose(hp, c.yaw, 1, aiming ? 0 : 0.9); } else model = mat4.mul(mat4.create(), hm, mat4.fromTRS(mat4.create(), [0, -0.08, 0.015], quat.fromEuler(Math.PI / 2, 0, 0), [1, 1, 1]));
+      let model; if (c._rigOn && c._rigP) model = c._rigP.toolModel; else if (c.W.gun) { const aiming = !!c.target; model = mat4.compose(hp, c.yaw, 1, aiming ? 0 : 0.9); } else model = mat4.mul(mat4.create(), hm, mat4.fromTRS(mat4.create(), [0, -0.08, 0.015], quat.fromEuler(Math.PI / 2, 0, 0), [1, 1, 1]));
       items.push({ mesh, model, sphere: [c.pos[0], c.pos[1] + 1, c.pos[2], 2] }); }
   }
 }

@@ -7,7 +7,7 @@ const pick = (a, r) => a[Math.floor(r() * a.length)];
 export function rollLoot(kind, r = Math.random, ctx = {}) {
   const out = []; const g = (id, a = 1, b = a) => out.push([id, a + Math.floor(r() * (b - a + 1))]); const p = (prob, ...args) => { if (r() < prob) g(...args); };
   const pills = (prob) => { if (r() < prob) g(pick(PILLS, r), 1, 8); }; // cartela com quantidade aleatória
-  const atts = (pm, ps) => { if (r() < pm) g(pick(['mag_pistol', 'mag_fa1', 'mag_fa2', 'mag_fa3', 'mag_fp1', 'mag_fp2', 'mag_fp3'], r), 1, 1); if (r() < ps) g(r() < 0.45 ? 'sil_pistol' : 'sil_rifle', 1, 1); }; // pentes e silenciadores
+  const atts = (pm, ps) => { if (r() < pm) g(pick(['mag_pistol', 'mag_fa1', 'mag_fa2', 'mag_fa3', 'mag_fp1', 'mag_fp2', 'mag_fp3'], r), 1, 1); if (r() < ps) g(pick(['sil_pistol', 'sil_pistol', 'sil_rifle', 'sil_rifle_long', 'sil_sniper', 'sil_sniper_max'], r), 1, 1); }; // pentes e silenciadores
   const packs = (prob) => { if (r() < prob) out.push([r() < 0.45 ? 'pack_small' : r() < 0.75 ? 'pack_medium' : 'pack_large', 1]); };
   switch (kind) {
     case 'fridge': p(0.55, 'water', 1, 2); p(0.45, 'canned', 1, 2); p(0.15, 'meat_cow', 1, 2); p(0.12, 'meat_chicken', 1, 2); p(0.2, 'berry', 2, 4); break;

@@ -43,6 +43,8 @@ import { GameAudio } from './audio.js';
 import { SmokeSignals } from './smoke.js';
 import { Admin } from './admin.js';
 import { Helis } from './heli.js';
+import { TouchControls } from './touch.js';
+import { Voice } from './voice.js';
 import { Blasts } from './blasts.js';
 import * as STR from './struct.js';
 import { Net } from './net.js';
@@ -89,7 +91,7 @@ export class Game {
     const defaults = { master: 0.8, sfx: 0.9, ambient: 0.7, music: 0.35, sens: 1, invertY: false, shadows: true, grass: mobile ? 0.5 : 1, viewDist: mobile ? 'curta' : 'normal', res: mobile ? 0.75 : 1, enemyMul: 1, autoRes: false, v: 2, quality: mobile ? 'baixa' : 'alta', ssao: !mobile, bloom: true, fxaa: true, detail: mobile ? 0.6 : 1 };
     const saved = this._loadJSON(SET_KEY) || {}; if (!(saved.v >= 2)) { delete saved.res; delete saved.autoRes; } // migração: resolução cheia, nítida
     this.settings = Object.assign(defaults, saved); this.settings.v = 2;
-    this.renderer = new Renderer(canvas); this.audio = new GameAudio(); { const A = this.audio, orig = A.play.bind(A); A.play = (name, o = {}) => { const res = orig(name, o); const R = NOISE_R[name]; if (R && !o.at && !o.noNoise && this.player && !this.player.dead && this.state === 'playing') this.noise(this.player.pos, name === 'step' ? R * (o.vol ?? 1) : R, name === 'step' ? 'passo' : name); return res; }; } this.audio.listener = () => this.cam ? { eye: this.cam.eye, yaw: Math.atan2(this.cam.target[0] - this.cam.eye[0], this.cam.target[2] - this.cam.eye[2]) } : null; this.ui = new UI(this); this.input = new Input(canvas, this.ui);
+    this.renderer = new Renderer(canvas); this.audio = new GameAudio(); { const A = this.audio, orig = A.play.bind(A); A.play = (name, o = {}) => { const res = orig(name, o); const R = NOISE_R[name]; if (R && !o.at && !o.noNoise && this.player && !this.player.dead && this.state === 'playing') this.noise(this.player.pos, name === 'step' ? R * (o.vol ?? 1) : R, name === 'step' ? 'passo' : name); return res; }; } this.audio.listener = () => this.cam ? { eye: this.cam.eye, yaw: Math.atan2(this.cam.target[0] - this.cam.eye[0], this.cam.target[2] - this.cam.eye[2]) } : null; this.ui = new UI(this); this.input = new Input(canvas, this.ui); this.touchUI = new TouchControls(this); this.voice = new Voice(this);
     this.cam = new ThirdPersonCamera(); this.env = new Environment(this); this.fx = new FX(this);
     this.guns = new Firearms(this); this.npcs = new NPCManager(this); this.fires = new FIRE.Campfires(this); this.convoys = new Convoys(this); this.helis = new Helis(this); this.grenades = new Grenades(this); this.smoke = new SmokeSignals(this); this.admin = new Admin(this); this.blasts = new Blasts(this); this.struct = new STR.StructSystem(this); this.net = new Net(this); this.inv = new GridInventory(); this._bigPockets = typeof window !== 'undefined' && !!window.__TEST_BIG_POCKETS; this.quick = Array(8).fill(null); this.inv.onChange = () => { this.syncHand && this.equip && this.syncHand(); if (this.ui.open) this.ui.refresh(); }; this.inv.onAdd = (id) => { this._autoQuick(id); this._toBack && this._toBack(id); };
     this.equip = this.freshEquip(); this._applyBack(); this.attach = {}; this.home = null; this.drops = []; this.logs = []; this.falling = []; this.projectiles = []; this.arrows = []; this.clouds = []; this.stats = { built: 0, kills: 0 };
@@ -278,7 +280,7 @@ export class Game {
   // Avança a simulação sem renderizar (usado pelos testes automatizados)
   debugStep(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) { if (this.state === 'playing') this.update(dt); else if (this.state === 'dead') { this.player.update(dt, {}, this.cam.yaw); this.creatures.update(dt); } if (this.net.active) this.net.update(dt); this.input.endFrame(); } }
   frame(t) {
-    requestAnimationFrame((tt) => this.frame(tt));
+    requestAnimationFrame((tt) => this.frame(tt)); if (this.touchUI) this.touchUI.tick();
     let dt = (t - this.last) / 1000; this.last = t; if (!(dt > 0)) dt = 0.016; dt = Math.min(dt, 0.05);
     const tf0 = performance.now();
     try {
@@ -322,6 +324,7 @@ export class Game {
     const inp = this.input, ui = this.ui, P = this.player; this.menuMode = false; this.playTime += dt; this.stream.update(P.pos, 2);
     const act = this._idleUpd ? { mx: 0, mz: 0, analog: 0, slot: 0 } : inp.actions();
     if (act.pause) { if (this.build.mode) this.build.cancel(); else if (ui.anyOpen) ui.closePanels(); else { this.pause(); return; } }
+    if (act.mic) this.voice.toggle(); this.voice.update(dt);
     if (act.map) { if (ui.open === 'map') ui.closePanels(); else ui.openPanel('map'); }
     if (act.nvg) this.toggleNvg();
     if (act.inventory) { if (ui.open === 'inv') ui.closePanels(); else if (!P.dead) ui.openPanel('inv', { tab: 'inv' }); }
@@ -352,7 +355,7 @@ export class Game {
     P.update(dt, pa, this.cam.yaw);
     this.cam.aimT = this.guns.aimT; this.cam.update(dt, P, this.physics);
     { const st = this.world.siteAt(P.pos[0], P.pos[2]); const k = st ? st.kind : null; if (k !== this._siteK) { this._siteK = k; if (st) this.ui.toast(`📍 ${st.name}`, 'info'); } }
-    this.env.update(dt); this.creatures.update(dt); this.npcs.update(dt); this.grenades.update(dt); this.blasts.update(dt); this.smoke.update(dt); this.helis.update(dt); this.admin.tick(dt); this.struct.update(dt); this.fires.update(dt); this.convoys.update(dt); this._trapTick(dt); if (this.ui.open === 'fire' && this.ui.fire) { this._fireUiT = (this._fireUiT || 0) - dt; if (this._fireUiT <= 0) { this._fireUiT = 0.25; this.ui.renderFire(); } } this._updateButcher(dt); this.ui.flash && this.ui.flash(this.grenades.flashT); this._smokeOv(); this.build.update2(dt); this.power.update(dt); this.grapple.update(dt); this.geiger.update(dt);
+    this.env.update(dt); this.helis.update(dt); this.creatures.update(dt); this.npcs.update(dt); this.grenades.update(dt); this.blasts.update(dt); this.smoke.update(dt); this.admin.tick(dt); this.struct.update(dt); this.fires.update(dt); this.convoys.update(dt); this._trapTick(dt); if (this.ui.open === 'fire' && this.ui.fire) { this._fireUiT = (this._fireUiT || 0) - dt; if (this._fireUiT <= 0) { this._fireUiT = 0.25; this.ui.renderFire(); } } this._updateButcher(dt); this.ui.flash && this.ui.flash(this.grenades.flashT); this._smokeOv(); this.build.update2(dt); this.power.update(dt); this.grapple.update(dt); this.geiger.update(dt);
     if (this._reading) { this._reading.t += dt; this.ui.readProgress(Math.min(1, this._reading.t / this._reading.T)); if (this.player.dead) this._reading = null; }
     this._updateClouds(dt); this._survival(dt); this._updateFalling(dt); this._updateProjectiles(dt); this._updateArrows(dt); this._updateC4(dt); this._updateWebs(dt); this._interactPrompt();
     this.saveT -= dt; if (this.saveT <= 0) { this.saveT = 60; this.saveGame(false); }

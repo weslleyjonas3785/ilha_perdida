@@ -4,7 +4,7 @@
 import { mat4, quat, clamp } from '../engine/math.js';
 import { GRIPS } from './gunrig.js';
 import { ITEMS } from './items.js';
-import { GUNS, SCOPES, SIL_LEN } from './weapons.js';
+import { GUNS, SCOPES, SIL_LEN, SIL_NOISE } from './weapons.js';
 
 const REGION = (name) => /head|skull|visor/i.test(name) ? 'head' : /neck/i.test(name) ? 'neck' : /hips|spine|chest|body|torso|abd|thorax|pelvis|root/i.test(name) ? 'torso' : 'limb';
 const MULT = { head: 2.4, neck: 1.6, torso: 1.0, limb: 0.65 };
@@ -141,7 +141,7 @@ export class Firearms {
     cam.shake = Math.max(cam.shake, gun.pellets > 1 ? 0.35 : 0.12); this.recoilV = Math.min(1.5, this.recoilV + gun.recoil * 12);
     this.bloom = Math.min(1.5, this.bloom + (gun.auto ? 0.18 : 0.35));
     // o barulho do tiro atrai androides num raio grande
-    const nR = (gun.pellets > 1 ? 70 : gun.bolt ? 140 : 85) * (sil ? 0.22 : 1); // silenciador: o barulho alcança bem menos
+    const nR = (gun.pellets > 1 ? 70 : gun.bolt ? 140 : 85) * (sil ? SIL_NOISE[sil] || 0.25 : 1); // silenciador: o barulho alcança bem menos
     if (g.noise) g.noise(P.pos, nR, 'tiro'); else g.creatures.hearShot(P.pos, nR);
   }
 

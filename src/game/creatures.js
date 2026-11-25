@@ -175,12 +175,15 @@ export class CreatureManager {
     return null;
   }
   // criatura controlada pela rede (avatar de outro jogador ou cópia de criatura do dono)
+  // criatura num ponto exato (tripulação do helicóptero)
+  spawnAt(kind, x, y, z) { if (!this.assets.rigs[kind] || !DEFS[kind]) return null; const c = new Creature(kind, x, y, z, this.assets); this.list.push(c); this.game.physics.dynamic.push(c.collider); return c; }
   addNet(kind, x, y, z) { if (!this.assets.rigs[kind] || !DEFS[kind]) return null; const c = new Creature(kind, x, y, z, this.assets); c.net = true; this.list.push(c); this.game.physics.dynamic.push(c.collider); return c; }
   remove(c) { const i = this.list.indexOf(c); if (i >= 0) this.list.splice(i, 1); const j = this.game.physics.dynamic.indexOf(c.collider); if (j >= 0) this.game.physics.dynamic.splice(j, 1); }
   populate(dt) {
     const g = this.game, p = g.player.pos; this.spawnT -= dt; if (this.spawnT > 0) return; this.spawnT = 2.5;
     const night = g.env.isNight; const counts = {}; let hostile = 0;
     for (const c of [...this.list]) { if (c.net) continue; const d = g.net && g.net.host && g.net.peers.size ? g.net.minDist(c.pos) : Math.hypot(c.pos[0] - p[0], c.pos[2] - p[2]);
+      if (c.mount) continue;
       if (d > (c.npc ? 360 : c.garrison !== undefined ? 280 : 200) || (c.dead && c.deadTime > (c.npc ? 900 : 150))) { this.remove(c); continue; }
       if (!c.dead && !c.def.robot && !c.avatar && !c.adminSpawn && !c.convoy && d > 35 && g.world.toxicAt(c.pos[0], c.pos[2]) > 0) { this.remove(c); continue; } // bicho/NPC que entrou na névoa some (longe da vista)
       if (!c.dead && d < 160 && !c.hive && !c.npc) { counts[c.kind] = (counts[c.kind] || 0) + 1; if (c.def.hostile && c.kind !== 'butterfly') hostile++; } }
@@ -228,10 +231,11 @@ export class CreatureManager {
     const P0 = g.player, multi = N && N.host && N.peers.size;
     for (const c of this.list) {
       if (c.net) { if (N) N.stepProxy(c, dt); continue; } if (g.netClient) continue;
+      if (c.mount) { g.helis.crewStep(c, dt); c.anim.update(dt); this._matrices(c); g.helis.crewModel(c); if (c.npc) g.npcs.rigStep(c, dt); continue; } // tripulação do helicóptero
       const d = multi ? N.minDist(c.pos) : Math.hypot(c.pos[0] - g.player.pos[0], c.pos[2] - g.player.pos[2]);
       if (d > (c.convoy ? 260 : 130) && !c.dead) { this._matrices(c); continue; } // LOD de IA: congela longe (o comboio continua andando)
       if (multi && !c.dead) { const T = N.nearestTarget(c); g.player = T; try { this._think(c, dt, Math.hypot(c.pos[0] - T.pos[0], c.pos[2] - T.pos[2])); c.anim.update(dt); } finally { g.player = P0; } } // eventos da animação (golpe) também acertam o alvo certo
-      else { this._think(c, dt, d); c.anim.update(dt); } this._matrices(c);
+      else { this._think(c, dt, d); c.anim.update(dt); } this._matrices(c); if (c.npc) g.npcs.rigStep(c, dt);
     }
   }
   // tiros fazem barulho: androides hostis no raio vão investigar/atacar; fauna foge
@@ -564,7 +568,7 @@ export class CreatureManager {
     if (c.convoy && g.convoys) g.convoys.onHurt(c);
     c.hp -= dmg; g.audio.play(c.def.robot ? 'metalHit' : 'hit', c.npc ? { at: c.pos } : undefined);
     // tiro que tira 70% da vida total sem matar: desmaia de peito no chão
-    if (c.npc && c.hp > 0 && dmg >= c.def.hp * 0.7) { c.fainted = 20 + Math.random() * 10; c.target = null; c.anim.action = null; c.anim.play(c.clips.faint, 0.1); g.audio.play('groan', { at: c.pos, f0: c.voice || 150 }); g.fx.burst([c.pos[0], c.pos[1] + 0.8, c.pos[2]], 14, [0.6, 0.05, 0.05], 3, 0.6); return; }
+    if (c.npc && !c.mount && c.hp > 0 && dmg >= c.def.hp * 0.7) { c.fainted = 20 + Math.random() * 10; c.target = null; c.anim.action = null; c.anim.play(c.clips.faint, 0.1); g.audio.play('groan', { at: c.pos, f0: c.voice || 150 }); g.fx.burst([c.pos[0], c.pos[1] + 0.8, c.pos[2]], 14, [0.6, 0.05, 0.05], 3, 0.6); return; }
     if (c.npc && kind !== 'robot' && kind !== 'npc' && c.hp > 0) { c.target = 'player'; c.lostT = 0; if ((c.shoutCd || 0) <= 0) { c.shoutCd = 5; g.audio.play('groan', { at: c.pos, f0: c.voice || 150 }); } }
     const hp = [c.pos[0], c.pos[1] + 0.8 * c.def.scale, c.pos[2]];
     if (c.def.robot) { g.fx.burst(hp, 12, [1, 0.75, 0.3], 4, 0.35, 0.04); g.fx.burst(hp, 6, [0.35, 0.35, 0.38], 2, 0.6, 0.06); } else g.fx.burst(hp, 14, [0.6, 0.05, 0.05], 3, 0.6);

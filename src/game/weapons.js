@@ -35,20 +35,28 @@ export const GUNS = {
 export function attSlots(gid) { const G = GUNS[gid]; if (!G) return []; if (G.model === 'pistol') return ['mag', 'sil']; if (G.model === 'rifle' || G.model === 'sniper') return ['mag', 'scope', 'sil']; return []; }
 // pente de cada arma (vem encaixado quando a arma é encontrada)
 export const MAGS = { mag_pistol: ['pistol35', 'pistol', 'pistol65'], mag_fa1: ['rifle540'], mag_fa2: ['rifle'], mag_fa3: ['rifle577'], mag_fp1: ['sniper745'], mag_fp2: ['sniper'], mag_fp3: ['sniper790'] };
-export const SILS = { sil_pistol: ['pistol35', 'pistol', 'pistol65'], sil_rifle: ['rifle540', 'rifle', 'rifle577', 'sniper745', 'sniper', 'sniper790'] };
-export const SIL_LEN = { sil_pistol: 0.13, sil_rifle: 0.2 };
+const PIS = ['pistol35', 'pistol', 'pistol65'], FA = ['rifle540', 'rifle', 'rifle577'], FP = ['sniper745', 'sniper', 'sniper790'];
+// silenciadores: pistola; fuzil de assalto médio e longo; fuzil de precisão grande e máximo (quanto maior, mais abafa)
+export const SILS = { sil_pistol: PIS, sil_rifle: FA, sil_rifle_long: FA, sil_sniper: FP, sil_sniper_max: FP };
+export const SIL_LEN = { sil_pistol: 0.13, sil_rifle: 0.19, sil_rifle_long: 0.25, sil_sniper: 0.3, sil_sniper_max: 0.36 };
+export const SIL_NOISE = { sil_pistol: 0.22, sil_rifle: 0.26, sil_rifle_long: 0.17, sil_sniper: 0.3, sil_sniper_max: 0.2 };
 export function magFor(gid) { for (const [k, L] of Object.entries(MAGS)) if (L.includes(gid)) return k; return null; }
 export function fits(gid, aid) { const G = GUNS[gid]; if (!G) return null; if (MAGS[aid]) return MAGS[aid].includes(gid) ? 'mag' : null; if (SILS[aid]) return SILS[aid].includes(gid) ? 'sil' : null; if (SCOPES[aid]) return (G.scopes || []).includes(aid) ? 'scope' : null; return null; }
 // ponta do cano (onde rosqueia o silenciador), já com o comprimento/escala do visual da arma
 const SIL_BASE = { pistol: [0, 0.06, 0.177], rifle: [0, 0.05, 0.69], sniper: [0, 0.065, 0.985] };
 export function silMount(gid) { const G = GUNS[gid] || {}, V = G.look || {}, b = SIL_BASE[G.model]; if (!b) return null; const L = V.len || 1, S = V.scale || 1; let z = b[2] * S; if (z > 0.1 * S) z = 0.1 * S + (z - 0.1 * S) * L; return [b[0] * S, b[1] * S, z]; }
-// silenciador: tubo fosco com anéis (cresce em +Z a partir da boca do cano)
+// silenciadores (crescem em +Z a partir da boca do cano): rosca atrás, corpo facetado, anéis, tampa recortada, janelas de ventilação
 export function silencerMesh(kind) {
-  const mb = new MeshBuilder(); const blk = hex(0x202124), dk = hex(0x121314), gr = hex(0x3a3c40); const rifle = kind === 'sil_rifle'; const r = rifle ? 0.022 : 0.016, L = SIL_LEN[kind] || 0.15;
-  mb.setColor(gr, MET); mb.cylinder(M(0, 0, 0, 0, 1, RX), r * 0.7, r * 0.7, 0.02, 12, gr);
-  mb.setColor(blk, POLY); mb.cylinder(M(0, 0, 0.015, 0, 1, RX), r, r, L - 0.025, 16, blk);
-  mb.setColor(dk, MET); for (const z of [0.02, L * 0.5, L - 0.02]) mb.cylinder(M(0, 0, z, 0, 1, RX), r * 1.06, r * 1.06, 0.008, 16, dk);
-  mb.cylinder(M(0, 0, L - 0.012, 0, 1, RX), r * 0.9, r * 0.6, 0.012, 16, dk);
+  const mb = new MeshBuilder(); const L = SIL_LEN[kind] || 0.15; const S = { sil_pistol: [0.016, 0x232426, 12], sil_rifle: [0.02, 0x2b2c2f, 8], sil_rifle_long: [0.022, 0x343a2e, 8], sil_sniper: [0.026, 0x1d1e20, 8], sil_sniper_max: [0.027, 0x29292b, 10] }[kind] || [0.02, 0x222222, 10];
+  const r = S[0], body = hex(S[1]), dk = hex(0x131415), lt = shade(body, 1.35), thr = hex(0x3c3e42); const Cz = (z, l, r0, r1, c, n = S[2], f = MET) => { mb.setColor(c, f); mb.cylinder(M(0, 0, z, 0, 1, RX), r0, r1, l, n, c); };
+  const thread = (z0, n) => { for (let i = 0; i < n; i++) Cz(z0 + i * 0.005, 0.003, r * 0.62, r * 0.62, thr, 10); Cz(z0, n * 0.005, r * 0.55, r * 0.55, dk, 10); };
+  const slots = (zc, n, len) => { mb.setColor(dk, POLY); for (let k = 0; k < n; k++) { const a = (k / n) * Math.PI * 2; mb.box(M(Math.sin(a) * r * 0.98, Math.cos(a) * r * 0.98, zc, 0, 1, 0, -a), r * 0.28, 0.004, len, dk); } };
+  const cap = (z, l) => { Cz(z, l, r * 1.05, r * 1.05, dk, 12); mb.setColor(lt, MET); for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; mb.box(M(Math.sin(a) * r * 1.07, Math.cos(a) * r * 1.07, z + l / 2, 0, 1, 0, -a), r * 0.22, 0.004, l * 0.8, lt); } };
+  if (kind === 'sil_pistol') { thread(0, 4); Cz(0.02, L - 0.045, r, r, body, 12, POLY); for (const z of [0.05, 0.062, 0.074]) Cz(z, 0.006, r * 1.05, r * 1.05, dk, 12); cap(L - 0.028, 0.028); }
+  else if (kind === 'sil_rifle') { thread(0, 5); Cz(0.025, L - 0.055, r, r, body, 8, POLY); Cz(0.03, 0.01, r * 1.04, r * 1.04, lt, 8); cap(L - 0.032, 0.032); }
+  else if (kind === 'sil_rifle_long') { Cz(0, 0.02, r * 1.06, r * 1.06, dk, 8); Cz(0.02, L - 0.065, r, r, body, 8, POLY); Cz(L - 0.05, 0.05, r * 1.02, r * 1.02, shade(body, 0.85), 8, POLY); slots(L - 0.025, 3, 0.03); Cz(L - 0.003, 0.003, r * 0.4, r * 0.4, dk, 10); }
+  else if (kind === 'sil_sniper') { Cz(0, 0.045, r * 0.95, r * 0.95, dk, 10); slots(0.022, 4, 0.006); for (const dz of [0.012, 0.024]) slots(dz, 4, 0.005); Cz(0.045, L * 0.35, r, r, body, 8, POLY); Cz(0.045 + L * 0.35, 0.05, r * 0.96, r * 0.96, dk, 12); slots(0.07 + L * 0.35, 8, 0.04); Cz(0.095 + L * 0.35, L - 0.095 - L * 0.35, r, r * 1.03, body, 8, POLY); }
+  else { thread(0, 6); Cz(0.03, 0.01, r * 1.05, r * 1.05, lt, 10); Cz(0.04, L * 0.35, r, r, body, 10, POLY); Cz(0.04 + L * 0.35, 0.025, r * 1.06, r * 1.06, shade(body, 1.2), 10); Cz(0.065 + L * 0.35, L - 0.12 - L * 0.35, r, r, body, 10, POLY); slots(L - 0.035, 3, 0.03); Cz(L - 0.055, 0.055, r * 1.0, r * 1.0, shade(body, 0.9), 10, POLY); }
   return mb.build();
 }
 // pentes soltos (ícones / visual): pistola reto com base; FA curvo (3 tamanhos); FP caixa (3 tamanhos)

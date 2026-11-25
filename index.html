@@ -15,6 +15,7 @@
 
   <!-- HUD -->
   <div id="hud" class="hidden">
+    <div id="micIcon" class="hidden" title="Microfone ligado (CAPS LOCK desliga)"><svg viewBox="0 0 24 24" class="micSvg"><path d="M12 14.5a3.2 3.2 0 0 0 3.2-3.2V5.2a3.2 3.2 0 0 0-6.4 0v6.1a3.2 3.2 0 0 0 3.2 3.2z" fill="currentColor"/><path d="M18.5 11.2a6.5 6.5 0 0 1-13 0M12 17.8v3.2M8.5 21h7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><line class="slash" x1="4" y1="3.5" x2="20" y2="20.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div>
     <div id="pname"></div><div id="compass"><div id="compassStrip"></div><div class="needle"></div></div>
     <div id="clock"><span id="clockDay">Dia 1</span><span id="clockTime">07:00</span><span id="clockWeather">Céu limpo</span></div>
     <div id="bars">
@@ -54,29 +55,37 @@
   <div id="throwBar" class="hidden"><div class="tbl"></div><div class="tbt"><i class="tbm"></i></div></div>
   <div id="fade"></div>
 
-  <!-- Controles de toque -->
+  <!-- Controles de toque (só aparecem quando o jogo é aberto no celular/tablet) -->
   <div id="mobile">
-    <div id="joy"><div id="joyKnob"></div></div>
-    <div class="tcol right">
-      <button class="tbtn big" data-act="attack">⚔<small>Atacar</small></button>
-      <button class="tbtn" data-act="jump">⤒<small>Pular</small></button>
-      <button class="tbtn" data-act="interact">✋<small>Interagir</small></button>
-      <button class="tbtn" data-act="block">🛡<small>Defender/Mirar</small></button>
-      <button class="tbtn" data-act="reload">↻<small>Recarregar</small></button>
-      <button class="tbtn s" data-act="shoulder">⇄<small>Ombro</small></button>
-      <button class="tbtn" data-act="sprint">»<small>Correr</small></button>
-      <button class="tbtn" data-act="crouch">⤓<small>Agachar</small></button>
-    </div>
-    <div class="ttop">
-      <button class="tbtn s" data-act="inventory">🎒</button>
-      <button class="tbtn s" data-act="build">🔨</button>
-      <button class="tbtn s" data-act="pause">⏸</button>
-    </div>
-    <div class="tbuild">
-      <button class="tbtn s" data-act="rotate">⟳<small>Girar</small></button>
-      <button class="tbtn s" data-act="cancel">✕<small>Sair</small></button>
+    <div id="joy" class="tctl" data-id="joy"><span class="jl n">W</span><span class="jl s">S</span><span class="jl w">A</span><span class="jl e">D</span><div class="jlock"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2" fill="currentColor"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="2.2" fill="none"/></svg><b>CORRER</b></div><div id="joyKnob"></div></div>
+    <button class="tbtn tctl" data-act="inventory" data-id="inventory"><i>🎒</i><small>MOCHILA</small></button>
+    <button class="tbtn tctl big" data-act="attack" data-id="attack" title="Atirar"><i><svg viewBox="0 0 24 24" class="bulSvg"><g transform="rotate(35 12 12)"><path d="M12 1.5c2.3 2.1 3.2 4.8 3.2 7.4V17H8.8V8.9c0-2.6.9-5.3 3.2-7.4z" fill="currentColor"/><rect x="8.3" y="17.8" width="7.4" height="1.4" rx="0.4" fill="currentColor" opacity="0.6"/><rect x="8.3" y="19.6" width="7.4" height="2.9" rx="0.7" fill="currentColor"/></g></svg></i></button>
+    <button class="tbtn tctl" data-act="block" data-id="block"><i>⌖</i><small>MIRAR</small></button>
+    <button class="tbtn tctl" data-act="jump" data-id="jump"><i>⤒</i><small>PULAR</small></button>
+    <button class="tbtn tctl" data-act="interact" data-id="interact"><i class="ihand">✋</i><i class="ibul"><svg viewBox="0 0 24 24" class="bulSvg"><g transform="rotate(35 12 12)"><path d="M12 1.5c2.3 2.1 3.2 4.8 3.2 7.4V17H8.8V8.9c0-2.6.9-5.3 3.2-7.4z" fill="currentColor"/><rect x="8.3" y="17.8" width="7.4" height="1.4" rx="0.4" fill="currentColor" opacity="0.6"/><rect x="8.3" y="19.6" width="7.4" height="2.9" rx="0.7" fill="currentColor"/></g></svg></i><small class="lhand">USAR</small><small class="lbul">ATIRAR</small></button>
+    <button class="tbtn tctl" data-act="crouch" data-id="crouch"><i>⤓</i><small>AGACHAR</small></button>
+    <button class="tbtn tctl" data-act="reload" data-id="reload"><i>↻</i><small>RECARREGAR</small></button>
+    <button class="tbtn tctl" data-act="sprint" data-id="sprint"><i>»</i><small>CORRER</small></button>
+    <button class="tbtn tctl s" data-act="shoulder" data-id="shoulder"><i>⇄</i><small>OMBRO</small></button>
+    <button class="tbtn tctl s" data-act="pin" data-id="pin"><i>💣</i><small>PINO (F)</small></button>
+    <button class="tbtn tctl s" data-act="unequip" data-id="unequip"><i>↓</i><small>MÃOS</small></button>
+    <button class="tbtn tctl s" data-act="map" data-id="map"><i>🗺</i><small>MAPA</small></button>
+    <button class="tbtn tctl s" data-act="build" data-id="build"><i>🔨</i><small>CONSTRUIR</small></button>
+    <button class="tbtn tctl s" data-act="pause" data-id="pause"><i>⏸</i><small>PAUSA</small></button>
+    <button class="tbtn tctl s" data-act="rotate" data-id="rotate"><i>⟳</i><small>GIRAR</small></button>
+    <button class="tbtn tctl s" data-act="cancel" data-id="cancel"><i>✕</i><small>SAIR</small></button>
+    <button class="tbtn tctl s" data-act="mic" data-id="mic" title="Microfone (voz por proximidade)"><i><svg viewBox="0 0 24 24" class="micSvg"><path d="M12 14.5a3.2 3.2 0 0 0 3.2-3.2V5.2a3.2 3.2 0 0 0-6.4 0v6.1a3.2 3.2 0 0 0 3.2 3.2z" fill="currentColor"/><path d="M18.5 11.2a6.5 6.5 0 0 1-13 0M12 17.8v3.2M8.5 21h7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><line class="slash" x1="4" y1="3.5" x2="20" y2="20.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></i><small>VOZ</small></button>
+    <button id="tGear" class="tctl" data-id="gear" title="Configurar botões">⚙</button>
+    <div id="tEdit" class="hidden">
+      <b>⚙ Botões na tela</b>
+      <p>Arraste cada botão para onde quiser. Toque num botão para escolher e mudar só o tamanho dele.</p>
+      <label>Tamanho de todos <input type="range" id="tSizeAll" min="0.6" max="1.8" step="0.05"></label>
+      <label>Tamanho do selecionado <span id="tSelName">—</span> <input type="range" id="tSizeOne" min="0.5" max="2.2" step="0.05"></label>
+      <label>Transparência <input type="range" id="tAlpha" min="0.3" max="1" step="0.05"></label>
+      <div class="tEditBtns"><button id="tReset">Restaurar padrão</button><button id="tDone">Pronto</button></div>
     </div>
   </div>
+  <div id="rotateHint"><div><span>📱</span><b>Gire o celular</b><p>O jogo é jogado com a tela na horizontal.</p></div></div>
 
   <!-- Inventário / fabricação / equipamento -->
   <div id="invPanel" class="panel hidden">
