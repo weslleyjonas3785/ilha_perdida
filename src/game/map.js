@@ -13,7 +13,7 @@ export class WorldMap {
     const panel = document.createElement('div'); panel.id = 'mapPanel'; panel.className = 'hidden';
     panel.innerHTML = `<canvas id="mapCanvas"></canvas>
       <div class="mapTop"><h2>Mapa da ilha</h2><span id="mapInfo"></span><button class="close" id="mapClose">✕</button></div>
-      <div class="mapHelp">Clique: marcar ponto · clique na marca ou botão direito: remover · roda: zoom · arrastar: mover · <b>M</b> fecha</div>
+      <div class="mapHelp"><span class="hpc">Clique: marcar ponto · clique na marca ou botão direito: remover · roda: zoom · arrastar: mover · <b>M</b> fecha</span><span class="hmob">Toque: marcar/desmarcar · arraste com um dedo para mover · pinça com dois dedos: zoom</span></div>
       <div class="mapLegend"><span><i class="lg city"></i>Cidade</span><span><i class="lg village"></i>Vilarejo</span><span><i class="lg industry"></i>Indústria</span><span><i class="lg military"></i>Base militar</span><span><i class="lg cave"></i>Caverna</span></div>
       <div class="mapMarks" id="mapMarks"></div>`;
     document.body.appendChild(panel); this.panel = panel; this.cv = $('mapCanvas'); this.ctx = this.cv.getContext('2d');
@@ -25,7 +25,21 @@ export class WorldMap {
     cv.addEventListener('mousemove', (e) => { this.hover = [e.offsetX, e.offsetY]; const d = this.drag; if (d) { const dx = e.offsetX - d.x, dy = e.offsetY - d.y; if (Math.hypot(dx, dy) > 4) d.moved = true; if (d.moved) { this.view.cx = d.cx - dx / this.view.s; this.view.cz = d.cz - dy / this.view.s; } } this.draw(); });
     window.addEventListener('mouseup', (e) => { const d = this.drag; this.drag = null; if (!d || d.moved || this.g.ui.open !== 'map' || e.target !== cv) return; const [wx, wz] = this.toWorld(e.offsetX, e.offsetY); if (d.btn === 2) this.removeNear(e.offsetX, e.offsetY, 1e9); else this.clickAt(wx, wz, e.offsetX, e.offsetY); });
     cv.addEventListener('contextmenu', (e) => e.preventDefault());
-    cv.addEventListener('touchend', (e) => { const t = e.changedTouches[0]; const r = cv.getBoundingClientRect(); const x = t.clientX - r.left, y = t.clientY - r.top; const [wx, wz] = this.toWorld(x, y); this.clickAt(wx, wz, x, y); });
+    // toque: um dedo arrasta o mapa (toque rápido marca/desmarca), dois dedos em pinça aumentam/diminuem o zoom
+    const tp = new Map(); let tg = null; const rel = (t) => { const r = cv.getBoundingClientRect(); return [t.clientX - r.left, t.clientY - r.top]; };
+    const pinchInfo = () => { const [a, b] = [...tp.values()]; return { d: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, m: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] }; };
+    const begin = () => { const v = this.view; if (tp.size === 1) { const [p] = [...tp.values()]; tg = { kind: 'pan', x: p[0], y: p[1], cx: v.cx, cz: v.cz, moved: tg ? tg.moved || tg.pinched : false, pinched: tg ? tg.pinched : false }; }
+      else if (tp.size >= 2) { const I = pinchInfo(); const [wx, wz] = this.toWorld(I.m[0], I.m[1]); tg = { kind: 'pinch', d0: I.d, s0: v.s, wx, wz, moved: true, pinched: true }; } };
+    cv.addEventListener('touchstart', (e) => { e.preventDefault(); for (const t of e.changedTouches) tp.set(t.identifier, rel(t)); if (tp.size === 1 && !tg) tg = null; begin(); }, { passive: false });
+    cv.addEventListener('touchmove', (e) => { e.preventDefault(); for (const t of e.changedTouches) if (tp.has(t.identifier)) tp.set(t.identifier, rel(t)); const v = this.view; if (!tg || !v) return;
+      if (tg.kind === 'pan' && tp.size === 1) { const [p] = [...tp.values()]; const dx = p[0] - tg.x, dy = p[1] - tg.y; if (Math.hypot(dx, dy) > 8) tg.moved = true; if (tg.moved) { v.cx = tg.cx - dx / v.s; v.cz = tg.cz - dy / v.s; } }
+      else if (tg.kind === 'pinch' && tp.size >= 2) { const I = pinchInfo(); v.s = Math.min(3, Math.max(this.minS, tg.s0 * I.d / tg.d0)); // o ponto entre os dedos fica parado e acompanha o movimento
+        v.cx = tg.wx - (I.m[0] - this.W / 2) / v.s; v.cz = tg.wz - (I.m[1] - this.H / 2) / v.s; }
+      this.draw(); }, { passive: false });
+    const tend = (e) => { e.preventDefault(); const last = tp.size === 1 ? [...tp.values()][0] : null; for (const t of e.changedTouches) tp.delete(t.identifier);
+      if (tp.size === 0) { const tap = tg && tg.kind === 'pan' && !tg.moved && !tg.pinched; tg = null; if (tap && last && this.g.ui.open === 'map') { const [wx, wz] = this.toWorld(last[0], last[1]); this.clickAt(wx, wz, last[0], last[1]); } }
+      else { const keep = tg; begin(); if (tg && keep) { tg.moved = true; tg.pinched = keep.pinched; } } };
+    cv.addEventListener('touchend', tend, { passive: false }); cv.addEventListener('touchcancel', tend, { passive: false });
     window.addEventListener('resize', () => { if (this.g.ui.open === 'map') this.open(); });
   }
   // ---------- marcações ----------
