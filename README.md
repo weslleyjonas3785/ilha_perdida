@@ -144,6 +144,9 @@ Otimizações:
 - **Martelo de madeira** (2 galhos + 2 madeira + 2 fibras): olhando para a peça, **botão esquerdo repara** (gasta material do nível dela). **Segure o direito** → roda **Upar / Mudar posição / Demolir**. Níveis: **Galhos → Madeira → Pedra → Metal** (cada um mais resistente). **Demolir devolve metade** do material do nível atual.
 - **Peças sem apoio caem** (tirou a fundação, caem as paredes e o telhado que estavam nela). **Explosões** (granada, C4, foguete) danificam as construções; metal aguenta muito mais. Parede com porta e alçapão abrem e fecham com E.
 
+## Versão em um único arquivo (sites que aceitam só um .html)
+`node tools/build_single.mjs` gera `dist/ilha_perdida.html` (~5 MB) com o código, o estilo, os ícones e os sons embutidos. É esse arquivo que vai para lojas/sites que pedem "um único arquivo .html".
+
 ## Painel do dono do mundo (Ctrl + Shift + F1)
 Só aparece para quem criou o mundo (no jogo solo sempre; no multiplayer só para o dono que hospeda — os amigos não abrem).
 - **DROPAR:** todos os itens do jogo por categoria (armas, munição, saúde, comida, roupas, materiais…) e também **NPCs, robôs e animais**. Escolha a quantidade e o destino (**aos seus pés**, **onde está mirando** ou **perto de um jogador**). Dá para montar uma **lista** e **Dropar tudo** de uma vez.
