@@ -15,8 +15,8 @@ export class GameAudio {
     this.amb.water = this._loop(this.noise, 'bandpass', 350);
     this.applyVolumes();
     // sons de tiro gravados (arquivos): pistola, fuzil de assalto, escopeta e fuzil de precisão
-    this.samples = {}; this.sampleGain = { pistol: 1.5, rifle: 1.0, shotgun: 0.95, sniper: 1.0, tinnitus: 0.7, smokegren: 1.0, barulhenta: 1.0 };
-    for (const k of ['pistol', 'rifle', 'shotgun', 'sniper', 'skill', 'mechastep', 'spindown', 'tinnitus', 'smokegren', 'barulhenta']) fetch(`assets/audio/${k}.mp3`).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)).then((buf) => { this.samples[k] = buf; }).catch(() => {});
+    this.samples = {}; this.sampleGain = { pistol: 1.5, rifle: 1.0, shotgun: 0.95, sniper: 1.0, tinnitus: 0.7, smokegren: 1.0, barulhenta: 1.0, helicoptero: 1.1 };
+    for (const k of ['pistol', 'rifle', 'shotgun', 'sniper', 'skill', 'mechastep', 'spindown', 'tinnitus', 'smokegren', 'barulhenta', 'helicoptero']) fetch(`assets/audio/${k}.mp3`).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)).then((buf) => { this.samples[k] = buf; }).catch(() => {});
   }
   // som longo posicional que segue a distância/direção do jogador e pode ser abaixado aos poucos (sirene da granada barulhenta)
   voice(name, o = {}) {
@@ -79,6 +79,7 @@ export class GameAudio {
       case 'jump': this._noise(t, 0.12, 'bandpass', 600, 1, 0.08); break;
       case 'ladder': this._tone(t, 'triangle', 620 + R() * 120, 540, 0.08, 0.1 * v); this._noise(t, 0.05, 'bandpass', 2400, 3, 0.12 * v); break; // degrau de metal
       case 'ladderSlide': this._noise(t, 0.5, 'bandpass', 3200 + R() * 600, 6, 0.16 * v); this._tone(t, 'sawtooth', 900, 700, 0.45, 0.025 * v); break;
+      case 'suppressed': { const rr = o.rate || 1; this._noise(t, 0.09, 'bandpass', 1100 * rr, 1.2, 0.5 * v); this._noise(t, 0.03, 'highpass', 3500, 0.7, 0.22 * v); this._tone(t, 'sine', 160 * rr, 60, 0.08, 0.35 * v); this._tone(t + 0.01, 'triangle', 900 * rr, 300, 0.05, 0.08 * v); break; } // tiro com silenciador (abafado)
       case 'pin': this._tone(t, 'triangle', 2600, 2200, 0.05, 0.12 * v); this._noise(t + 0.06, 0.04, 'highpass', 4000, 1, 0.1 * v); this._tone(t + 0.12, 'square', 1300, 900, 0.04, 0.05 * v); break; // pino puxado + alavanca
       case 'flashbang': this._noise(t, 0.45, 'highpass', 900, 0.5, 1.2 * v, this.sfx, 0.001); this._tone(t, 'sine', 120, 40, 0.4, 0.9 * v); break;
       case 'horn': for (let i = 0; i < 10; i++) { const d = i * 0.6; this._tone(t + d, 'sawtooth', 420, 400, 0.45, 0.22 * v); this._tone(t + d, 'square', 840, 820, 0.45, 0.06 * v); } break; // buzina da granada barulhenta

@@ -4,7 +4,7 @@
 import { mat4, quat, clamp } from '../engine/math.js';
 import { GRIPS } from './gunrig.js';
 import { ITEMS } from './items.js';
-import { GUNS, SCOPES } from './weapons.js';
+import { GUNS, SCOPES, SIL_LEN } from './weapons.js';
 
 const REGION = (name) => /head|skull|visor/i.test(name) ? 'head' : /neck/i.test(name) ? 'neck' : /hips|spine|chest|body|torso|abd|thorax|pelvis|root/i.test(name) ? 'torso' : 'limb';
 const MULT = { head: 2.4, neck: 1.6, torso: 1.0, limb: 0.65 };
@@ -35,7 +35,7 @@ export class Firearms {
     this.aiming = !!(canUse && !blocked && act.block && !P.sprinting);
     this.aimT = clamp(this.aimT + (this.aiming ? dt / 0.16 : -dt / 0.2), 0, 1);
     // luneta encaixada: abre a mira enquanto o botão direito está segurado; a roda ajusta a ampliação
-    const sc = gun && g.attach && g.attach[id] && SCOPES[g.attach[id]]; this.scope = sc ? g.attach[id] : null; this.scopes = this.scopes || {};
+    const scId = gun && g.attOf ? g.attOf(id, 'scope') : null, sc = scId && SCOPES[scId]; this.scope = sc ? scId : null; this.scopes = this.scopes || {};
     if (sc) { let m = this.scopes[id] ?? sc.mag; if (this.aiming && this.aimT > 0.5 && g.input.mouse.wheel) m = clamp(m - Math.sign(g.input.mouse.wheel) * 0.5, sc.min, sc.max); this.scopes[id] = Math.min(sc.max, Math.max(sc.min, m)); this.magX = this.scopes[id]; }
     this.scoped = !!sc && this.aimT > 0.05;
     P.aiming = this.aiming; g.cam.aimZoom = sc ? 1 / this.magX : gun && gun.hold === 'rifle' ? 0.7 : 0.78; g.cam.scopeT = sc ? this.aimT : 0;
@@ -65,7 +65,8 @@ export class Firearms {
     const trig = gun.auto ? act.useHeld : act.use;
     if (trig && gun.grapple && g.grapple.busy) { if (act.use) g.grapple.release(); }
     else if (trig && !this.reloading && this.cool <= 0) {
-      if (this.mag(id) <= 0) { if (act.use) { g.audio.play('dryfire'); if (this.reserve(id) > 0) this.reload(); else g.ui.toast(`Sem munição (${ITEMS[gun.ammo].name})`, 'warn'); } this.cool = 0.25; }
+      if (g.hasMag && !g.hasMag(id)) { if (act.use) { g.audio.play('dryfire'); g.ui.toast('Sem pente! Botão direito na arma (inventário) → Verificar para encaixar um', 'warn'); } this.cool = 0.4; }
+      else if (this.mag(id) <= 0) { if (act.use) { g.audio.play('dryfire'); if (this.reserve(id) > 0) this.reload(); else g.ui.toast(`Sem munição (${ITEMS[gun.ammo].name})`, 'warn'); } this.cool = 0.25; }
       else this.fire();
     }
     if (!act.useHeld) this.shots = 0;
@@ -76,6 +77,7 @@ export class Firearms {
     const g = this.g, P = g.player, id = this.gunId, gun = this.gun; if (!gun || this.reloading) return;
     if (gun.direct) return; // o arco puxa a flecha direto da mochila
     if (gun.perItem && this.mag(id) > 0) { g.ui.toast(`Ainda restam ${this.mag(id)} disparo(s) no arpão`, 'info'); return; }
+    if (g.hasMag && !g.hasMag(id)) { g.ui.toast('Sem pente encaixado nessa arma', 'warn'); return; }
     if (this.mag(id) >= gun.mag) return; if (this.reserve(id) <= 0) { g.ui.toast(`Sem ${ITEMS[gun.ammo].name} na mochila`, 'warn'); return; }
     if (P.anim.busy) P.anim.stopAction(0.05);
     const C = P.clips; const clip = gun.perShell ? C.loadShell : gun.hold === 'rifle' ? C.reloadRifle : C.reloadPistol;
@@ -98,7 +100,8 @@ export class Firearms {
 
   _aimOrigin() { const P = this.g.player, e = this.g.cam.eye, d = this._rayDir(); const piv = [P.pos[0], P.pos[1] + 1.5, P.pos[2]]; const t0 = Math.max(0, (piv[0] - e[0]) * d[0] + (piv[1] - e[1]) * d[1] + (piv[2] - e[2]) * d[2]); return [e[0] + d[0] * t0, e[1] + d[1] * t0, e[2] + d[2] * t0]; }
   _rayDir() { const c = this.g.cam; const d = [c.target[0] - c.eye[0], c.target[1] - c.eye[1], c.target[2] - c.eye[2]]; const l = Math.hypot(...d); return d.map((x) => x / l); }
-  muzzle() { const gun = this.gun; return mat4.transformPoint(this.g.player.toolModel, gun ? gun.muzzle : [0, 0, 0.5]); }
+  silencer(id = this.gunId) { return id && this.g.attOf ? this.g.attOf(id, 'sil') : null; }
+  muzzle() { const gun = this.gun, sl = this.silencer(); const m = gun ? gun.muzzle : [0, 0, 0.5]; return mat4.transformPoint(this.g.player.toolModel, sl ? [m[0], m[1], m[2] + (SIL_LEN[sl] || 0.15) * ((gun.look && gun.look.scale) || 1)] : m); }
 
   fire() {
     const g = this.g, P = g.player, id = this.gunId, gun = this.gun, cam = g.cam;
@@ -111,7 +114,7 @@ export class Firearms {
     const t0 = Math.max(0, (piv[0] - e[0]) * dir0[0] + (piv[1] - e[1]) * dir0[1] + (piv[2] - e[2]) * dir0[2]);
     const origin = [e[0] + dir0[0] * t0, e[1] + dir0[1] * t0, e[2] + dir0[2] * t0];
     const mz = this.muzzle();
-    if (g.net && g.net.active) g.net.onShot(origin, dir0, gun.sound);
+    if (g.net && g.net.active) g.net.onShot(origin, dir0, this.silencer(id) ? 'suppressed' : gun.sound);
     if (gun.grapple) { g.grapple.fire(origin, dir0, mz, gun); g.audio.play('harpoon'); cam.pitch = clamp(cam.pitch - gun.recoil, -1.15, 1.2); this.recoilV = Math.min(1.5, this.recoilV + 0.3); return; }
     // balística: cada bala/flecha é um projétil físico. Sai da boca do cano rumo ao ponto sob a mira
     // e cai com a gravidade: de longe é preciso mirar acima do alvo (calibres mais rápidos caem menos)
@@ -125,9 +128,11 @@ export class Firearms {
       g.audio.play(gun.sound, { vol: 1 }); cam.pitch = clamp(cam.pitch - gun.recoil, -1.15, 1.2); cam.shake = Math.max(cam.shake, 0.3); this.recoilV = Math.min(1.5, this.recoilV + gun.recoil * 10); g.creatures.hearShot && g.creatures.hearShot(P.pos, 90); return; }
     if (gun.projectile) { g.audio.play(gun.sound); this.bloom = Math.min(1.5, this.bloom + 0.3); cam.pitch = clamp(cam.pitch - gun.recoil, -1.15, 1.2); this.recoilV = Math.min(1.5, this.recoilV + 0.15); return; }
     // efeitos: clarão na boca do cano, luz, fumaça, cápsula, som, recuo
-    this.flash = 0.06; g.gunLight = { pos: mz, t: 0.06 };
+    const sil = this.silencer(id); this.lastSilenced = !!sil;
+    if (sil) { this.flash = 0.02; g.fx.burst(mz, 3, [0.45, 0.45, 0.45], 0.5, 0.5, 0.05, -0.5); g.audio.play('suppressed', { vol: 1, rate: (gun.pitch || 1) * (gun.model === 'pistol' ? 1.15 : 0.9) }); }
+    else { this.flash = 0.06; g.gunLight = { pos: mz, t: 0.06 };
     g.fx.burst(mz, 5, [7, 4.5, 1.8], 1.5, 0.05, 0.07, 0); g.fx.burst(mz, 3, [0.5, 0.5, 0.5], 0.6, 0.6, 0.06, -0.6);
-    g.audio.play(gun.sound, { vol: 1, rate: gun.pitch || 1 }); if (!gun.perShell) g.audio.play('shell', { vol: 0.6 });
+    g.audio.play(gun.sound, { vol: 1, rate: gun.pitch || 1 }); } if (!gun.perShell) g.audio.play('shell', { vol: 0.6 });
     if (this.g.player.rig) this.g.player.rig.onShot(gun, gun.model);
     if (gun.perShell) setTimeout(() => this.g.audio.play('pump'), 380);
     if (gun.bolt) setTimeout(() => this.g.audio.play('bolt'), 450);
@@ -136,7 +141,8 @@ export class Firearms {
     cam.shake = Math.max(cam.shake, gun.pellets > 1 ? 0.35 : 0.12); this.recoilV = Math.min(1.5, this.recoilV + gun.recoil * 12);
     this.bloom = Math.min(1.5, this.bloom + (gun.auto ? 0.18 : 0.35));
     // o barulho do tiro atrai androides num raio grande
-    if (g.noise) g.noise(P.pos, gun.pellets > 1 ? 70 : gun.bolt ? 140 : 85, 'tiro'); else g.creatures.hearShot(P.pos, gun.pellets > 1 ? 70 : gun.bolt ? 140 : 85);
+    const nR = (gun.pellets > 1 ? 70 : gun.bolt ? 140 : 85) * (sil ? 0.22 : 1); // silenciador: o barulho alcança bem menos
+    if (g.noise) g.noise(P.pos, nR, 'tiro'); else g.creatures.hearShot(P.pos, nR);
   }
 
   // Raio contra criaturas (esferas por osso, região do corpo) e contra o mundo (terreno/colisores)
@@ -159,6 +165,7 @@ export class Firearms {
         const th = tb - Math.sqrt(r * r - d2); if (th < (best ? best.t : range)) best = { t: th, p: [o[0] + d[0] * th, o[1] + d[1] * th, o[2] + d[2] * th], c, region: reg };
       }
     }
+    if (g.helis && g.helis.list.length) { const h = g.helis.trace(o, d, best ? best.t : range); if (h && (!best || h.t < best.t)) best = h; }
     return best;
   }
   _worldTrace(o, d, range) {

@@ -33,7 +33,7 @@ import { buildChibiMesh as buildPlayerMesh, makeChibiSkeleton, LOOK_DEFAULT, HAI
 import * as P from './props.js';
 import { makeFoliageAtlas } from './textures.js';
 import { Firearms } from './firearms.js';
-import { gunMesh, GUNS, arrowMesh, scopeMesh, SCOPES, SCOPE_MOUNT, magMesh } from './weapons.js';
+import { gunMesh, GUNS, arrowMesh, scopeMesh, SCOPES, SCOPE_MOUNT, magMesh, attSlots, fits, silencerMesh, silMount, magFor } from './weapons.js';
 import { SKILLS, SKILL_OF, quickClass, slotClass } from './items.js';
 import { ITEMS, Inventory, RECIPES, GridInventory, PACKS, POCKETS, PIECES, itemKg, CARRY_KG, MAX_KG, CLOTH_SLOTS, SLOT_NAMES, LARGE } from './items.js';
 import { BuildSystem } from './building.js';
@@ -42,6 +42,7 @@ import { Environment, FX } from './environment.js';
 import { GameAudio } from './audio.js';
 import { SmokeSignals } from './smoke.js';
 import { Admin } from './admin.js';
+import { Helis } from './heli.js';
 import { Blasts } from './blasts.js';
 import * as STR from './struct.js';
 import { Net } from './net.js';
@@ -90,7 +91,7 @@ export class Game {
     this.settings = Object.assign(defaults, saved); this.settings.v = 2;
     this.renderer = new Renderer(canvas); this.audio = new GameAudio(); { const A = this.audio, orig = A.play.bind(A); A.play = (name, o = {}) => { const res = orig(name, o); const R = NOISE_R[name]; if (R && !o.at && !o.noNoise && this.player && !this.player.dead && this.state === 'playing') this.noise(this.player.pos, name === 'step' ? R * (o.vol ?? 1) : R, name === 'step' ? 'passo' : name); return res; }; } this.audio.listener = () => this.cam ? { eye: this.cam.eye, yaw: Math.atan2(this.cam.target[0] - this.cam.eye[0], this.cam.target[2] - this.cam.eye[2]) } : null; this.ui = new UI(this); this.input = new Input(canvas, this.ui);
     this.cam = new ThirdPersonCamera(); this.env = new Environment(this); this.fx = new FX(this);
-    this.guns = new Firearms(this); this.npcs = new NPCManager(this); this.fires = new FIRE.Campfires(this); this.convoys = new Convoys(this); this.grenades = new Grenades(this); this.smoke = new SmokeSignals(this); this.admin = new Admin(this); this.blasts = new Blasts(this); this.struct = new STR.StructSystem(this); this.net = new Net(this); this.inv = new GridInventory(); this._bigPockets = typeof window !== 'undefined' && !!window.__TEST_BIG_POCKETS; this.quick = Array(8).fill(null); this.inv.onChange = () => { this.syncHand && this.equip && this.syncHand(); if (this.ui.open) this.ui.refresh(); }; this.inv.onAdd = (id) => { this._autoQuick(id); this._toBack && this._toBack(id); };
+    this.guns = new Firearms(this); this.npcs = new NPCManager(this); this.fires = new FIRE.Campfires(this); this.convoys = new Convoys(this); this.helis = new Helis(this); this.grenades = new Grenades(this); this.smoke = new SmokeSignals(this); this.admin = new Admin(this); this.blasts = new Blasts(this); this.struct = new STR.StructSystem(this); this.net = new Net(this); this.inv = new GridInventory(); this._bigPockets = typeof window !== 'undefined' && !!window.__TEST_BIG_POCKETS; this.quick = Array(8).fill(null); this.inv.onChange = () => { this.syncHand && this.equip && this.syncHand(); if (this.ui.open) this.ui.refresh(); }; this.inv.onAdd = (id) => { this._autoQuick(id); this._toBack && this._toBack(id); };
     this.equip = this.freshEquip(); this._applyBack(); this.attach = {}; this.home = null; this.drops = []; this.logs = []; this.falling = []; this.projectiles = []; this.arrows = []; this.clouds = []; this.stats = { built: 0, kills: 0 };
     this.lastFire = [0, 0]; this.saveT = 60; this.grassCells = new Map(); this.menuT = 0; this.playTime = 0;
     this.input.wantLock = true;
@@ -190,6 +191,7 @@ export class Game {
     this._dirtyAll(); this.drops = []; this.logs = []; this.falling = []; this.projectiles = []; this.arrows = []; this.clouds = []; if (this.guns) this.guns.load({});
     if (this.build) this.build.load([]);
     if (this.creatures) for (const c of [...this.creatures.list]) this.creatures.remove(c);
+    if (this.helis) this.helis.clear();
   }
   _dirtyAll() { for (const g of Object.values(this.groups)) for (const gg of (Array.isArray(g) ? g : [g])) for (const c of gg.cells.values()) c.dirty = true; }
   newGame() {
@@ -263,7 +265,7 @@ export class Game {
     this.quick = Array(8).fill(null); if (Array.isArray(s.quick)) { if (s.quick.length === 8) s.quick.forEach((q, k) => { if (ITEMS[q] && quickClass(q) === slotClass(k)) this.quick[k] = q; }); else for (const q of s.quick) if (ITEMS[q]) this.bindQuick(q); } else for (const e of this.inv.slots) this._autoQuick(e.id);
     this.syncHand(); if (this.vehicles.driving) this.vehicles.exit(); this.vehicles.load(s.veh); this.jerryFuel = s.jerryFuel || 0;
     if (s.look) { this.look = { ...LOOK_DEFAULT, ...s.look }; this.applyLook(); }
-    this.attach = {}; for (const [k, v] of Object.entries(s.attach || {})) if (GUNS[k] && ITEMS[v]) this.attach[k] = v;
+    this.attach = {}; for (const [k, v] of Object.entries(s.attach || {})) { if (!GUNS[k]) continue; if (typeof v === 'string') { if (ITEMS[v]) this.attach[k] = { scope: v }; } else if (v && typeof v === 'object') { const o = {}; for (const sl of ['scope', 'mag', 'sil']) if (v[sl] === null) o[sl] = null; else if (v[sl] && ITEMS[v[sl]]) o[sl] = v[sl]; this.attach[k] = o; } }
     this.skills = new Set(s.skills || (s.v >= 2 ? [] : [])); if (!s.skills) this.skills.add('carpintaria'); this._initBooks(s.books);
     this.map.load(s.marks); this.home = s.home || null; this.stats = s.stats || { built: 0, kills: 0 }; this.guns.load(s.mags); this.env.load(s.env); this.playTime = s.playTime || 0;
     const P = this.player; P.revive(); this.stream.flush(s.player.pos); P.setPosition(...s.player.pos); P.yaw = s.player.yaw; this.freshBody(); Object.assign(P.stats, s.player.stats); P.crouch = !!s.player.crouch; P.stats.hp = Math.max(P.stats.hp, 1);
@@ -350,7 +352,7 @@ export class Game {
     P.update(dt, pa, this.cam.yaw);
     this.cam.aimT = this.guns.aimT; this.cam.update(dt, P, this.physics);
     { const st = this.world.siteAt(P.pos[0], P.pos[2]); const k = st ? st.kind : null; if (k !== this._siteK) { this._siteK = k; if (st) this.ui.toast(`📍 ${st.name}`, 'info'); } }
-    this.env.update(dt); this.creatures.update(dt); this.npcs.update(dt); this.grenades.update(dt); this.blasts.update(dt); this.smoke.update(dt); this.admin.tick(dt); this.struct.update(dt); this.fires.update(dt); this.convoys.update(dt); this._trapTick(dt); if (this.ui.open === 'fire' && this.ui.fire) { this._fireUiT = (this._fireUiT || 0) - dt; if (this._fireUiT <= 0) { this._fireUiT = 0.25; this.ui.renderFire(); } } this._updateButcher(dt); this.ui.flash && this.ui.flash(this.grenades.flashT); this._smokeOv(); this.build.update2(dt); this.power.update(dt); this.grapple.update(dt); this.geiger.update(dt);
+    this.env.update(dt); this.creatures.update(dt); this.npcs.update(dt); this.grenades.update(dt); this.blasts.update(dt); this.smoke.update(dt); this.helis.update(dt); this.admin.tick(dt); this.struct.update(dt); this.fires.update(dt); this.convoys.update(dt); this._trapTick(dt); if (this.ui.open === 'fire' && this.ui.fire) { this._fireUiT = (this._fireUiT || 0) - dt; if (this._fireUiT <= 0) { this._fireUiT = 0.25; this.ui.renderFire(); } } this._updateButcher(dt); this.ui.flash && this.ui.flash(this.grenades.flashT); this._smokeOv(); this.build.update2(dt); this.power.update(dt); this.grapple.update(dt); this.geiger.update(dt);
     if (this._reading) { this._reading.t += dt; this.ui.readProgress(Math.min(1, this._reading.t / this._reading.T)); if (this.player.dead) this._reading = null; }
     this._updateClouds(dt); this._survival(dt); this._updateFalling(dt); this._updateProjectiles(dt); this._updateArrows(dt); this._updateC4(dt); this._updateWebs(dt); this._interactPrompt();
     this.saveT -= dt; if (this.saveT <= 0) { this.saveT = 60; this.saveGame(false); }
@@ -536,6 +538,8 @@ export class Game {
   // quantidade de um item contando as armas nas costas
   countAll(id) { return this.inv.count(id) + (this.equip.backA === id ? 1 : 0) + (this.equip.backB === id ? 1 : 0); }
   // armas grandes (arco, fuzis, escopeta, sniper, machado, picareta, lança) vão direto para os 2 espaços das costas
+  // armas grandes vão direto para as costas (se houver lado livre); devolve quantas foram
+  _backFirst(id, n) { let k = 0; while (k < n && LARGE.has(id) && this.equip && !this._noBack && (!this.equip.backA || !this.equip.backB)) { const s = !this.equip.backA ? 'backA' : 'backB'; this.equip[s] = id; k++; this._autoQuick(id); this.ui.toast(`🎽 ${ITEMS[id].name} foi direto para as costas (${s === 'backA' ? 'lado direito' : 'lado esquerdo'})`, 'info'); } return k; }
   _toBack(id) { if (this._noBack || !LARGE.has(id) || !this.equip) return; const k = !this.equip.backA ? 'backA' : !this.equip.backB ? 'backB' : null; if (!k) return; if (this.inv.remove(id, 1)) { this.equip[k] = id; this.ui.toast(`🎽 ${ITEMS[id].name} foi para as costas (${k === 'backA' ? 'lado direito' : 'lado esquerdo'})`, 'info'); } }
   backToInv(k) { const id = this.equip[k]; if (!id) return; this._noBack = true; const n = this.inv.add(id, 1); this._noBack = false; if (n < 1) return this.ui.toast('Sem espaço no inventário', 'warn'); if (this.equip.hand === id && this.countAll(id) <= 0) this.equip.hand = null; this.equip[k] = null; this.audio.play('cloth'); }
   invToBack(i, k) { const s = this.inv.slots[i]; if (!s || !LARGE.has(s.id)) return this.ui.toast('Só armas grandes vão nas costas (arco, fuzil, escopeta, sniper, machado, picareta, lança)', 'warn'); if (this.equip[k]) { this.backToInv(k); if (this.equip[k]) return; } this.inv.takeSlot(i, 1); this.equip[k] = s.id; this.audio.play('cloth'); }
@@ -565,17 +569,29 @@ export class Game {
   useSlot(i) { const s = this.inv.slots[i]; if (!s) return; const it = ITEMS[s.id];
     if (it.type === 'tool') { this.equip.debugHand = false; this.equip.hand = this.equip.hand === s.id ? null : s.id; this.audio.play('pickup'); }
     else if (['armor', 'backpack', 'suit'].includes(it.type)) this.equipFromSlot(i);
-    else if (it.type === 'attachment') this.attachScope(i);
+    else if (it.type === 'attachment') this.attachItem(i);
     else if (['food', 'drink', 'medical'].includes(it.type)) this.consume(i); }
-  // lunetas: encaixam na arma que está na mão (fuzis de assalto: 4x; fuzis de precisão: 4x e 8x)
-  attachScope(i) {
-    const s = this.inv.slots[i]; if (!s || ITEMS[s.id].type !== 'attachment') return false; const gun = this.equip.hand, G = gun && GUNS[gun];
-    if (!G) { this.ui.toast('Empunhe um fuzil para encaixar a luneta', 'warn'); return false; }
-    if (!(G.scopes || []).includes(s.id)) { this.ui.toast(`${ITEMS[gun].name} não aceita ${ITEMS[s.id].name}`, 'warn'); return false; }
-    const prev = this.attach[gun]; this.attach[gun] = s.id; this.inv.takeSlot(i, 1); if (prev && this.inv.add(prev, 1) < 1) this.dropNear([[prev, 1]]); this.audio.play('magIn');
-    this.ui.toast(`${ITEMS[s.id].icon} ${ITEMS[s.id].name} encaixada no ${ITEMS[gun].name}. Segure o botão direito para mirar; roda ajusta o zoom.`, 'ok'); return true;
+  // acessórios por arma: { scope, mag, sil }. Pente ausente da chave = o pente original da arma (vem encaixado); null = retirado
+  att(gun) { return (this.attach[gun] = this.attach[gun] || {}); }
+  // arma sem pente encaixado: modelo sem o carregador
+  _gunMeshFor(id) { if (!GUNS[id] || this.hasMag(id) || !['rifle', 'sniper'].includes(GUNS[id].model)) return this.tools[id]; this._noMagM = this._noMagM || {}; return this._noMagM[id] || (this._noMagM[id] = this.renderer.createMesh(gunMesh(id, { noMag: true }))); }
+  attOf(gun, slot) { const a = this.attach[gun] || {}; if (slot === 'mag') { if (!attSlots(gun).includes('mag')) return null; return a.mag === undefined ? magFor(gun) : a.mag; } return a[slot] || null; }
+  hasMag(gun) { return !attSlots(gun).includes('mag') || !!this.attOf(gun, 'mag'); }
+  // encaixa o acessório do espaço i do inventário na arma (padrão: a da mão)
+  attachItem(i, gun = this.equip.hand) {
+    const s = this.inv.slots[i]; if (!s || ITEMS[s.id].type !== 'attachment') return false; const G = gun && GUNS[gun];
+    if (!G) { this.ui.toast('Empunhe a arma (ou use Verificar com o botão direito nela) para encaixar', 'warn'); return false; }
+    const slot = fits(gun, s.id); if (!slot) { this.ui.toast(`${ITEMS[gun].name} não aceita ${ITEMS[s.id].name}`, 'warn'); return false; }
+    const prev = this.attOf(gun, slot); if (slot === 'mag' && prev) this._unloadMag(gun);
+    this.inv.takeSlot(i, 1); this.att(gun)[slot] = s.id; if (prev && this.inv.add(prev, 1) < 1) this.dropNear([[prev, 1]]); this.audio.play('magIn');
+    this.ui.toast(`${ITEMS[s.id].name} encaixado no ${ITEMS[gun].name}${slot === 'scope' ? '. Segure o botão direito para mirar; roda ajusta o zoom.' : slot === 'mag' ? ' (vazio: recarregue com R)' : ''}`, 'ok'); return true;
   }
-  detachScope(gun) { const sc = this.attach[gun]; if (!sc) return; if (this.inv.room(sc) <= 0) return this.ui.toast('Inventário cheio', 'warn'); this.inv.add(sc, 1); delete this.attach[gun]; this.audio.play('pickup'); this.ui.toast(`${ITEMS[sc].name} removida`, 'ok'); }
+  attachScope(i) { return this.attachItem(i); }
+  // tira o acessório: volta para o inventário (o pente devolve as balas que estavam nele)
+  detachAtt(gun, slot) { const id = this.attOf(gun, slot); if (!id) return false; if (this.inv.room(id) <= 0) { this.ui.toast('Inventário cheio', 'warn'); return false; }
+    if (slot === 'mag') this._unloadMag(gun); this.inv.add(id, 1); this.att(gun)[slot] = null; if (slot !== 'mag') delete this.att(gun)[slot]; this.audio.play(slot === 'mag' ? 'magOut' : 'pickup'); this.ui.toast(`${ITEMS[id].name} retirado`, 'ok'); return true; }
+  detachScope(gun) { return this.detachAtt(gun, 'scope'); }
+  _unloadMag(gun) { const n = this.guns.mags[gun] || 0; if (n > 0) { const G = GUNS[gun]; const k = this.inv.add(G.ammo, n); if (k < n) this.dropNear([[G.ammo, n - k]]); } this.guns.mags[gun] = 0; if (this.guns.reloading && this.guns.reloading.id === gun) this.guns.reloading = null; }
   // deixa itens no chão ao lado do jogador (um saco de itens)
   dropNear(list, label) { if (!list.length) return; const P = this.player, a = P.yaw + Math.PI / 2; const x = P.pos[0] + Math.sin(a) * 0.9, z = P.pos[2] + Math.cos(a) * 0.9; const [gy] = this.physics.ground(x, z, 0.2, P.pos[1] + 0.5, 0.6);
     this.drops.push({ items: list.map((o) => (Array.isArray(o) ? o : o.rad ? [o.id, o.qty, 1] : [o.id, o.qty])), x, y: gy, z, bag: true }); if (label) this.ui.toast(label, 'warn'); }
@@ -786,7 +802,7 @@ export class Game {
       case 'book': pick(() => { if (o.taken) return; const id = 'book_' + o.skill; if (this.inv.add(id, 1) < 1) return this.ui.toast('Inventário cheio', 'warn'); o.taken = true; o.regrowAt = day + 15; this.audio.play('pickup'); this.ui.toast(`📕 Você achou o <b>Livro de ${this.skillName(o.skill)}</b>! Leia no inventário (botão direito → Ler).`, 'ok'); }, o.x, o.z); break;
       case 'special': pick(() => { if (o.taken) return; if (this.inv.room('ratsuit') < 1) return this.ui.toast('Inventário cheio', 'warn'); o.taken = true; o.regrowAt = day + 7; this.groups.ratfold.dirty(o); this.give('ratsuit', 1); this.audio.play('cloth'); this.ui.toast('☣️ Roupa R.A.T encontrada! Vista-a para entrar na zona tóxica.', 'ok'); }, o.x, o.z); break;
       case 'drop': pick(() => { const i = this.drops.indexOf(o); if (i < 0) return; const left = [];
-        for (let [id, n, rad] of o.items) { if (this._autoWear(id) && !--n) continue; const k = this.inv.add(id, n, { rad: !!rad || this.world.toxicAt(o.x, o.z) > 0.2 }); if (k) this.ui.toast(`+${k} ${ITEMS[id].icon} ${ITEMS[id].name}${rad ? ' ☢' : ''}`, 'ok'); if (k < n) left.push(rad ? [id, n - k, 1] : [id, n - k]); }
+        for (let [id, n, rad] of o.items) { if (this._autoWear(id) && !--n) continue; const kb = this._backFirst(id, n); n -= kb; if (!n) continue; const k = this.inv.add(id, n, { rad: !!rad || this.world.toxicAt(o.x, o.z) > 0.2 }); if (k) this.ui.toast(`+${k} ${ITEMS[id].icon} ${ITEMS[id].name}${rad ? ' ☢' : ''}`, 'ok'); if (k < n) left.push(rad ? [id, n - k, 1] : [id, n - k]); }
         if (left.length) { o.items = left; this.ui.toast('Inventário cheio — alguns itens ficaram', 'warn'); } else { this.drops.splice(i, 1); if (o.death) this.deathPos = null; } this.audio.play('pickup'); }, o.x, o.z); break;
       case 'arrow': pick(() => { const i = this.arrows.indexOf(o); if (i < 0) return; this.arrows.splice(i, 1); this.give('arrow', 1); this.audio.play('pickup'); }, o.p[0], o.p[2]); break;
       case 'log': pick(() => { const i = this.logs.indexOf(o); if (i < 0) return; if (this.inv.room('wood') < 1) return this.ui.toast('Inventário cheio', 'warn'); this.logs.splice(i, 1); this.give('wood', 4); if (Math.random() < 0.5) this.give('stick', 1); this.audio.play('pickup'); }, o.x, o.z); break;
@@ -878,7 +894,7 @@ export class Game {
   noise(pos, radius, kind, src) { if (this.netClient) { if (radius >= 8 && this.net.active) { const t = this.env.elapsed; if (radius >= 30 || !this._nzT || t - this._nzT > 0.5) { this._nzT = t; this.net.send({ t: 'noise', p: pos.map((v) => +v.toFixed(1)), r: radius, k: kind }); } } return; } if (!src || src === 'horn') this.creatures.hearShot(pos, radius * (kind === 'passo' ? 1 : 0.9)); this.npcs.hear(pos, radius); if (radius >= 40 && this.convoys && (!src || !src.convoy)) this.convoys.hear(pos, radius); }
   // ---------- corpo de NPC: revistar (arma e munição) ou picotar com faca/machado (sobram mochila, roupas, armas, carne e ossos) ----------
   _useHumanCorpse(c) { const P = this.player, blade = this.equip.hand && ['knife', 'axe'].includes(ITEMS[this.equip.hand].tool);
-    if (!blade) { if (c.searched) { this.ui.toast('Você já revistou esse corpo — com faca ou machado dá para picotar', 'info'); return; } P.doAction('pickup', (n) => { if (n !== 'grab') return; c.searched = true; this.net.onLoot(c, false, true); const L = c.loadout || {}; let got = 0; for (const [id, q] of [...(L.weapon || []), ...(L.misc || [])]) { if (!ITEMS[id]) continue; got += this.inv.add(id, q) > 0 ? 1 : 0; } if (L.weapon) L.weapon = []; if (L.misc) L.misc = []; this.audio.play('pickup'); this.ui.toast(got ? '🔎 Corpo revistado' : 'Nada de útil', 'ok'); }); return; }
+    if (!blade) { if (c.searched) { this.ui.toast('Você já revistou esse corpo — com faca ou machado dá para picotar', 'info'); return; } P.doAction('pickup', (n) => { if (n !== 'grab') return; c.searched = true; this.net.onLoot(c, false, true); const L = c.loadout || {}; let got = 0; for (const [id, q] of [...(L.weapon || []), ...(L.misc || [])]) { if (!ITEMS[id]) continue; const kb = this._backFirst(id, q); const k = kb < q ? this.inv.add(id, q - kb) : 0; if (kb + k < q) this.dropNear([[id, q - kb - k]]); got += kb + k > 0 ? 1 : 0; } if (L.weapon) L.weapon = []; if (L.misc) L.misc = []; this.audio.play('pickup'); this.ui.toast(got ? '🔎 Corpo revistado' : 'Nada de útil', 'ok'); }); return; }
     if (this._butcher) return; this._butcher = { c, t: 0, T: 6, hit: 0 }; this.ui.toast('🔪 Picotando o corpo… (fique perto)', 'info'); }
   _updateButcher(dt) { const B = this._butcher; if (!B) return; const P = this.player, c = B.c;
     if (P.dead || !this.creatures.list.includes(c) || Math.hypot(c.pos[0] - P.pos[0], c.pos[2] - P.pos[2]) > 3 || !(this.equip.hand && ['knife', 'axe'].includes(ITEMS[this.equip.hand].tool))) { this._butcher = null; this.ui.readProgress(null); return; }
@@ -1020,6 +1036,7 @@ export class Game {
     const pr = o.pr || 4, R = o.r || 3.5; const cover = (q) => { const e = [p[0], p[1] + 0.3, p[2]]; const L = Math.hypot(q[0] - e[0], q[1] - e[1], q[2] - e[2]); return this.physics.rayFree(q, e, 0.02, null) * L < L - 0.8; }; if (!P.dead && d < pr && !cover([P.pos[0], P.pos[1] + 1.0, P.pos[2]])) { if (src) this.playerHit((o.playerDmg || 34) * (1 - d / pr) + 6, src, { ranged: true }); else this.damage((o.playerDmg || 34) * (1 - d / pr) + 6, o.cause || 'explosão de C4'); this.knockback(Math.atan2(P.pos[0] - p[0], P.pos[2] - p[2]), 12 * (1 - d / pr)); }
     for (const c of this.creatures.list) { if (c === src || c.dead) continue; const dc = Math.hypot(c.pos[0] - p[0], c.pos[2] - p[2]); if (dc < R && (o.vis === 'c4' || !cover([c.pos[0], c.pos[1] + 0.6, c.pos[2]]))) this.creatures.damage(c, (o.dmg || 40) * (1 - dc / R * 0.7), Math.atan2(c.pos[0] - p[0], c.pos[2] - p[2]), o.kind); }
     if (this.struct) this.struct.blast(p, R, o.dmg || 40, o.kind);
+    if (this.helis) this.helis.blast(p, R);
     if (o.wreck) this.wreck(p, o.wreck);
   }
   // lupa em cima dos móveis/caixas/carros que ainda têm loot (some depois de vasculhar)
@@ -1048,7 +1065,7 @@ export class Game {
     for (const a of this.arrows) if (a.stuck && Math.hypot(a.p[0] - P[0], a.p[2] - P[2]) < R) out.push({ src: 'arrow', a, id: 'arrow', n: 1, rad: false });
     return out; }
   takeNear(e, quiet) { const it = ITEMS[e.id]; if (!it) return 0;
-    if (e.src === 'drop') { const d = e.d, i = d.items.indexOf(e.ref); if (i < 0 || !this.drops.includes(d)) return 0; const k = this.inv.add(e.id, e.n, { rad: e.rad || this.world.toxicAt(d.x, d.z) > 0.2 }); if (!k) { if (!quiet) this.ui.toast('Inventário cheio', 'warn'); return 0; }
+    if (e.src === 'drop') { const d = e.d, i = d.items.indexOf(e.ref); if (i < 0 || !this.drops.includes(d)) return 0; const kb = this._backFirst(e.id, e.n); if (kb) { if (kb >= e.n) { d.items.splice(i, 1); if (!d.items.length) { this.drops.splice(this.drops.indexOf(d), 1); if (d.death) this.deathPos = null; } return kb; } e.ref[1] = e.n -= kb; } const k = this.inv.add(e.id, e.n, { rad: e.rad || this.world.toxicAt(d.x, d.z) > 0.2 }); if (!k) { if (!quiet) this.ui.toast('Inventário cheio', 'warn'); return 0; }
       if (k < e.n) e.ref[1] = e.n - k; else d.items.splice(i, 1); if (!d.items.length) { this.drops.splice(this.drops.indexOf(d), 1); if (d.death) this.deathPos = null; } if (!quiet) { this.ui.toast(`+${k} ${it.icon} ${it.name}${e.rad ? ' ☢' : ''}`, 'ok'); this.audio.play('pickup'); } this._autoQuick && this._autoQuick(e.id); return k; }
     if (e.src === 'pick') { const o = e.o; if (o.taken) return 0; if (this.inv.room(e.id) < 1) { if (!quiet) this.ui.toast('Inventário cheio', 'warn'); return 0; } const n = e.id === 'stick' ? 1 + (Math.random() < 0.4) : e.n; this.give(e.id, n, quiet); if (o.kind === 'fiber' && Math.random() < 0.4) this.give('leaf', 1, true);
       o.taken = true; o.regrowAt = this.env.day + (o.kind === 'crystal' ? 4 : 1); if (o._grp) o._grp.dirty(o); if (!quiet) this.audio.play('pickup'); return n; }
@@ -1193,6 +1210,7 @@ export class Game {
         if (!hit) { a.p = [a.p[0] + a.v[0] * h, a.p[1] + a.v[1] * h, a.p[2] + a.v[2] * h]; a.dist += L; continue; }
         done = true; a.p = hit.p.slice(); a.dist += hit.t; if (a.tracer) this._streakEnd(a);
         if (a.boom) { this._boom(a, hit.p); break; }
+        if (hit.heli) { const pil = this.helis.shot(hit.heli, hit.part, a.dmg * (a.arrow ? 0.6 : 1), hit.p); if (pil) { this.guns.hitMark = 0.18; this.guns.hitKill = hit.heli.state === 'fall'; this.guns.lastHitRegion = 'head'; this.audio.play('hitmark'); } break; }
         if (hit.c) {
           let mult = { head: 2.4, neck: 1.8, torso: 1, limb: 0.6 }[hit.region] || 1; const c = hit.c;
           if (hit.region === 'head') mult = a.dmg >= 20 && c.def.hp <= 300 ? 999 : 4; // tiro na cabeça: morte na hora (exceto chefes)
@@ -1285,7 +1303,7 @@ export class Game {
     this.stream.siteItems(items);
     if (!this.menuMode) { this._renderExtras(items, eye); this._renderBlood(items); }
     for (const c of this.caveMeshes) items.push({ mesh: c.mesh, sphere: [c.c.x, c.c.y + 3, c.c.z, c.c.R + 8], doubleSided: true });
-    this.build.renderItems(items); this.power.render(items); this.grapple.render(items); this.geiger.render(items); this.grenades.render(items); this.fires.render(items); this.smoke.render(items, eye); this.blasts.render(items); this.struct.render(items, eye); this._renderSheet(items); if (!this._porterMesh) this._porterMesh = this.renderer.createMesh(porterLoadMesh()); this.convoys.render(items, this._porterMesh); this.npcs.render(items, eye, (wid) => { const id = { club: 'scrapaxe', knife: 'scrapknife' }[wid] || wid; return this.tools[id]; });
+    this.build.renderItems(items); this.power.render(items); this.grapple.render(items); this.geiger.render(items); this.grenades.render(items); this.fires.render(items); this.smoke.render(items, eye); this.blasts.render(items); this.helis.render(items, eye); this.struct.render(items, eye); this._renderSheet(items); if (!this._porterMesh) this._porterMesh = this.renderer.createMesh(porterLoadMesh()); this.convoys.render(items, this._porterMesh); this.npcs.render(items, eye, (wid) => { const id = { club: 'scrapaxe', knife: 'scrapknife' }[wid] || wid; return this.tools[id]; });
     if (P.rig) { if (!this.rigMeshes) this.rigMeshes = { mag: r.createMesh(magMesh()), shell: r.createMesh(MXS.shellMesh()), bolt: this.grapple.boltMesh }; P.rig.render(items, this.rigMeshes); }
     const I = mat4.create();
     for (const f of this.falling) { const t = f.t; const ax = [Math.cos(f.dir), 0, -Math.sin(f.dir)]; const s = Math.sin(f.a / 2); const q = [ax[0] * s, 0, ax[2] * s, Math.cos(f.a / 2)];
@@ -1352,11 +1370,13 @@ export class Game {
         for (const [k, sx] of [['backA', -1], ['backB', 1]]) { const id = this.equip[k]; if (!id || !this.tools[id]) continue; if (skip === id && this.inv.count(id) <= 0) { skip = null; continue; }
           const gun = !!GUNS[id]; const off = gun ? mat4.compose([sx * 0.07, 0.02, -0.19], Math.PI, 1, -Math.PI / 2 + 0.25, sx * 0.55) : mat4.compose([sx * 0.06, -0.1, -0.2], 0, 1, 0.15, sx * 0.6);
           items.push({ smooth: true, mesh: this.tools[id], model: mat4.mul(mat4.create(), CW, off), alpha: a < 0.99 ? a : undefined, sphere: [P.pos[0], P.pos[1] + 1, P.pos[2], 2.5] }); } }
-      if (this.equip.hand && this.tools[this.equip.hand] && !P.sleeping && !P.swimming && !(P.anim.action && P.anim.action.clip === P.clips.blueprint && !P.anim.action.ending)) items.push({ smooth: true, mesh: this.tools[this.equip.hand], model: P.toolModel, alpha: a < 0.99 ? a : undefined, sphere: [P.pos[0], P.pos[1] + 1, P.pos[2], 2.5], emissive: this.equip.hand === 'torch' ? 0.0 : 0 });
-      const sc = this.equip.hand && this.attach[this.equip.hand]; if (sc && this.scopeMeshes[sc] && !P.sleeping && !P.swimming) { const G = GUNS[this.equip.hand], mt = SCOPE_MOUNT[G.model] || [0, 0.13, 0.06]; items.push({ smooth: true, mesh: this.scopeMeshes[sc], model: mat4.mul(mat4.create(), P.toolModel, mat4.compose(mt, 0, (G.look && G.look.scale) || 1)), alpha: a < 0.99 ? a : undefined, sphere: [P.pos[0], P.pos[1] + 1, P.pos[2], 2.5] }); }
+      if (this.equip.hand && this.tools[this.equip.hand] && !P.sleeping && !P.swimming && !(P.anim.action && P.anim.action.clip === P.clips.blueprint && !P.anim.action.ending)) items.push({ smooth: true, mesh: this._gunMeshFor(this.equip.hand), model: P.toolModel, alpha: a < 0.99 ? a : undefined, sphere: [P.pos[0], P.pos[1] + 1, P.pos[2], 2.5], emissive: this.equip.hand === 'torch' ? 0.0 : 0 });
+      if (this.equip.hand && GUNS[this.equip.hand] && !P.sleeping && !P.swimming) { const gid = this.equip.hand, G = GUNS[gid], sc = this.attOf(gid, 'scope'), sl = this.attOf(gid, 'sil'), al = a < 0.99 ? a : undefined, sph = [P.pos[0], P.pos[1] + 1, P.pos[2], 2.5];
+        if (sc && this.scopeMeshes[sc]) { const mt = SCOPE_MOUNT[G.model] || [0, 0.13, 0.06]; items.push({ smooth: true, mesh: this.scopeMeshes[sc], model: mat4.mul(mat4.create(), P.toolModel, mat4.compose(mt, 0, (G.look && G.look.scale) || 1)), alpha: al, sphere: sph }); }
+        const sm = sl && silMount(gid); if (sm) { this.silMeshes = this.silMeshes || {}; const m = this.silMeshes[sl] || (this.silMeshes[sl] = this.renderer.createMesh(silencerMesh(sl))); items.push({ smooth: true, mesh: m, model: mat4.mul(mat4.create(), P.toolModel, mat4.compose(sm, 0, (G.look && G.look.scale) || 1)), alpha: al, sphere: sph }); } }
     }
     // luzes pontuais: fogueiras, tocha, cristais
-    const lights = []; const t = this.env.elapsed; if (!this.menuMode) this.smoke.lights(lights, eye, t);
+    const lights = []; const t = this.env.elapsed; if (!this.menuMode) { this.smoke.lights(lights, eye, t); this.helis.lights(lights, eye); }
     for (const p of this.build.pieces) if (p.type === 'campfire' && p.lit) { const d = Math.hypot(p.x - eye[0], p.z - eye[2]); if (d < 120) { lights.push({ pos: [p.x, p.y + 0.8, p.z], range: 14, col: [3.2 * (0.85 + 0.15 * Math.sin(t * 13 + p.x)), 1.5, 0.45], d }); if (d < 70) this.fx.fire([p.x, p.y, p.z], 1); } }
     if (!this.menuMode && this.equip.hand === 'solarlamp' && !P.sleeping) { const hp = P.handWorldPos(); lights.push({ pos: hp, range: 14, col: [2.2, 2.5, 2.9], d: 0 }); }
     if (this._mechaLights) { for (const l of this._mechaLights) lights.push(l); this._mechaLights = null; }

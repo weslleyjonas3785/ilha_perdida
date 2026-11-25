@@ -276,7 +276,7 @@ export class CreatureManager {
     let moveSpeed = 0, faceYaw = null, targetAlt = c.flyer ? gh + (def.alt || 4) + Math.sin(g.env.elapsed * 1.3 + c.uid) * 0.4 : null;
     // audição: correr faz barulho, agachado é silencioso
     const hearR = def.robot ? (P.sprinting ? 24 : Math.hypot(P.vel[0], P.vel[2]) > 2.5 ? 11 : P.crouch ? 0 : 5) * (def.hearMul || 1) : 0;
-    if (hostileNow && !c.hive && !P.dead && dist < hearR && (c.state === 'wander' || c.state === 'search' || c.state === 'return') && !(def.ambush && c.state === 'ambush')) { c.alerted = Math.max(c.alerted, 5); c.lastSeen = [pp[0], pp[2]]; if (c.state !== 'search') { c.state = 'chase'; c.alertT = 0; } else c.timer = Math.max(c.timer, 5); }
+    if (hostileNow && !c.hive && !P.dead && !P.invis && dist < hearR && (c.state === 'wander' || c.state === 'search' || c.state === 'return') && !(def.ambush && c.state === 'ambush')) { c.alerted = Math.max(c.alerted, 5); c.lastSeen = [pp[0], pp[2]]; if (c.state !== 'search') { c.state = 'chase'; c.alertT = 0; } else c.timer = Math.max(c.timer, 5); }
     // emboscada (aranhas): ficam imóveis e escondidas até o jogador chegar muito perto
     if (def.ambush && c.state === 'wander' && !aware && Math.random() < dt * 0.15) { c.state = 'ambush'; c.timer = 25 + Math.random() * 20; }
     // abelhas detectam movimento perto da colmeia

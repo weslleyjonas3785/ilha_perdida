@@ -89,7 +89,7 @@ export class Admin {
     if (a === 'goto') this.gotoPlayer(+arg); if (a === 'bring') this.bringPlayer(+arg);
     if (a === 'time') { this.g.env.time = +arg; this.say('Hora alterada'); } if (a === 'day') { this.g.env.day++; this.say('Dia +1'); }
     if (a === 'weather') { this.g.env.setWeather(arg); this.say('Clima: ' + arg); }
-    if (a === 'kill') this.killNear(+arg); if (a === 'convoy') { const cv = this.g.convoys && this.g.convoys.spawn({ force: true }); this.say(cv ? '🚚 Comboio chamado numa estrada perto' : 'Nenhuma estrada perto para o comboio'); }
+    if (a === 'kill') this.killNear(+arg); if (a === 'heli') { const P = this.g.player; this.g.helis.spawn({ at: [P.pos[0], P.pos[2]] }); this.say('🚁 Helicóptero chamado: vem de longe e passa por cima de você'); } if (a === 'convoy') { const cv = this.g.convoys && this.g.convoys.spawn({ force: true }); this.say(cv ? '🚚 Comboio chamado numa estrada perto' : 'Nenhuma estrada perto para o comboio'); }
     if (a === 'loot') this.respawnLoot(); if (a === 'save') { this.g.saveGame(true); } if (a === 'heal') this.resetStats();
     this.render();
   }
@@ -143,7 +143,7 @@ export class Admin {
     return `<h3>MUNDO</h3><div class="admRow"><span>Hora do dia (Dia ${e.day})</span><input id="admTime" type="range" min="0" max="0.999" step="0.01" value="${e.time}"></div>
       <div class="admBtns"><button class="admB" data-act="time" data-arg="0.3">Manhã</button><button class="admB" data-act="time" data-arg="0.5">Meio-dia</button><button class="admB" data-act="time" data-arg="0.78">Pôr do sol</button><button class="admB" data-act="time" data-arg="0.95">Noite</button><button class="admB" data-act="day">Dia +1</button></div>
       <div class="admSub">CLIMA</div><div class="admBtns">${W.map((w) => `<button class="admB" data-act="weather" data-arg="${w}">${w}</button>`).join('')}</div>
-      <div class="admSub">INIMIGOS E LOOT</div><div class="admBtns"><button class="admB" data-act="kill" data-arg="80">Matar tudo em 80 m</button><button class="admB" data-act="kill" data-arg="300">Matar tudo em 300 m</button><button class="admB" data-act="convoy">Chamar comboio</button><button class="admB" data-act="loot">Repor loot das caixas</button><button class="admB" data-act="save">Salvar o mundo</button></div>`;
+      <div class="admSub">INIMIGOS E LOOT</div><div class="admBtns"><button class="admB" data-act="kill" data-arg="80">Matar tudo em 80 m</button><button class="admB" data-act="kill" data-arg="300">Matar tudo em 300 m</button><button class="admB" data-act="convoy">Chamar comboio</button><button class="admB" data-act="heli">Chamar helicóptero</button><button class="admB" data-act="loot">Repor loot das caixas</button><button class="admB" data-act="save">Salvar o mundo</button></div>`;
   }
   _pageSystem() {
     const g = this.g; const CL = g.creatures.list; return `<h3>SISTEMA</h3><table class="admTable"><tr><td>FPS</td><td>${Math.round(g.fps || 0)}</td></tr><tr><td>Criaturas carregadas</td><td>${CL.length} (${CL.filter((c) => c.npc).length} NPCs, ${CL.filter((c) => c.def.robot).length} robôs)</td></tr>

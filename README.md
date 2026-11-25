@@ -244,6 +244,20 @@ Todos entram na mesma VPN (Radmin VPN, Hamachi, ZeroTier…) ou na mesma rede de
 - Para encaixar: com o fuzil na mão, use a luneta pela barra rápida ou pelo inventário ("Encaixar na arma da mão"). Para tirar: aba Equipamentos → "Remover luneta".
 - Lunetas aparecem em bases militares (e raramente em carros e cidades). Munições antigas do salvamento são convertidas (9mm → .42, 5.56 → 5.55, 7.62 → 7.69).
 
+## Acessórios das armas (Verificar)
+- Botão direito numa arma de fogo (na grade, na mão ou nas costas) → **Verificar**: mostra a arma desenhada com o que está encaixado e os espaços **Pente**, **Mira** e **Silenciador**. Pistolas: só pente e silenciador; escopeta e armas especiais: sem espaços.
+- Clique num acessório compatível da mochila para encaixar; clique no espaço ocupado para tirar (o pente devolve as balas que estavam nele).
+- Pentes: Pente de pistola, Pente FA 5.40 / 5.55 / 5.77 (curvos) e Pente FP 7.45 / 7.69 / 7.90 (caixa). A arma encontrada já vem com o seu pente; **sem pente ela não recarrega nem atira**.
+- Miras: Luneta 4x e 8x. Silenciadores: de pistola e de fuzil — tiro abafado, sem clarão, e o barulho alcança ~1/5 da distância.
+- Ícones de todos os acessórios gerados dos modelos 3D (`tools/gun_icons.py`, que usa `src/game/iconrender.js`).
+- Armas grandes coletadas (chão, caixas, corpos) vão direto para as costas; com os 2 espaços ocupados, vão para o inventário.
+
+## Helicóptero militar
+- De tempos em tempos (primeira vez depois de ~5 a 8 min) um helicóptero verde-oliva "07" cruza o céu passando perto de você. O som do rotor é estéreo e muda com a distância: dá para saber de que lado ele vem.
+- Se ele te vê (a céu aberto, sem fumaça, perto), faz a volta e fica circulando em cima com a porta aberta: dois atiradores disparam rajadas. Esconda-se embaixo de teto, entre árvores ou numa granada de fumaça — sem te ver por ~14 s, ele vai embora.
+- Atire no **piloto** pela janela da cabine (a fuselagem só faz faísca) ou acerte um foguete: o helicóptero gira, cai pegando fogo, explode e deixa destroços em chamas (coluna de fumaça preta) com 6–8 caixas militares de loot em volta.
+- Painel do administrador: botão **Chamar helicóptero**. No multiplayer ele aparece só para quem hospeda o mundo.
+
 ## Animais e robôs novos
 
 - **Cervo** com galhada e **javali** com presas e crina: dão carne e couro.
@@ -428,6 +442,8 @@ python3 tests/play21.py  # 33 verificações: bifes, cidades grandes, tosse/infe
                          # NPCs (acampamentos, militares, briga com robôs, picotar) e as 4 granadas de mão
 python3 tests/play25.py  # 19 verificações: projeto (roda com 11 peças, encaixes, animação), bandeira (área), martelo (reparar, upar até metal, girar, demolir com metade), peças sem apoio caem, explosão, salvar
 python3 tests/play29.py  # 5 verificações: área Próximo no inventário (pegar e pegar tudo) e lupa nos móveis com loot
+python3 tests/play30.py  # 7 verificações: arma grande direto para as costas, Verificar (pente/mira/silenciador), sem pente não atira, silenciador
+python3 tests/play31.py  # 8 verificações: helicóptero (som, voo, circula e atira, fumaça esconde, tiro no piloto, queda, caixas, fumaça dos destroços)
 python3 tests/play28.py  # 9 verificações: quantidade no slot, fragmentação (fogo, clarão, cratera), luz (4 s + embaçado), fumaça densa 15 s, barulhenta, C4 (20 m) e dano nas construções
 python3 tests/play27.py  # 14 verificações: painel do dono (Ctrl+Shift+F1): dropar itens/NPCs/robôs/animais, lista, modo deus, voar, esqueletos, teleporte, console
 python3 tests/play26.py  # 20 verificações: multiplayer com dois navegadores (o teste liga o server.mjs sozinho): busca por IP, senha, avatares, mundo, criaturas, PvP

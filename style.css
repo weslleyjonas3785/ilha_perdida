@@ -466,3 +466,15 @@ body.scoped #prompt { display: none; }
 #lootMarks{position:fixed;inset:0;pointer-events:none;z-index:30}
 #lootMarks .lm{position:absolute;transform:translate(-50%,-50%);border-radius:50%;background:rgba(12,16,22,.72);border:2px solid rgba(255,214,110,.9);box-shadow:0 0 8px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center}
 #lootMarks .lm svg{width:62%;height:62%}
+/* Verificar arma (acessórios) */
+.gunCheck{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:250;width:540px;max-width:94vw;background:linear-gradient(#20252c,#171b20);border:1px solid #4a5260;border-radius:12px;padding:14px 16px;box-shadow:0 18px 50px rgba(0,0,0,.6);color:#e8ecf0}
+.gcHead{display:flex;justify-content:space-between;align-items:center}.gcHead h3{margin:0;font-size:17px}
+.gcX{background:#2c333c;border:1px solid #4a5260;color:#ddd;border-radius:6px;width:30px;height:30px;cursor:pointer}
+.gcView{display:block;width:100%;height:auto;margin:8px 0;background:radial-gradient(ellipse at center,#3a434e 0%,#232930 70%);border-radius:8px}
+.gcSlots{display:flex;gap:12px;justify-content:center;margin:6px 0 10px}
+.gcSlot{width:108px;height:96px;border:2px dashed #556070;border-radius:9px;display:flex;flex-direction:column;align-items:center;padding:4px;background:#1a1e24}
+.gcSlot small{color:#9aa6b4;font-size:11px;text-transform:uppercase;letter-spacing:.06em}.gcSlot .ic{flex:1;display:flex;align-items:center;justify-content:center}
+.gcSlot .ic img{max-width:84px;max-height:62px}.gcSlot.on{border-style:solid;border-color:#7fb069;cursor:pointer;background:#1f2a1f}.gcSlot.on:hover{border-color:#e06c5a}
+.gcInv{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.gcItem{display:flex;align-items:center;gap:6px;background:#262d36;border:1px solid #4a5260;color:#e8ecf0;border-radius:7px;padding:4px 10px 4px 4px;cursor:pointer;font:inherit;font-size:13px}
+.gcItem img{width:40px;height:40px;object-fit:contain}.gcItem:hover{background:#33404e;border-color:#7fb069}.gcHint{font-size:12px;text-align:center;margin:8px 0 0}

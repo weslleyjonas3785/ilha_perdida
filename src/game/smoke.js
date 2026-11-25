@@ -22,6 +22,7 @@ export class SmokeSignals {
   sources() {
     const g = this.g, out = [];
     for (const p of g.build.pieces) if (p.type === 'campfire' && p.lit) out.push({ x: p.x, y: p.y, z: p.z, cov: this.covered(p), seed: (p.x * 13.1 + p.z * 7.7) % 1, own: p });
+    if (g.helis) for (const w of g.helis.smokeSources()) out.push(w);
     for (const c of g.world.camps || []) out.push({ x: c.x, y: g.world.height(c.x, c.z), z: c.z, cov: false, seed: (c.id * 0.37) % 1, camp: c });
     return out;
   }

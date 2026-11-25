@@ -31,12 +31,41 @@ export const GUNS = {
   sniper: { model: 'sniper', ammo: 'ammo769', mag: 5, dmg: 88, rate: 1.25, auto: false, pellets: 1, spread: 0.0008, hipSpread: 0.06, recoil: 0.09, range: 700, speed: 576, drag: 0.002, reload: 2.8, sound: 'sniper', muzzle: [0, 0.07, 0.95], hold: 'rifle', falloff: 400, bolt: true, scopes: ['scope4', 'scope8'] },
   sniper790: { model: 'sniper', ammo: 'ammo790', mag: 4, dmg: 108, rate: 1.5, auto: false, pellets: 1, spread: 0.0007, hipSpread: 0.065, recoil: 0.12, range: 800, speed: 621, drag: 0.0018, reload: 3.1, sound: 'sniper', pitch: 0.92, muzzle: [0, 0.07, 1.05], hold: 'rifle', falloff: 450, bolt: true, scopes: ['scope4', 'scope8'], look: { len: 1.1, wood: 0x5a5e3a } },
 };
+// Acessórios ("Verificar" no inventário): pente, mira e silenciador. Pistolas: pente + silenciador; escopeta e armas especiais: nenhum.
+export function attSlots(gid) { const G = GUNS[gid]; if (!G) return []; if (G.model === 'pistol') return ['mag', 'sil']; if (G.model === 'rifle' || G.model === 'sniper') return ['mag', 'scope', 'sil']; return []; }
+// pente de cada arma (vem encaixado quando a arma é encontrada)
+export const MAGS = { mag_pistol: ['pistol35', 'pistol', 'pistol65'], mag_fa1: ['rifle540'], mag_fa2: ['rifle'], mag_fa3: ['rifle577'], mag_fp1: ['sniper745'], mag_fp2: ['sniper'], mag_fp3: ['sniper790'] };
+export const SILS = { sil_pistol: ['pistol35', 'pistol', 'pistol65'], sil_rifle: ['rifle540', 'rifle', 'rifle577', 'sniper745', 'sniper', 'sniper790'] };
+export const SIL_LEN = { sil_pistol: 0.13, sil_rifle: 0.2 };
+export function magFor(gid) { for (const [k, L] of Object.entries(MAGS)) if (L.includes(gid)) return k; return null; }
+export function fits(gid, aid) { const G = GUNS[gid]; if (!G) return null; if (MAGS[aid]) return MAGS[aid].includes(gid) ? 'mag' : null; if (SILS[aid]) return SILS[aid].includes(gid) ? 'sil' : null; if (SCOPES[aid]) return (G.scopes || []).includes(aid) ? 'scope' : null; return null; }
+// ponta do cano (onde rosqueia o silenciador), já com o comprimento/escala do visual da arma
+const SIL_BASE = { pistol: [0, 0.06, 0.177], rifle: [0, 0.05, 0.69], sniper: [0, 0.065, 0.985] };
+export function silMount(gid) { const G = GUNS[gid] || {}, V = G.look || {}, b = SIL_BASE[G.model]; if (!b) return null; const L = V.len || 1, S = V.scale || 1; let z = b[2] * S; if (z > 0.1 * S) z = 0.1 * S + (z - 0.1 * S) * L; return [b[0] * S, b[1] * S, z]; }
+// silenciador: tubo fosco com anéis (cresce em +Z a partir da boca do cano)
+export function silencerMesh(kind) {
+  const mb = new MeshBuilder(); const blk = hex(0x202124), dk = hex(0x121314), gr = hex(0x3a3c40); const rifle = kind === 'sil_rifle'; const r = rifle ? 0.022 : 0.016, L = SIL_LEN[kind] || 0.15;
+  mb.setColor(gr, MET); mb.cylinder(M(0, 0, 0, 0, 1, RX), r * 0.7, r * 0.7, 0.02, 12, gr);
+  mb.setColor(blk, POLY); mb.cylinder(M(0, 0, 0.015, 0, 1, RX), r, r, L - 0.025, 16, blk);
+  mb.setColor(dk, MET); for (const z of [0.02, L * 0.5, L - 0.02]) mb.cylinder(M(0, 0, z, 0, 1, RX), r * 1.06, r * 1.06, 0.008, 16, dk);
+  mb.cylinder(M(0, 0, L - 0.012, 0, 1, RX), r * 0.9, r * 0.6, 0.012, 16, dk);
+  return mb.build();
+}
+// pentes soltos (ícones / visual): pistola reto com base; FA curvo (3 tamanhos); FP caixa (3 tamanhos)
+export function magItemMesh(id) {
+  const mb = new MeshBuilder(); const blk = hex(0x1d1e20), dk = hex(0x111214), st = hex(0x5a5d62), brass = hex(0xb08a3e), tan = hex(0x8a7552), od = hex(0x48502f);
+  if (id === 'mag_pistol') { mb.setColor(blk, MET); mb.roundBox(M(0, 0, 0, 0, 1, -0.18), 0.026, 0.13, 0.045, blk, 0.004, 1); mb.setColor(dk, POLY); mb.roundBox(M(0.012, -0.07, -0.012, 0, 1, -0.18), 0.034, 0.014, 0.056, dk, 0.004, 1); mb.setColor(brass, MET); mb.box(M(-0.003, 0.068, 0.006, 0, 1, -0.18), 0.012, 0.01, 0.03, brass); return mb.build(); }
+  const n = +id.slice(-1) || 1; const fa = id.startsWith('mag_fa');
+  if (fa) { const c = n === 1 ? tan : n === 3 ? od : blk; const segs = 6 + n * 2; let y = 0, z = 0, a = 0.08; mb.setColor(c, POLY); for (let i = 0; i < segs; i++) { mb.roundBox(M(0, y, z, 0, 1, a), 0.03, 0.03, 0.075, c, 0.004, 1); y -= 0.021 * Math.cos(a); z += 0.021 * Math.sin(a); a += 0.045; }
+    mb.setColor(dk, POLY); mb.roundBox(M(0, y - 0.006, z, 0, 1, a), 0.034, 0.014, 0.082, dk, 0.004, 1); mb.setColor(brass, MET); mb.box(M(0, 0.018, 0.0), 0.014, 0.01, 0.05, brass); return mb.build(); }
+  const h = 0.05 + n * 0.022; mb.setColor(blk, MET); mb.roundBox(M(0, -h / 2, 0), 0.032, h, 0.075, blk, 0.004, 1); mb.setColor(dk, POLY); mb.roundBox(M(0, -h - 0.006, 0), 0.036, 0.012, 0.08, dk, 0.003, 1); mb.setColor(st, MET); mb.box(M(0.0165, -h / 2, 0), 0.002, h * 0.6, 0.01, st); mb.setColor(brass, MET); mb.box(M(0, 0.006, 0.0), 0.014, 0.012, 0.06, brass); return mb.build();
+}
 // lunetas: ampliação padrão e faixa ajustável pela roda do mouse
 export const SCOPES = { scope4: { mag: 4, min: 3, max: 5 }, scope8: { mag: 8, min: 6, max: 10 } };
 // posição do centro da luneta sobre o trilho de cada modelo
 export const SCOPE_MOUNT = { rifle: [0, 0.128, 0.06], sniper: [0, 0.13, 0.06] };
 
-export function gunMesh(gid) {
+export function gunMesh(gid, o = {}) {
   const G = GUNS[gid] || {}, V = G.look || {}; const id = G.model || gid;
   if (id === 'harpoon') return harpoonGunMesh();
   if (id === 'gl') { // lança-granadas de sucata: coronha de vergalhão, corpo de chapa com trapos camuflados, cano largo, guarda-mão de madeira
@@ -84,7 +113,7 @@ export function gunMesh(gid) {
     for (let i = 0; i < 3; i++) mb.box(M(0, 0.064, 0.675 + i * 0.015), 0.034, 0.006, 0.006, steel);
     mb.box(M(0, 0.1, 0.43), 0.012, 0.05, 0.012, dark); // massa de mira
     C(blk, POLY); // carregador curvo
-    for (let i = 0; i < 4; i++) mb.roundBox(M(0, -0.03 - i * 0.042, 0.11 + i * 0.012, 0, 1, 0.12 + i * 0.06), 0.03, 0.046, 0.075, blk, 0.005, 1);
+    if (!o.noMag) for (let i = 0; i < 4; i++) mb.roundBox(M(0, -0.03 - i * 0.042, 0.11 + i * 0.012, 0, 1, 0.12 + i * 0.06), 0.03, 0.046, 0.075, blk, 0.005, 1);
     mb.roundBox(M(0, 0.03, -0.13), 0.042, 0.055, 0.12, blk, 0.01, 2); // tubo da coronha
     mb.roundBox(M(0, 0.0, -0.27, 0, 1, -0.1), 0.044, 0.13, 0.16, blk, 0.012, 2); // coronha
     mb.roundBox(M(0, -0.005, -0.355, 0, 1, -0.1), 0.046, 0.14, 0.02, dark, 0.006, 1); // soleira
@@ -111,7 +140,7 @@ export function gunMesh(gid) {
     mb.cylinder(M(0, 0.065, 0.96, 0, 1, RX), 0.018, 0.018, 0.05, 12, dark); mb.cylinder(M(0.035, 0.07, -0.03, 0, 1, 0, Math.PI / 2), 0.006, 0.006, 0.05, 6, steel); mb.sphere(M(0.06, 0.07, -0.03), 0.012, 8, 6, steel);
     C(dark, MET); for (const z of [-0.02, 0.14]) mb.box(M(0, 0.09, z), 0.03, 0.012, 0.02, dark); mb.box(M(0, 0.088, 0.06), 0.018, 0.006, 0.26, dark); // bases do trilho
     mb.box(M(0, 0.09, 0.93), 0.006, 0.03, 0.006, dark); // massa de mira
-    C(blk, POLY); mb.roundBox(M(0, -0.04, 0.08), 0.03, 0.07, 0.06, blk, 0.006, 1);
+    C(blk, POLY); if (!o.noMag) mb.roundBox(M(0, -0.04, 0.08), 0.03, 0.07, 0.06, blk, 0.006, 1);
   }
   else if (id === 'bow') {
     // arco recurvo de madeira: duas lâminas curvas, empunhadura enrolada e corda
