@@ -536,3 +536,21 @@ body.mobile #joy .jlock svg { width: 26px; height: 26px; } body.mobile #joy .jlo
 body.mobile:not(.tplay) #joy .jlock, body.mobile #joy:not(.active) .jlock { opacity: 0; } body.mobile.runLock #joy .jlock { opacity: 1; }
 body.mobile.runNear #joy .jlock { color: rgba(255, 255, 255, 0.75); }
 body.mobile.runLock #joy .jlock { color: #ffd27a; filter: drop-shadow(0 0 6px rgba(255, 210, 122, 0.9)); }
+/* engrenagem: menu e tela de modificar controles */
+#tMenu { position: absolute; right: 12px; top: 22%; width: 230px; background: rgba(16, 20, 26, 0.96); border: 1px solid #4a5260; border-radius: 12px; padding: 12px; pointer-events: auto; display: flex; flex-direction: column; gap: 8px; z-index: 6; color: #e8ecf0; }
+#tMenu.hidden { display: none; }
+#tMenu button { background: #2c333c; border: 1px solid #4a5260; color: #fff; border-radius: 9px; padding: 11px; font: inherit; font-size: 15px; text-align: left; }
+#tMenu #tModify { background: #2f4a6a; border-color: #6ea0d8; }
+#tEditBg { display: none; } body.tedit #tEditBg { display: block; position: absolute; inset: 0; background: rgba(4, 8, 14, 0.55); pointer-events: none; z-index: 1; }
+body.tedit #mobile .tctl { z-index: 2; }
+#tEdit { top: 3%; width: min(440px, 46vw); padding: 8px 12px; z-index: 6; font-size: 12px; }
+#tEdit.hidden { display: none; }
+.tEditHead { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; } .tEditHead b { font-size: 14px; } .tEditHead span { color: #9aa6b4; font-size: 11px; }
+.tEditRow { display: flex; align-items: center; gap: 8px; margin: 5px 0; } .tEditRow .tLbl { flex: 0 0 42%; } .tEditRow .tLbl b { color: #ffd27a; } .tEditRow input[type=range] { flex: 1; max-width: none; }
+.tSq { width: 30px; height: 30px; padding: 0; border-radius: 8px; background: #2c333c; border: 1px solid #4a5260; color: #fff; font-size: 18px; }
+.tEditBtns #tSave { background: #3c6b34; border-color: #7fb069; } .tEditBtns #tCancel { background: #4a2c2c; border-color: #a86a6a; }
+/* celular deitado: menus compactos (cabem na altura da tela) */
+@media (max-height: 520px) { .menu { gap: 8px; overflow-y: auto; justify-content: safe center; padding: 8px 0; } .menu h2 { font-size: 22px; margin: 0; } .mbtns { gap: 5px; width: min(300px, 60vw); } .mbtns button { padding: 6px; font-size: 14px; } }
+@media (max-height: 520px) { body.mobile .mbtns { display: grid; grid-template-columns: 1fr 1fr; width: min(560px, 80vw); } }
+/* painel de edição compacto e arrastável pelo título */
+#tEdit { width: min(360px, 40vw); } .tEditHead { cursor: move; touch-action: none; } .tEditHead b::after { content: '  ✥'; color: #9aa6b4; font-weight: 400; }

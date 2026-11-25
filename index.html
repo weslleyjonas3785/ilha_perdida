@@ -76,13 +76,14 @@
     <button class="tbtn tctl s" data-act="cancel" data-id="cancel"><i>✕</i><small>SAIR</small></button>
     <button class="tbtn tctl s" data-act="mic" data-id="mic" title="Microfone (voz por proximidade)"><i><svg viewBox="0 0 24 24" class="micSvg"><path d="M12 14.5a3.2 3.2 0 0 0 3.2-3.2V5.2a3.2 3.2 0 0 0-6.4 0v6.1a3.2 3.2 0 0 0 3.2 3.2z" fill="currentColor"/><path d="M18.5 11.2a6.5 6.5 0 0 1-13 0M12 17.8v3.2M8.5 21h7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><line class="slash" x1="4" y1="3.5" x2="20" y2="20.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></i><small>VOZ</small></button>
     <button id="tGear" class="tctl" data-id="gear" title="Configurar botões">⚙</button>
+    <div id="tMenu" class="hidden"><b>⚙ Configurações</b><button id="tModify">🎮 Modificar controles</button><button id="tMenuClose">Fechar</button></div>
+    <div id="tEditBg"></div>
     <div id="tEdit" class="hidden">
-      <b>⚙ Botões na tela</b>
-      <p>Arraste cada botão para onde quiser. Toque num botão para escolher e mudar só o tamanho dele.</p>
-      <label>Tamanho de todos <input type="range" id="tSizeAll" min="0.6" max="1.8" step="0.05"></label>
-      <label>Tamanho do selecionado <span id="tSelName">—</span> <input type="range" id="tSizeOne" min="0.5" max="2.2" step="0.05"></label>
-      <label>Transparência <input type="range" id="tAlpha" min="0.3" max="1" step="0.05"></label>
-      <div class="tEditBtns"><button id="tReset">Restaurar padrão</button><button id="tDone">Pronto</button></div>
+      <div class="tEditHead"><b>🎮 Modificar controles</b><span>Toque num botão para escolher · arraste para mudar de lugar</span></div>
+      <div class="tEditRow"><span class="tLbl">Selecionado: <b id="tSelName">(toque num botão)</b></span><button id="tMinus" class="tSq">−</button><input type="range" id="tSizeOne" min="0.5" max="2.2" step="0.05"><button id="tPlus" class="tSq">+</button></div>
+      <div class="tEditRow"><span class="tLbl">Tamanho de todos</span><input type="range" id="tSizeAll" min="0.6" max="1.8" step="0.05"></div>
+      <div class="tEditRow"><span class="tLbl">Transparência</span><input type="range" id="tAlpha" min="0.3" max="1" step="0.05"></div>
+      <div class="tEditBtns"><button id="tReset">Restaurar padrão</button><button id="tCancel">Cancelar</button><button id="tSave">💾 Salvar</button></div>
     </div>
   </div>
   <div id="rotateHint"><div><span>📱</span><b>Gire o celular</b><p>O jogo é jogado com a tela na horizontal.</p></div></div>

@@ -266,7 +266,8 @@ Todos entram na mesma VPN (Radmin VPN, Hamachi, ZeroTier…) ou na mesma rede de
 - No primeiro toque o jogo entra em tela cheia e trava na horizontal (Android/Chrome). Se o celular estiver em pé (ou o navegador não deixar travar, como no iPhone), aparece o aviso para girar.
 - Com arma de fogo na mão, o botão USAR vira uma bala (ATIRAR). O botão grande da esquerda é só o desenho de uma bala.
 - Puxar a bola do joystick para cima e arrastar além do círculo trava a corrida (aparece o cadeado CORRER); o personagem segue correndo ao soltar, e tocar no joystick de novo destrava.
-- ⚙ Engrenagem: modo de edição — arraste cada botão para onde quiser, mude o tamanho de todos, o tamanho de um só (toque nele) e a transparência. "Restaurar padrão" volta ao original. Fica salvo no aparelho.
+- ⚙ Engrenagem → **Modificar controles**: o jogo para e abre a tela com todos os botões (inclusive Girar/Sair da construção). Toque num botão para escolher, arraste para mudar de lugar, use − / + (ou a barra) para o tamanho dele, e ajuste o tamanho de todos e a transparência. **Salvar** grava do jeito que ficou (no aparelho); **Cancelar** desfaz; **Restaurar padrão** volta ao original. O painel pode ser arrastado pelo título.
+- **PAUSA** abre o menu de pausa, igual ao ESC do computador (no celular deitado o menu fica em 2 colunas para caber na tela).
 
 ## Voz por proximidade
 - **CAPS LOCK** liga o microfone e ele fica aberto até apertar de novo. Quem estiver perto (até ~45 m) ouve, com volume pela distância e lado pelo estéreo.
@@ -465,7 +466,7 @@ python3 tests/play29.py  # 5 verificações: área Próximo no inventário (pega
 python3 tests/play30.py  # 7 verificações: arma grande direto para as costas, Verificar (pente/mira/silenciador), sem pente não atira, silenciador
 python3 tests/play31.py  # 10 verificações: helicóptero (som, voo, circula e atira, fumaça esconde, tripulação NPC, tiro no piloto, atirador cai, queda, caixas, fumaça)
 python3 tests/play33.py  # 9 verificações: voz (CAPS LOCK, ícone pisca, NPC/robô vêm, voz de outro jogador), botões VOZ e bala no celular
-python3 tests/play32.py  # 10 verificações: trava de corrida no joystick + celular (só no celular, joystick, câmera, botões, mochila, engrenagem arrasta/tamanho salvo, aviso de girar)
+python3 tests/play32.py  # 12 verificações: Modificar controles (Cancelar/Salvar), PAUSA + trava de corrida no joystick + celular (só no celular, joystick, câmera, botões, mochila, engrenagem arrasta/tamanho salvo, aviso de girar)
 python3 tests/play28.py  # 9 verificações: quantidade no slot, fragmentação (fogo, clarão, cratera), luz (4 s + embaçado), fumaça densa 15 s, barulhenta, C4 (20 m) e dano nas construções
 python3 tests/play27.py  # 14 verificações: painel do dono (Ctrl+Shift+F1): dropar itens/NPCs/robôs/animais, lista, modo deus, voar, esqueletos, teleporte, console
 python3 tests/play26.py  # 20 verificações: multiplayer com dois navegadores (o teste liga o server.mjs sozinho): busca por IP, senha, avatares, mundo, criaturas, PvP
