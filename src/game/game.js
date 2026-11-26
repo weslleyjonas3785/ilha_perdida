@@ -106,6 +106,7 @@ export class Game {
     this.equip = this.freshEquip(); this._applyBack(); this.attach = {}; this.home = null; this.drops = []; this.logs = []; this.falling = []; this.projectiles = []; this.arrows = []; this.clouds = []; this.stats = { built: 0, kills: 0 };
     this.lastFire = [0, 0]; this.saveT = 60; this.grassCells = new Map(); this.menuT = 0; this.playTime = 0;
     this.input.wantLock = true;
+    this.input.canLock = () => this.state === 'playing' && !this.ui.anyOpen && !(this.struct && this.struct.radial);
     // Esc solta o mouse no navegador: pausa automaticamente para não deixar o jogo sem controle
     this.input.onUnlock = () => { if (this.state === 'playing' && !this.ui.anyOpen && !this.build.mode && !this.player.sleeping) this.pause(); };
     window.addEventListener('resize', () => this.renderer.resize());
