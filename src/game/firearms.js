@@ -41,7 +41,7 @@ export class Firearms {
     P.aiming = this.aiming; g.cam.aimZoom = sc ? 1 / this.magX : gun && gun.hold === 'rifle' ? 0.7 : 0.78; g.cam.scopeT = sc ? this.aimT : 0;
     // postura da arma (camada sobre a locomoção)
     const C = P.clips;
-    if (canUse && C.rifleHold) { const rifle = gun.hold === 'rifle'; P.anim.setOverlay(this.aiming ? (rifle ? C.rifleAim : C.pistolAim) : (rifle ? C.rifleHold : C.pistolHold), C.masks.upper, 0.14); }
+    if (canUse && C.rifleHold && !P.grapple && !P.hang) { const rifle = gun.hold === 'rifle'; P.anim.setOverlay(this.aiming ? (rifle ? C.rifleAim : C.pistolAim) : (rifle ? C.rifleHold : C.pistolHold), C.masks.upper, 0.14); }
     else if (g.equip.hand === 'geiger' && C.pistolHold && !P.dead && !P.swimming && !P.climb && !P.ladder && !P.sleeping && !g.build.mode) { const pt = !!(act.block && !blocked && !P.sprinting); P.aiming = pt; P.anim.setOverlay(pt ? C.pistolAim : C.pistolHold, C.masks.upper, 0.18); } // contador Geiger apontado como uma pistola
     else if (g.grenades && g.grenades.charge && C.throwHold && !P.dead) { P.aiming = true; P.anim.setOverlay(C.throwHold, C.masks.upper, 0.12); } // granada: braço erguido enquanto segura o botão
     else { if (P.aiming && !g.grenades?.charge) P.aiming = false; P.anim.setOverlay(null, null, 0.2); }
@@ -55,7 +55,7 @@ export class Firearms {
     // empunhadura por IK (mãos presas no punho e no guarda-mão) + fase da recarga
     if (P.rig) { const a = P.anim.action, C2 = P.clips; let reload = null;
       if (this.reloading && a && (a.clip === C2.reloadRifle || a.clip === C2.reloadPistol || a.clip === C2.loadShell)) reload = { ph: Math.min(1, a.time / a.clip.duration), kind: gun.perShell ? 'shell' : gun.perItem ? 'harpoon' : 'mag' };
-      const busyOther = a && !reload && !a.ending; P.rig.set({ active: !!GR && !busyOther && !P.swimming && !P.climb && !P.dead && !P.sleeping, model: gun && gun.model, aimT: this.aimT, pitch: g.cam.pitch, recoil: this.recoilV, sprint: P.sprinting && !this.aiming, reload }); }
+      const busyOther = a && !reload && !a.ending; P.rig.set({ active: !!GR && !busyOther && !P.swimming && !P.climb && !P.grapple && !P.hang && !P.dead && !P.sleeping, model: gun && gun.model, aimT: this.aimT, pitch: g.cam.pitch, recoil: this.recoilV, sprint: P.sprinting && !this.aiming, reload }); }
     // arpão-gancho: testa se o ponto sob a mira está ao alcance (mira verde) ou não (vermelha)
     this.grappleOK = false; this.grappleDist = 0;
     if (canUse && gun.grapple) { const o = this._aimOrigin(), d = this._rayDir(); this._dryTrace = true; const h = this._worldTrace(o, d, gun.range); this._dryTrace = false; this.grappleOK = !!h; this.grappleDist = h ? h.t : 0; }

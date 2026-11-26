@@ -193,7 +193,7 @@ export class Player {
     const auto = !!stand && hp[1] > top - 0.35; // sem lugar para ficar em pé em cima (telhado, beiral): só se pendura // o gancho cravou em cima da beirada: já sobe de uma vez
     return { top, fx, fz, stand, auto, hangAt: [hp[0] - fx * 0.38, top - 1.95, hp[2] - fz * 0.38], hook: hp.slice() };
   }
-  startHang(L) { this.hang = { ...L, t: 0 }; this.yaw = Math.atan2(L.fx, L.fz); this.vel = [0, 0, 0]; this.onGround = false; this.crouch = false; this.slide = null; this.anim.play(this.clips.ladder, 0.15, 0); this.game.audio.play('climb', { vol: 0.6 });
+  startHang(L) { this.anim.setOverlay(null, null, 0.1); this.hang = { ...L, t: 0 }; this.yaw = Math.atan2(L.fx, L.fz); this.vel = [0, 0, 0]; this.onGround = false; this.crouch = false; this.slide = null; this.anim.play(this.clips.ladder, 0.15, 0); this.game.audio.play('climb', { vol: 0.6 });
     this.game.ui.toast(L.face ? 'Agarrado no paredão — E escala, Espaço solta' : 'Pendurado na beirada — E sobe, Espaço solta', 'info'); }
   _ledgeClimb(L) { this.hang = null; const p = this.pos; this.yaw = Math.atan2(L.fx, L.fz); this.climb = { from: p.slice(), to: L.stand.slice(), t: 0, dur: Math.max(0.75, Math.min(1.2, (L.stand[1] - p[1]) * 0.45)) };
     this.anim.playAction(this.clips.climb, { fadeIn: 0.08, fadeOut: 0.15 }); this.fullBodyAction = true; this.game.audio.play('climb'); return true; }
@@ -214,7 +214,7 @@ export class Player {
     }
     this.anim.play(this.clips.ladder, 0.2, 0);
   }
-  startGrapple() { this.crouch = false; this.slide = null; this.onGround = false; this.anim.play(this.clips.fall || this.clips.jump, 0.1); this.grapple.moved = []; }
+  startGrapple() { this.anim.setOverlay(null, null, 0.08); this.crouch = false; this.slide = null; this.onGround = false; this.anim.play(this.clips.grappleFly || this.clips.fall || this.clips.jump, 0.12); this.grapple.moved = []; }
   endGrapple() { const v = this.vel; v[1] = Math.max(-3, Math.min(5, v[1] + 2.5)); v[0] *= 0.35; v[2] *= 0.35; this.airTime = 0; this.lastGroundY = this.pos[1]; }
   _grappleStep(dt, act) {
     const g = this.game, ph = g.physics, p = this.pos, v = this.vel, G = this.grapple; G.t += dt;
@@ -356,7 +356,7 @@ export class Player {
     else mat4.fromTRS(this.model, this.pos, quat.fromEuler(0, this.yaw, 0), [1, 1, 1]);
     if (this.assets.offset) mat4.mul(this.model, this.model, this.assets.offset);
     if (!this.rig && this.assets.skel.index.upperArmL !== undefined) this.rig = new GunRig(this);
-    if (this.rig && this.rig.apply(this._dt || 1 / 60)) return; // empunhadura de arma por IK
+    if (this.rig && !this.grapple && !this.hang && this.rig.apply(this._dt || 1 / 60)) return; // empunhadura de arma por IK (puxado pelo gancho/pendurado: pose da animação)
     const hand = this.anim.world[this.assets.skel.index.handR ?? 0];
     const tmp = mat4.mul(mat4.create(), this.model, hand);
     mat4.mul(this.toolModel, tmp, TOOL_OFFSET);

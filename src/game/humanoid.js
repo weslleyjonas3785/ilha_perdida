@@ -156,6 +156,13 @@ export function buildHumanClips(skel, variant = 'player') {
   mk('fall', 0.9, (ph) => { const s = Math.sin(ph * TAU);
     return { root: [0, 0, 0], bones: { spine: [0.08, 0, 0], head: [-0.1, 0, 0], thighL: [-0.55 + s * 0.12, 0, 0.08], shinL: [0.85, 0, 0], thighR: [-0.15 - s * 0.12, 0, -0.08], shinR: [0.5, 0, 0],
       upperArmL: [-0.4 + s * 0.15, 0, 0.75 + s * 0.1], upperArmR: [-0.4 - s * 0.15, 0, -0.75 - s * 0.1], foreArmL: [-0.5, 0, 0], foreArmR: [-0.5, 0, 0], footL: [0.2, 0, 0], footR: [0.2, 0, 0] } }; });
+  // puxado pelo gancho (do desenho): corpo deitado na direção da corda, braço direito esticado à frente com a arma,
+  // braço esquerdo dobrado junto ao corpo, cabeça erguida olhando para onde vai, perna esquerda esticada e a direita dobrada
+  mk('grappleFly', 0.8, (ph) => { const s = Math.sin(ph * TAU) * 0.06;
+    return { root: [0, 0, 0], bones: { spine: [0.05, 0, 0.05], chest: [-0.05, 0, 0], head: [-1.05, 0.1, 0], neck: [-0.2, 0, 0],
+      upperArmR: [-2.85, 0.1, -0.12], foreArmR: [-0.05, 0, 0], handR: [0.1, 0, 0],
+      upperArmL: [0.35 + s, 0.1, 0.45], foreArmL: [-1.25, 0, 0], handL: [0.2, 0, 0],
+      thighL: [0.18 + s, 0, 0.1], shinL: [0.25, 0, 0], footL: [0.5, 0, 0], thighR: [-0.55 - s, 0, -0.1], shinR: [1.45, 0, 0], footR: [0.4, 0, 0] } }; });
   mk('land', 0.4, (ph) => { const d = kf(ph, [[0, 0], [0.25, 1], [1, 0]]);
     return { root: [0, -0.28 * d, 0], bones: { spine: [0.35 * d, 0, 0], head: [-0.2 * d, 0, 0], thighL: [-0.9 * d, 0, 0.1], shinL: [1.5 * d, 0, 0], footL: [-0.6 * d, 0, 0], thighR: [-0.9 * d, 0, -0.1], shinR: [1.5 * d, 0, 0], footR: [-0.6 * d, 0, 0],
       upperArmL: [-0.3 * d, 0, 0.3 * d + 0.1], upperArmR: [-0.3 * d, 0, -0.3 * d - 0.1], foreArmL: [-0.4 * d, 0, 0], foreArmR: [-0.4 * d, 0, 0] } }; }, { loop: false });
