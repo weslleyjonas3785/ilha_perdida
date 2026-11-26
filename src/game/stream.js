@@ -116,7 +116,7 @@ export class WorldStream {
     for (const o of d.trees) { if (M.trees.has(o.id)) { o.felled = true; o.regrowAt = M.trees.get(o.id); M.trees.delete(o.id); } if (M.treeHp.has(o.id)) { o.hp = M.treeHp.get(o.id); M.treeHp.delete(o.id); }
       const info = P.TREE_INFO[o.type]; G[o.type].add(o); G.stump.add(o); o.collider = ph.add({ type: 'cyl', x: o.x, z: o.z, r: info.r * o.s + 0.05, y0: o.y - 1, y1: o.y + info.h * o.s, tree: o, noClimb: true, ghost: o.felled }); w.trees.push(o); }
     d.rocks.forEach((o, i) => { if (M.rocks.has(o.id)) { o.mined = true; o.regrowAt = M.rocks.get(o.id); M.rocks.delete(o.id); }
-      (o.rich ? G.rich : G.rock[i % 3]).add(o); o.collider = ph.add({ type: 'cyl', x: o.x, z: o.z, r: 1.05 * o.s, y0: o.y - 1, y1: o.y + 1.2 * o.s, rock: o, ghost: o.mined }); w.rocks.push(o); });
+      (o.ore ? G.ore[o.ore] : o.rich ? G.rich : G.rock[i % 3]).add(o); o.collider = ph.add({ type: 'cyl', x: o.x, z: o.z, r: 1.05 * o.s, y0: o.y - 1, y1: o.y + 1.2 * o.s, rock: o, ghost: o.mined }); w.rocks.push(o); });
     for (const o of d.bushes) { if (M.bushes.has(o.id)) { o.berries = false; o.regrowAt = M.bushes.get(o.id); M.bushes.delete(o.id); } G.bushB.add(o); G.bushE.add(o); w.bushes.push(o); }
     for (const o of d.pickups) { if (M.pickups.has(o.id)) { o.taken = true; o.regrowAt = M.pickups.get(o.id); M.pickups.delete(o.id); } G[o.kind].add(o); w.pickups.push(o); }
     for (const o of d.hives) { if (M.hives.has(o.id)) { o.honey = false; o.regrowAt = M.hives.get(o.id); M.hives.delete(o.id); } w.hives.push(o); }

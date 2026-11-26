@@ -214,6 +214,12 @@ export function buildHumanClips(skel, variant = 'player') {
     spine: [0.05 + b, 0, 0], upperArmL: [-0.95, -0.15, 0.1], upperArmR: [-0.95, 0.15, -0.1], foreArmL: [-0.55, 0, 0], foreArmR: [-0.55, 0, 0] } }; });
   mk('ride', 2.0, (ph) => { const b = Math.sin(ph * TAU) * 0.02; return { root: [0, -0.06, -0.05], bones: { thighL: [-1.1, 0, 0.3], thighR: [-1.1, 0, -0.3], shinL: [1.45, 0, 0], shinR: [1.45, 0, 0], footL: [-0.3, 0, 0], footR: [-0.3, 0, 0],
     spine: [0.38 + b, 0, 0], chest: [0.1, 0, 0], head: [-0.35, 0, 0], upperArmL: [-1.15, -0.35, 0.25], upperArmR: [-1.15, 0.35, -0.25], foreArmL: [-0.35, 0, 0], foreArmR: [-0.35, 0, 0] } }; });
+  // moto parada ou em curva fechada: um pé no chão equilibrando (L = esquerdo, R = direito); o corpo inclina para o lado do pé
+  for (const [nm, sd] of [['rideFootL', 1], ['rideFootR', -1]]) mk(nm, 2.0, (ph) => { const b = Math.sin(ph * TAU) * 0.015; const L = sd > 0;
+    return { root: [0, -0.06, -0.05], bones: { thighL: L ? [-0.25, 0, 0.42] : [-1.1, 0, 0.3], thighR: L ? [-1.1, 0, -0.3] : [-0.25, 0, -0.42], shinL: L ? [0.12, 0, 0] : [1.45, 0, 0], shinR: L ? [1.45, 0, 0] : [0.12, 0, 0], footL: L ? [0.1, 0, 0] : [-0.3, 0, 0], footR: L ? [-0.3, 0, 0] : [0.1, 0, 0],
+      spine: [0.34 + b, 0, 0.08 * sd], chest: [0.1, 0, 0], head: [-0.3, 0, 0], upperArmL: [-1.15, -0.35, 0.25], upperArmR: [-1.15, 0.35, -0.25], foreArmL: [-0.35, 0, 0], foreArmR: [-0.35, 0, 0] } }; });
+  // entrar/sair do carro: abaixa e passa a perna para dentro
+  mk('carIn', 0.9, (ph) => { const k = Math.sin(Math.min(1, ph) * Math.PI / 2); return { root: [0, -0.42 * k, 0], bones: { thighL: [-1.45 * k, 0, 0.08], thighR: [-1.45 * k, 0, -0.08], shinL: [1.5 * k, 0, 0], shinR: [1.5 * k, 0, 0], spine: [0.25 * Math.sin(ph * Math.PI), 0, 0], upperArmL: [-0.6 * k, -0.15, 0.1], upperArmR: [-0.95 * k, 0.15, -0.1] } }; });
   // despejar/encher o galão: segura com as duas mãos e inclina
   mk('pour', 3.0, (ph) => { const d = kf(ph, [[0, 0], [0.12, 1], [0.9, 1], [1, 0]]); const w = Math.sin(ph * TAU * 3) * 0.05 * d;
     return { bones: { spine: [0.3 * d, 0, 0], upperArmR: [-0.75 * d, 0.25 * d, -0.1], foreArmR: [-0.7 * d + w, 0, 0], upperArmL: [-0.85 * d, -0.45 * d, 0.1], foreArmL: [-1.1 * d, 0, 0], handR: [0.6 * d, 0, 0], head: [0.3 * d, 0, 0] } }; }, { loop: false });

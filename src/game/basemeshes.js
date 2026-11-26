@@ -148,3 +148,79 @@ export function bedMesh() {
   C(hex(0xe8dcc0), GLOW); mb.cylinder(M(nx, 0.72, nz), 0.13, 0.07, 0.15, 8, hex(0xe8dcc0));
   return mb.build();
 }
+
+// ---------- bancadas (do desenho): comum (madeira + pés de metal), mecânica (metal, painel de ferramentas, compressor), armas (painel com fuzis, morsa) ----------
+// local: comprimento em X (~1,9 m), fundo em Z (~0,95 m), frente em +Z; tampo a ~0,95 m
+const legs = (mb, w, d, h, col, t = 0.07) => { for (const [x, z] of [[-w, -d], [w, -d], [-w, d], [w, d]]) mb.box(M(x, h / 2, z), t, h, t, col); };
+export function benchCommonMesh() {
+  const mb = new MeshBuilder(); const WD = hex(0xa0703e), WL = hex(0xb98450), ST = hex(0x77797e), DK = hex(0x3a3c40), C = (c, f) => mb.setColor(c, f);
+  C(ST, PAINT); legs(mb, 0.86, 0.4, 0.9, ST); mb.box(M(0, 0.28, -0.4), 1.72, 0.05, 0.05, ST); mb.box(M(0, 0.28, 0.4), 1.72, 0.05, 0.05, ST); for (const s of [-1, 1]) mb.box(M(s * 0.86, 0.28, 0), 0.05, 0.05, 0.8, ST);
+  C(WD, WOOD); for (let i = 0; i < 5; i++) mb.roundBox(M(0, 0.9, -0.38 + i * 0.19), 1.92, 0.08, 0.18, i % 2 ? WL : WD, 0.012, 1);
+  // martelo, chave, serrote, rolo de fio e luminária
+  C(hex(0x7a5530), WOOD); mb.box(M(-0.62, 0.97, 0.12, 0.35), 0.36, 0.03, 0.04, hex(0x7a5530)); C(DK, MET); mb.box(M(-0.78, 0.98, 0.06, 0.35), 0.08, 0.05, 0.12, DK);
+  C(hex(0x9a9ea4), MET); mb.box(M(-0.2, 0.955, 0.18, -0.3), 0.32, 0.012, 0.04, hex(0x9a9ea4)); mb.box(M(0.32, 0.955, 0.15, 0.45), 0.42, 0.006, 0.12, hex(0xb8bcc0)); C(hex(0x2a2a2a), POLY); mb.box(M(0.5, 0.96, 0.3, 0.45), 0.1, 0.03, 0.08, hex(0x2a2a2a));
+  C(hex(0x55585c), MET); mb.cylinder(M(0.05, 0.95, -0.2), 0.11, 0.11, 0.05, 10, hex(0x55585c)); C(hex(0x3a3c40), MET); mb.cylinder(M(0.05, 0.952, -0.2), 0.06, 0.06, 0.05, 8, hex(0x3a3c40));
+  C(ST, PAINT); mb.cylinder(M(0.55, 0.94, -0.3), 0.1, 0.11, 0.03, 8, ST); seg(mb, [0.55, 0.96, -0.3], [0.6, 1.36, -0.32], 0.025, ST); seg(mb, [0.6, 1.36, -0.32], [0.38, 1.52, -0.2], 0.022, ST); mb.cylinder(M(0.33, 1.44, -0.18, 0, 1, 0.9), 0.04, 0.1, 0.13, 7, ST);
+  return mb.build(); }
+export function benchMechMesh() {
+  const mb = new MeshBuilder(); const ST = hex(0x8d9095), SD = hex(0x6c6f74), DK = hex(0x2e3034), OR = hex(0xd6762a), RD = hex(0xb02a2a), C = (c, f) => mb.setColor(c, f);
+  C(SD, PAINT); legs(mb, 0.86, 0.38, 0.92, SD, 0.09); C(ST, PAINT); mb.roundBox(M(0, 0.88, 0), 1.9, 0.1, 0.9, ST, 0.015, 1); mb.box(M(0, 0.7, 0.44), 1.86, 0.2, 0.03, SD);
+  for (let i = 0; i < 6; i++) mb.cylinder(M(-0.8 + i * 0.32, 0.79, 0.455, 0, 1, Math.PI / 2), 0.012, 0.012, 0.01, 6, DK);
+  // painel perfurado com ferramentas
+  C(SD, PAINT); mb.box(M(0, 0.98, -0.42), 1.8, 0.9, 0.04, SD); C(DK, MET); for (let i = 0; i < 14; i++) for (let j = 0; j < 6; j++) mb.box(M(-0.78 + i * 0.12, 1.08 + j * 0.12, -0.398), 0.015, 0.015, 0.004, DK);
+  C(hex(0xa8acb2), MET); for (let i = 0; i < 4; i++) mb.box(M(-0.7 + i * 0.16, 1.45, -0.39, 0, 1, 0, 0.1), 0.04, 0.38 - i * 0.04, 0.012, hex(0xa8acb2));
+  for (let i = 0; i < 4; i++) { C(hex(0xa8acb2), MET); mb.box(M(0.05 + i * 0.1, 1.5, -0.39), 0.012, 0.22, 0.012, hex(0xa8acb2)); C(i % 2 ? OR : DK, POLY); mb.box(M(0.05 + i * 0.1, 1.36, -0.39), 0.03, 0.1, 0.03, i % 2 ? OR : DK); }
+  // chaves inglesas e multímetro na bancada, porcas
+  C(hex(0xa8acb2), MET); mb.box(M(-0.4, 0.95, 0.1, 0.2), 0.5, 0.02, 0.06, hex(0xa8acb2)); mb.box(M(-0.5, 0.95, -0.15, -0.1), 0.42, 0.02, 0.05, hex(0xa8acb2));
+  C(OR, POLY); mb.roundBox(M(0.55, 0.94, -0.18), 0.14, 0.05, 0.2, OR, 0.01, 1); C(DK, POLY); mb.box(M(0.55, 0.97, -0.2), 0.1, 0.01, 0.08, DK); C(RD, POLY); seg(mb, [0.5, 0.94, -0.08], [0.25, 0.94, 0.1], 0.008, RD);
+  C(hex(0x9a9ea4), MET); for (let i = 0; i < 6; i++) mb.cylinder(M(0.05 + (i % 3) * 0.09, 0.935, 0.1 + Math.floor(i / 3) * 0.08), 0.022, 0.022, 0.02, 6, hex(0x9a9ea4));
+  C(hex(0x9a9ea4), MET); mb.cylinder(M(0.3, 0.94, -0.22), 0.05, 0.06, 0.12, 8, hex(0x9a9ea4)); seg(mb, [0.33, 1.05, -0.22], [0.42, 1.12, -0.12], 0.008, hex(0x9a9ea4));
+  // compressor de ar embaixo
+  C(hex(0x9ca0a6), MET); mb.cylinder(M(-0.25, 0.25, 0, 0, 1, 0, Math.PI / 2), 0.17, 0.17, 0.5, 10, hex(0x9ca0a6)); C(DK, MET); mb.roundBox(M(-0.25, 0.42, 0), 0.24, 0.14, 0.2, DK, 0.02, 1);
+  C(DK, POLY); for (const x of [-0.45, -0.05]) mb.cylinder(M(x, 0.06, 0.12, 0, 1, 0, Math.PI / 2), 0.06, 0.06, 0.04, 8, DK);
+  return mb.build(); }
+export function benchGunsMesh() {
+  const mb = new MeshBuilder(); const ST = hex(0x6e7177), SD = hex(0x55585d), WD = hex(0x5e4632), DK = hex(0x25272a), Y = hex(0xd8b33a), C = (c, f) => mb.setColor(c, f);
+  C(SD, PAINT); legs(mb, 0.88, 0.4, 0.92, SD, 0.1); C(WD, WOOD); for (let i = 0; i < 4; i++) mb.box(M(0, 0.3, -0.33 + i * 0.22), 1.72, 0.04, 0.2, WD);
+  C(ST, PAINT); mb.roundBox(M(0, 0.86, 0), 1.94, 0.12, 0.94, ST, 0.015, 1); C(WD, WOOD); mb.box(M(0, 0.925, 0), 1.84, 0.02, 0.84, WD); C(SD, PAINT); mb.box(M(0, 0.74, 0.46), 1.8, 0.16, 0.03, SD);
+  // painel com dois fuzis pendurados
+  C(ST, PAINT); mb.box(M(0, 0.98, -0.43), 1.86, 0.95, 0.05, ST); C(hex(0x8a8d92), MET); mb.box(M(0, 0.98, -0.405), 1.7, 0.85, 0.01, hex(0x8a8d92));
+  C(DK, MET); for (const y of [1.6, 1.25]) { mb.box(M(0.05, y, -0.39), 0.9, 0.06, 0.03, DK); mb.box(M(-0.45, y - 0.04, -0.39), 0.28, 0.1, 0.03, DK); mb.box(M(0.12, y - 0.1, -0.39, 0, 1, 0, 0.1), 0.05, 0.16, 0.03, DK); mb.box(M(-0.05, y - 0.08, -0.39), 0.06, 0.12, 0.03, DK); mb.box(M(0.55, y, -0.39), 0.3, 0.025, 0.02, DK); }
+  // peças, pentes, frascos de óleo e morsa
+  C(DK, MET); mb.box(M(-0.35, 0.95, 0.1, 0.3), 0.3, 0.04, 0.05, DK); mb.box(M(0.0, 0.95, -0.05), 0.06, 0.04, 0.16, DK); mb.box(M(0.15, 0.95, 0.15, -0.4), 0.06, 0.04, 0.14, DK); mb.box(M(0.25, 0.97, 0.02), 0.25, 0.06, 0.06, DK);
+  C(hex(0xb08a5a), WOOD); mb.box(M(-0.15, 0.95, 0.15), 0.18, 0.05, 0.06, hex(0xb08a5a));
+  for (const [x, z] of [[-0.85, -0.25], [0.6, -0.2]]) { C(Y, POLY); mb.cylinder(M(x, 0.935, z), 0.035, 0.035, 0.12, 8, Y); C(hex(0xb02a2a), POLY); mb.cylinder(M(x, 1.055, z), 0.01, 0.018, 0.04, 6, hex(0xb02a2a)); }
+  C(SD, PAINT); mb.roundBox(M(0.78, 0.97, 0.2), 0.12, 0.1, 0.2, SD, 0.015, 1); mb.box(M(0.78, 1.06, 0.2), 0.2, 0.05, 0.06, ST); mb.cylinder(M(0.78, 1.0, 0.36, 0, 1, Math.PI / 2), 0.012, 0.012, 0.14, 6, ST);
+  return mb.build(); }
+
+// ---------- forno de pedra (do desenho): cúpula de pedras com boca de fogo, chaminé e mesinha com lingotes ----------
+export function furnaceMesh() {
+  const mb = new MeshBuilder(); const r = rnd(77); const G = hex(0x8a8780), GD = hex(0x6c6a64), BASE = hex(0x9a978f), C = (c, f) => mb.setColor(c, f);
+  C(BASE, POLY); mb.cylinder(M(0, 0, 0), 1.05, 1.12, 0.1, 12, BASE);
+  // cúpula de pedras em anéis (deixa a boca na frente +Z)
+  for (let ring = 0; ring < 6; ring++) { const y = 0.15 + ring * 0.24, rr = 0.78 * Math.cos(ring / 6 * 1.35) + 0.08, n = Math.max(5, Math.round(10 - ring)); for (let k = 0; k < n; k++) { const a = k / n * Math.PI * 2 + ring * 0.3; if (ring < 2 && Math.abs(Math.atan2(Math.sin(a), Math.cos(a)) - Math.PI / 2) < 0.5) continue;
+      C(r() < 0.5 ? G : GD, POLY); mb.roundBox(M(Math.cos(a) * rr, y, Math.sin(a) * rr, -a), 0.3, 0.24, 0.42 * rr + 0.12, r() < 0.5 ? G : GD, 0.05, 1); } }
+  C(GD, POLY); mb.cylinder(M(0, 0.1, 0), 0.62, 0.3, 1.5, 9, GD); // miolo
+  // chaminé
+  C(G, POLY); mb.cylinder(M(0, 1.55, 0), 0.2, 0.18, 0.35, 7, G); C(hex(0x3a2418), POLY); mb.cylinder(M(0, 1.88, 0), 0.12, 0.12, 0.03, 7, hex(0x3a2418));
+  // boca de fogo com arco, lenha e brasas
+  C(GD, POLY); mb.roundBox(M(0, 0.12, 0.7), 0.62, 0.08, 0.2, GD, 0.02, 1); for (const s of [-1, 1]) mb.roundBox(M(s * 0.3, 0.12, 0.72), 0.16, 0.5, 0.22, G, 0.04, 1); mb.roundBox(M(0, 0.6, 0.72), 0.72, 0.16, 0.22, G, 0.04, 1);
+  C(hex(0x2a1810), POLY); mb.box(M(0, 0.18, 0.55), 0.46, 0.4, 0.06, hex(0x2a1810));
+  C(hex(0x6a4428), WOOD); for (let i = 0; i < 4; i++) mb.box(M(-0.12 + i * 0.08, 0.22, 0.62, i * 0.7), 0.06, 0.06, 0.3, hex(0x6a4428));
+  C(hex(0xff7a2a), GLOW); for (let i = 0; i < 6; i++) mb.box(M(-0.16 + r() * 0.32, 0.2, 0.6 + r() * 0.1), 0.04, 0.03, 0.04, hex(0xff7a2a));
+  // mesinha lateral com lingotes
+  C(G, POLY); mb.roundBox(M(0.95, 0.08, 0.15), 0.42, 0.45, 0.42, G, 0.05, 1); for (const [k, c] of [[0, 0xb06a48], [1, 0xc8ccd2], [2, 0x8e9096]]) { C(hex(c), MET); mb.box(M(0.83 + k * 0.12, 0.56, 0.15), 0.1, 0.05, 0.2, hex(c)); }
+  return mb.build(); }
+
+// ---------- rochas de minério (do desenho): ferro (cinza com ferrugem), cobre (marrom com verde), prata (cristais prateados), ouro (cristais dourados) ----------
+export const ORE_KINDS = ['iron', 'copper', 'silver', 'gold'];
+export function oreMesh(kind) {
+  const mb = new MeshBuilder(); const r = rnd({ iron: 5, copper: 9, silver: 13, gold: 17 }[kind] || 3); const base = hex(0x8e8c86);
+  C0(mb, base); mb.cylinder(M(0, -0.05, 0), 1.0, 1.1, 0.12, 9, base); // laje rachada
+  const pal = { iron: [0x6e6e70, 0x5a5a5c, 0x9a5a34], copper: [0x9a5a44, 0x7e4836, 0x3aa07a], silver: [0xc8ccd4, 0xa8aeb8, 0xe8ecf2], gold: [0xe0a848, 0xc88a2a, 0xffd870] }[kind];
+  const crystal = kind === 'silver' || kind === 'gold';
+  const col = (y, dir, rr) => { const n = rr(); return hex(n < 0.2 ? pal[2] : n < 0.6 ? pal[0] : pal[1]); };
+  if (!crystal) { mb.flex = 0.88; mb.rockSmooth(M(0, 0.5, 0, 0, [1.0, 1.2, 0.95]), 0.75, 2, 0.35, hex(pal[0]), r, col, 0.3); mb.rockSmooth(M(0.6, 0.22, 0.35, r() * 6), 0.4, 2, 0.35, hex(pal[1]), r, col, 0.3); mb.rockSmooth(M(-0.55, 0.18, 0.4, r() * 6), 0.32, 2, 0.35, hex(pal[1]), r, col, 0.3); }
+  else { for (let i = 0; i < 9; i++) { const a = r() * 6.28, d = i ? 0.2 + r() * 0.45 : 0, h = i ? 0.35 + r() * 0.5 : 1.05; const c = hex(pal[i % 3]); mb.setColor(c, 0.5); mb.cylinder(M(Math.cos(a) * d, 0.02, Math.sin(a) * d, r() * 3, 1, (r() - 0.5) * 0.5, (r() - 0.5) * 0.5), 0.12 + r() * 0.1, 0.03, h, 6, c); } }
+  return mb.build(); }
+function C0(mb, c) { mb.setColor(c, POLY); }

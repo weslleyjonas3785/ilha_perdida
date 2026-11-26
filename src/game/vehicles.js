@@ -14,14 +14,33 @@ export const VTYPES = {
   suv: { name: 'SUV', L: 4.6, W: 1.88, wr: 0.4, clear: 0.42, belt: 1.14, roof: 1.88, cab: [-2.22, 0.56], hood: [0.62, 2.24], rack: true, wf: 1.45, wb: -1.45, max: 24, acc: 6.8, tank: 60, km: 360, wheels: 4, tire: 'tire_suv', engine: 'engine' },
   moto: { name: 'Moto', L: 2.1, W: 0.7, wr: 0.31, clear: 0.3, wf: 0.72, wb: -0.72, max: 30, acc: 9, tank: 12, km: 700, wheels: 2, tire: 'mototire', engine: 'motoengine', moto: true },
 };
+// porta-malas: espaço de cada veículo (cada espaço da grade = 10 de espaço); moto só com a bolsa
+export const TRUNK = { suv: 650, hatch: 300, sedan: 500, pickup: 750, moto: 150 };
+export const trunkSlots = (v) => (v.type === 'moto' && !v.bag ? 0 : Math.round(TRUNK[v.type] / 10));
+// tampa do porta-malas (origem na dobradiça): sedã deitada, hatch/SUV em pé (dobradiça no teto), picape tampa traseira (dobradiça embaixo)
+export function trunkLidMesh(type, colorIdx) { const T = VTYPES[type], mb = new MeshBuilder(); const C = hex(VCOLORS[colorIdx] || VCOLORS[0]), GL = hex(0x1c2630), DK = hex(0x2c2e32), RD = hex(0xc02018); const W = T.W - 0.14;
+  if (type === 'sedan') { const l = T.cab[0] + T.L / 2 - 0.05; mb.setColor(C, PL); mb.box(M(0, -0.03, -l / 2), W, 0.06, l, C); mb.setColor(DK, RB); mb.box(M(0, -0.1, -l + 0.02), W * 0.5, 0.08, 0.03, DK); }
+  else if (type === 'pickup') { const h = T.belt - T.clear - 0.2; mb.setColor(C, PL); mb.box(M(0, h / 2, 0), W, h, 0.06, C); mb.setColor(DK, RB); mb.box(M(0, h - 0.08, -0.04), 0.3, 0.05, 0.02, DK); }
+  else { const h = T.roof - T.belt + 0.25; mb.setColor(C, PL); mb.box(M(0, -h / 2, 0), W, h, 0.06, C); mb.setColor(GL, MT); mb.box(M(0, -h * 0.35, -0.035), W - 0.2, h * 0.45, 0.02, GL); for (const sx of [-1, 1]) { mb.setColor(RD, 0.02); mb.box(M(sx * (W / 2 - 0.1), -h * 0.85, -0.04), 0.14, 0.12, 0.02, RD); } }
+  return mb.build(); }
+export function motoBagMesh() { const mb = new MeshBuilder(); const L = hex(0x6a4428), D = hex(0x3e2616), B = hex(0xb8bcc0); for (const s of [-1, 1]) { mb.setColor(L, 0.7); mb.roundBox(M(s * 0.25, 0.55, -0.55), 0.16, 0.3, 0.42, L, 0.04, 2); mb.setColor(D, 0.7); mb.box(M(s * 0.335, 0.62, -0.55), 0.02, 0.18, 0.3, D); mb.setColor(B, 0.5); mb.box(M(s * 0.34, 0.7, -0.55), 0.01, 0.04, 0.05, B); } mb.setColor(D, 0.7); mb.box(M(0, 0.86, -0.55), 0.5, 0.03, 0.08, D); return mb.build(); }
+// porta do motorista (aparece abrindo ao entrar/sair); origem na dobradiça da frente, porta vai para trás (−Z)
+export function doorMesh(type, colorIdx) { const T = VTYPES[type], mb = new MeshBuilder(); const C = hex(VCOLORS[colorIdx] || VCOLORS[0]), GL = hex(0x2a3a48), DK = hex(0x2c2e32); const len = type === 'pickup' ? 1.05 : 1.0, hb = T.belt - T.clear - 0.14, hg = T.roof - T.belt - 0.08;
+  mb.setColor(C, PL); mb.box(M(0.03, hb / 2, -len / 2), 0.06, hb, len, C); mb.setColor(DK, RB); mb.box(M(-0.01, hb / 2, -len / 2), 0.02, hb - 0.1, len - 0.1, DK); mb.box(M(0.07, hb - 0.12, -len + 0.18), 0.03, 0.03, 0.14, DK);
+  mb.setColor(C, PL); mb.box(M(0.03, hb + hg / 2, -0.04), 0.05, hg, 0.06, C); mb.box(M(0.03, hb + hg - 0.03, -len / 2), 0.05, 0.05, len, C); mb.setColor(GL, MT); mb.box(M(0.03, hb + hg / 2, -len / 2), 0.02, hg - 0.06, len - 0.1, GL);
+  return mb.build(); }
 export const vName = (v) => `${VTYPES[v.type].name} ${VCOLOR_NAMES[v.color] || ''}`.trim();
 const ST = 0.93, MT = 0.5, RB = 0.7, FB = 0.83, PL = 0.86;
 
 // ---------------- malhas ----------------
+// construtor que só guarda os vidros (cor GL): o vidro é desenhado à parte, transparente
+const GLC = hex(0x1c2630);
+class GlassSplit extends MeshBuilder { constructor(keepGlass) { super(); this.kg = keepGlass; } setColor(c, f) { this._isG = c[0] === GLC[0] && c[1] === GLC[1] && c[2] === GLC[2]; return super.setColor(c, f); } get _on() { return this.kg ? this._isG : !this._isG; }
+  box(...a) { if (this._on) return super.box(...a); } roundBox(...a) { if (this._on) return super.roundBox(...a); } cylinder(...a) { if (this._on) return super.cylinder(...a); } tri(...a) { if (this._on) return super.tri(...a); } }
 function boxB(mb, x, y0, z, sx, sy, sz, c, f = PL) { mb.setColor(c, f); mb.box(M(x, y0 + sy / 2, z), sx, sy, sz, c); }
 // carroceria sem capô (o capô é desenhado à parte: só aparece com o motor instalado)
-export function carBodyMesh(type, colorIdx) {
-  const T = VTYPES[type], mb = new MeshBuilder(); const C = hex(VCOLORS[colorIdx] || VCOLORS[0]), Cd = shade(C, 0.82), DK = hex(0x2c2e32), BK = hex(0x18191b), GL = hex(0x1c2630), LT = hex(0xf2f0e6), RD = hex(0xc02018), GY = hex(0x6a6e74);
+export function carBodyMesh(type, colorIdx, part = 'body') {
+  const glassOnly = part === 'glass'; const T = VTYPES[type], mb = new GlassSplit(glassOnly); const C = hex(VCOLORS[colorIdx] || VCOLORS[0]), Cd = shade(C, 0.82), DK = hex(0x2c2e32), BK = hex(0x18191b), GL = hex(0x1c2630), LT = hex(0xf2f0e6), RD = hex(0xc02018), GY = hex(0x6a6e74);
   const { L, W, clear: c0, belt, roof, cab } = T; const hw = W / 2, hl = L / 2; const B = (x, y0, z, sx, sy, sz, c, f) => boxB(mb, x, y0, z, sx, sy, sz, c, f);
   // assoalho, saias e para-choques escuros
   B(0, c0, 0, W - 0.12, 0.14, L - 0.3, BK, RB);
@@ -53,9 +72,13 @@ export function carBodyMesh(type, colorIdx) {
   else B(0, belt - 0.06, (cab[0] - hl) / 2 + 0.1, W - 0.1, 0.06, -hl - cab[0] + 0.2, C);
   // cabine na cor do carro com vidros escuros: para-brisa e vidro traseiro inclinados, janelas laterais com colunas
   const zf = cab[1], zb = cab[0], rk = 0.55, cw = W - 0.16, rb = type === 'sedan' ? 0.5 : 0.12, h = roof - belt;
-  B(0, belt, (zb + rb + zf - rk) / 2, cw, h, zf - rk - zb - rb, C); // bloco central
+  // cabine oca (dá para ver o motorista pelo vidro): bancos, painel e volante
+  { const DKI = hex(0x2a2b2f), SEAT = hex(0x3a3633); const zs = (zb + rb + zf - rk) / 2; mb.setColor(DKI, RB); mb.box(M(0, belt - 0.02, zf - rk - 0.12), cw - 0.06, 0.16, 0.3, DKI); // painel
+    for (const sx of [-1, 1]) { mb.setColor(SEAT, FB); mb.box(M(sx * cw * 0.24, c0 + 0.38, zs + 0.15), cw * 0.38, 0.12, 0.5, SEAT); mb.box(M(sx * cw * 0.24, c0 + 0.62, zs - 0.12, 0, 1, -0.15), cw * 0.38, 0.55, 0.12, SEAT); }
+    if (zf - zb > 1.6) { mb.setColor(SEAT, FB); mb.box(M(0, c0 + 0.38, zb + rb + 0.35), cw - 0.1, 0.12, 0.45, SEAT); mb.box(M(0, c0 + 0.62, zb + rb + 0.12), cw - 0.1, 0.5, 0.1, SEAT); }
+    mb.setColor(hex(0x1a1a1c), RB); mb.cylinder(M(cw * 0.24, belt + 0.05, zf - rk - 0.28, 0, 1, 1.1), 0.17, 0.17, 0.03, 10, hex(0x1a1a1c)); }
   const slab = (z0, z1, front) => { const run = Math.abs(z1 - z0), len = Math.hypot(run, h), ang = Math.atan2(h, run) * (front ? 1 : -1); const zc = (z0 + z1) / 2;
-    mb.setColor(C, PL); mb.box(M(0, belt + h / 2, zc, 0, 1, ang), cw, 0.06, len, C); mb.setColor(GL, MT); mb.box(M(0, belt + h / 2, zc, 0, 1, ang), cw - 0.22, 0.075, len - 0.18, GL);
+    mb.setColor(C, PL); for (const sx of [-1, 1]) mb.box(M(sx * (cw / 2 - 0.055), belt + h / 2, zc, 0, 1, ang), 0.11, 0.06, len, C); mb.box(M(0, belt + h / 2, zc, 0, 1, ang), cw, 0.06, 0.1, C); mb.setColor(GL, MT); mb.box(M(0, belt + h / 2, zc, 0, 1, ang), cw - 0.22, 0.075, len - 0.18, GL);
     // preenche o triângulo abaixo do vidro (lateral da cabine)
     mb.setColor(C, PL); for (const sd of [-1, 1]) { const x = sd * cw / 2, zl = front ? Math.max(z0, z1) : Math.min(z0, z1), zh = front ? Math.min(z0, z1) : Math.max(z0, z1); const a0 = mb.vert([x, belt, zl], [sd, 0, 0], C), a1 = mb.vert([x, belt, zh], [sd, 0, 0], C), a2 = mb.vert([x, roof, zh], [sd, 0, 0], C);
       const b0 = mb.vert([x, belt, zl], [-sd, 0, 0], C), b1 = mb.vert([x, belt, zh], [-sd, 0, 0], C), b2 = mb.vert([x, roof, zh], [-sd, 0, 0], C); mb.tri(a0, a1, a2); mb.tri(b0, b2, b1); } };
@@ -82,17 +105,24 @@ export function motoBodyMesh(colorIdx) { const mb = new MeshBuilder(); const C =
   for (const s of [-1, 1]) { tube([s * 0.05, 1.0, 0.5], [s * 0.12, 0.88, 0.0], 0.03, FR); tube([s * 0.12, 0.88, 0.0], [s * 0.1, 0.5, -0.2], 0.035, FR); tube([s * 0.12, 0.88, 0.0], [s * 0.1, 0.9, -0.75], 0.025, FR); tube([s * 0.1, 0.5, -0.2], [s * 0.1, 0.9, -0.62], 0.022, FR);
     tube([s * 0.05, 0.95, 0.48], [s * 0.1, 0.42, 0.1], 0.03, FR); tube([s * 0.1, 0.42, 0.1], [s * 0.1, 0.4, -0.2], 0.03, FR);
     // braço oscilante até o eixo traseiro e garfo dianteiro até o eixo da frente
-    tube([s * 0.12, 0.46, -0.22], [s * 0.12, 0.31, -0.72], 0.035, FR); tube([s * 0.09, 1.08, 0.56], [s * 0.09, 0.31, 0.74], 0.03, SL); tube([s * 0.09, 0.98, 0.585], [s * 0.09, 0.6, 0.68], 0.042, FR); }
+    tube([s * 0.12, 0.46, -0.22], [s * 0.12, 0.31, -0.72], 0.035, FR); }
   void head; void piv;
   // tanque e carenagens laterais (cor), farol (prata), para-lama dianteiro
   mb.setColor(C, PL); mb.roundBox(M(0, 0.98, 0.2), 0.34, 0.24, 0.5, C, 0.06, 1); mb.roundBox(M(0, 0.74, 0.32, 0, 1, -0.4), 0.3, 0.26, 0.14, C, 0.03, 1);
   for (const s of [-1, 1]) { mb.setColor(C, PL); mb.roundBox(M(s * 0.16, 0.88, 0.32, 0, 1, 0.3), 0.04, 0.24, 0.36, C, 0.02, 1); mb.roundBox(M(s * 0.14, 0.88, -0.6, 0, 1, -0.35), 0.06, 0.12, 0.5, C, 0.02, 1); }
-  mb.setColor(C, PL); mb.roundBox(M(0, 1.14, 0.62, 0, 1, 0.5), 0.24, 0.28, 0.1, C, 0.03, 1); mb.setColor(SL, MT); mb.roundBox(M(0, 1.12, 0.67, 0, 1, 0.5), 0.17, 0.17, 0.04, SL, 0.02, 1); mb.setColor(BK, MT); mb.box(M(0, 1.3, 0.6, 0, 1, 0.4), 0.18, 0.1, 0.03, BK);
-  mb.setColor(C, PL); mb.roundBox(M(0, 0.68, 0.82, 0, 1, -0.3), 0.14, 0.04, 0.42, C, 0.02, 1);
   // banco preto, rabeta, alça e para-lama traseiro
   mb.setColor(BK, FB); mb.roundBox(M(0, 0.96, -0.32, 0, 1, -0.05), 0.26, 0.08, 0.62, BK, 0.03, 1); mb.setColor(C, PL); mb.roundBox(M(0, 0.98, -0.78, 0, 1, -0.25), 0.2, 0.08, 0.3, C, 0.02, 1);
   for (const s of [-1, 1]) tube([s * 0.13, 1.02, -0.6], [s * 0.13, 1.06, -0.9], 0.015, FR); tube([-0.13, 1.06, -0.9], [0.13, 1.06, -0.9], 0.015, FR); mb.setColor(BK, RB); mb.box(M(0, 0.7, -1.0, 0, 1, 0.6), 0.12, 0.02, 0.3, BK);
   // guidão e manoplas
+  return mb.build(); }
+// frente da moto que gira com o guidão (garfo, farol, para-lama e guidão), com origem no eixo de direção
+export const MOTO_PIVOT = [0, 1.0, 0.56], MOTO_RAKE = 0.23;
+export function motoBarsMesh(colorIdx) { const mb = new MeshBuilder(); const C = hex(VCOLORS[colorIdx] || VCOLORS[3]), FR = hex(0x3a3c40), BK = hex(0x1c1d20), SL = hex(0xc8ccd0); const [px, py, pz] = MOTO_PIVOT; const Q = (x, y, z) => [x - px, y - py, z - pz];
+  const tube = (a, b, r, c, f = MT) => { a = Q(...a); b = Q(...b); const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]; const L = Math.hypot(...d); const ry = Math.atan2(d[0], d[2]), rx = -Math.asin(d[1] / L); mb.setColor(c, f); mb.box(M((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2, ry, 1, rx), r * 2, r * 2, L, c); };
+  for (const s of [-1, 1]) { tube([s * 0.09, 1.08, 0.56], [s * 0.09, 0.31, 0.74], 0.03, SL); tube([s * 0.09, 0.98, 0.585], [s * 0.09, 0.6, 0.68], 0.042, FR); }
+  const P = (x, y, z, a, b, c2) => M(x - px, y - py, z - pz, a, b, c2);
+  mb.setColor(C, PL); mb.roundBox(P(0, 1.14, 0.62, 0, 1, 0.5), 0.24, 0.28, 0.1, C, 0.03, 1); mb.setColor(SL, MT); mb.roundBox(P(0, 1.12, 0.67, 0, 1, 0.5), 0.17, 0.17, 0.04, SL, 0.02, 1); mb.setColor(BK, MT); mb.box(P(0, 1.3, 0.6, 0, 1, 0.4), 0.18, 0.1, 0.03, BK);
+  mb.setColor(C, PL); mb.roundBox(P(0, 0.68, 0.82, 0, 1, -0.3), 0.14, 0.04, 0.42, C, 0.02, 1);
   tube([-0.36, 1.2, 0.5], [0.36, 1.2, 0.5], 0.016, SL); for (const s of [-1, 1]) tube([s * 0.3, 1.2, 0.5], [s * 0.4, 1.2, 0.5], 0.024, BK, RB);
   return mb.build(); }
 export function motoEngineMesh() { const mb = new MeshBuilder(); const D = hex(0x3a3c40), F = hex(0x6a6e74), SL = hex(0xb8bcc0); mb.setColor(D, MT); mb.roundBox(M(0, 0.48, 0.08), 0.26, 0.3, 0.38, D, 0.03, 1);
@@ -135,11 +165,23 @@ export class VehicleSystem {
   _scramble(v) { const T = VTYPES[v.type]; let sd = (Math.imul(v.id + 7, 2654435761) ^ 0x5bd1e995) >>> 0; const R = () => { sd = (Math.imul(sd, 1664525) + 1013904223) >>> 0; return sd / 4294967296; }; R(); R();
     v.wheels = Math.floor(R() * (T.wheels + 1)); v.engine = R() < 0.45; v.gear = T.moto ? true : R() < 0.55; v.bad = { engine: v.engine && R() < 0.55, gear: !T.moto && v.gear && R() < 0.4, flat: v.wheels && R() < 0.35 ? 1 : 0 };
     if (this.complete(v)) { v.engine = false; v.bad.engine = false; } return v; }
-  _make(s) { const T = VTYPES[s.type]; return { id: s.id, type: s.type, color: s.color, x: s.x, y: s.y, z: s.z, yaw: s.yaw, pitch: 0, roll: 0, wheels: 0, engine: false, gear: !T.moto, bad: { engine: false, gear: false, flat: 0 }, jack: false, lift: 0, fuel: Math.round(T.tank * (Math.random() < 0.6 ? Math.random() * 0.35 : 0)), speed: 0, steer: 0, spin: 0, siph: false }; }
-  serialize() { return { v: this.list.map((v) => [v.id, +v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2), +v.yaw.toFixed(3), v.wheels, v.engine ? 1 : 0, v.gear ? 1 : 0, +v.fuel.toFixed(1), (v.bad.engine ? 1 : 0) | (v.bad.gear ? 2 : 0) | (v.bad.flat << 2), v.jack ? 1 : 0]), p: this.pumps.map((p) => +p.fuel.toFixed(1)) }; }
+  _make(s) { const T = VTYPES[s.type]; return { id: s.id, type: s.type, color: s.color, x: s.x, y: s.y, z: s.z, yaw: s.yaw, pitch: 0, roll: 0, wheels: 0, engine: false, gear: !T.moto, bad: { engine: false, gear: false, flat: 0 }, jack: false, lift: 0, trunk: [], trunkOpen: false, trunkAng: 0, bag: false, data: {}, door: 0, fuel: Math.round(T.tank * (Math.random() < 0.6 ? Math.random() * 0.35 : 0)), speed: 0, steer: 0, spin: 0, siph: false }; }
+  serialize() { return { v: this.list.map((v) => [v.id, +v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2), +v.yaw.toFixed(3), v.wheels, v.engine ? 1 : 0, v.gear ? 1 : 0, +v.fuel.toFixed(1), (v.bad.engine ? 1 : 0) | (v.bad.gear ? 2 : 0) | (v.bad.flat << 2), v.jack ? 1 : 0, v.trunk || [], v.trunkOpen ? 1 : 0, v.bag ? 1 : 0, v.data && v.data.lock ? v.data.lock : null]), p: this.pumps.map((p) => +p.fuel.toFixed(1)) }; }
   load(st) { this.reset(); if (!st) return; const byId = new Map(this.list.map((v) => [v.id, v]));
-    for (const [id, x, y, z, yaw, wh, en, ge, fu, bd, jk] of st.v || []) { const v = byId.get(id); if (!v) continue; Object.assign(v, { x, y, z, yaw, wheels: wh, engine: !!en, gear: !!ge, fuel: fu, jack: !!jk, lift: jk ? 1 : 0 }); if (bd !== undefined) v.bad = { engine: !!(bd & 1), gear: !!(bd & 2), flat: bd >> 2 }; }
+    for (const [id, x, y, z, yaw, wh, en, ge, fu, bd, jk, tr, to, bg, lk] of st.v || []) { const v = byId.get(id); if (!v) continue; Object.assign(v, { x, y, z, yaw, wheels: wh, engine: !!en, gear: !!ge, fuel: fu, jack: !!jk, lift: jk ? 1 : 0, trunk: Array.isArray(tr) ? tr : [], trunkOpen: !!to, trunkAng: to ? 1 : 0, bag: !!bg, data: lk ? { lock: lk } : {} }); if (bd !== undefined) v.bad = { engine: !!(bd & 1), gear: !!(bd & 2), flat: bd >> 2 }; }
     (st.p || []).forEach((f, i) => { if (this.pumps[i]) this.pumps[i].fuel = f; }); this._clearCols(); this._addCols(); }
+  name(v) { return vName(v); }
+  // banco do motorista (lado esquerdo do carro, atrás do volante) / banco da moto
+  seatPos(v) { const T = VTYPES[v.type]; if (T.moto) return this.toW(v, 0, 0.05, -0.25); const cw = T.W - 0.16, zs = (T.cab[0] + (v.type === 'sedan' ? 0.5 : 0.12) + T.cab[1] - 0.55) / 2; return this.toW(v, cw * 0.24, T.clear - 0.2, zs + 0.15); }
+  doorHinge(v) { const T = VTYPES[v.type]; return [T.W / 2 - 0.02, T.clear + 0.14, T.cab[1] - 0.5]; }
+  // pontos locais → mundo
+  toW(v, lx, ly, lz) { const c = Math.cos(v.yaw), s = Math.sin(v.yaw); return [v.x + lx * c + lz * s, v.y + ly, v.z - lx * s + lz * c]; }
+  lockModel(v) { const T = VTYPES[v.type]; const p = T.moto ? this.toW(v, 0.2, 0.75, -0.25) : this.toW(v, T.W / 2 + 0.03, T.belt - 0.12, (T.cab[0] + T.cab[1]) / 2 + 0.25); return mat4.compose(p, v.yaw + Math.PI / 2); }
+  trunkPoint(v) { const T = VTYPES[v.type]; return this.toW(v, 0, 0, -T.L / 2 - (T.moto ? 0.35 : 0.55)); }
+  // porta-malas como "baú" (para o painel de baú): itens, espaço e tranca do veículo
+  trunkBox(v) { if (!v._tp) { const V = this; v._tp = { type: 'trunk', veh: v, get title() { return `${v.type === 'moto' ? '👜 Bolsa da' : '🧳 Porta-malas do'} ${vName(v)} — ${TRUNK[v.type]} de espaço`; }, get items() { return v.trunk; }, set items(x) { v.trunk = x; }, get x() { return V.trunkPoint(v)[0]; }, get y() { return v.y; }, get z() { return V.trunkPoint(v)[2]; }, get data() { return v.data || (v.data = {}); } }; } return v._tp; }
+  // perto da traseira (de frente para ela)
+  nearTrunk(p, yaw) { let best = null, bd = 1.8; for (const v of this.list) { if (v === this.driving || Math.abs(v.x - p[0]) > 6 || Math.abs(v.z - p[2]) > 6) continue; const q = this.trunkPoint(v); const d = Math.hypot(q[0] - p[0], q[2] - p[2]); if (d < bd && Math.abs(q[1] - p[1]) < 2) { bd = d; best = v; } } return best; }
   complete(v) { const T = VTYPES[v.type]; return v.wheels >= T.wheels && v.engine && v.gear; }
   damaged(v) { const b = v.bad || {}; const m = []; if (v.engine && b.engine) m.push(VTYPES[v.type].moto ? 'motor de moto danificado' : 'motor danificado'); if (v.gear && b.gear) m.push('câmbio danificado'); if (b.flat && v.wheels) m.push(`${Math.min(b.flat, v.wheels)} pneu(s) furado(s)`); return m; }
   usable(v) { return this.complete(v) && !this.damaged(v).length; }
@@ -156,15 +198,16 @@ export class VehicleSystem {
   // ---------- direção ----------
   enter(v) { const g = this.g, P = g.player, T = VTYPES[v.type]; if (!this.complete(v)) return g.ui.toast(`Faltam peças: ${this.missing(v).join(', ')}`, 'warn'); if (v.jack) return g.ui.toast('O carro está no macaco — aperte TAB e finalize o serviço (botão direito no macaco)', 'warn'); if (this.damaged(v).length) return g.ui.toast(`Peças danificadas: ${this.damaged(v).join(', ')} — conserte (habilidade Mecânica)`, 'warn');
     if (v.fuel <= 0.05) return g.ui.toast('⛽ Sem combustível — abasteça com o galão (segure o galão e aperte E perto do veículo)', 'warn');
-    this.driving = v; v.speed = 0; g.equip.hand = null; P.seat = { v, clip: T.moto ? 'ride' : 'sit', hidden: !T.moto }; g.audio.engineStart(); g.audio.play('engineStart', { at: [v.x, v.y, v.z] });
+    this.driving = v; v.speed = 0; g.equip.hand = null; P.seat = { v, clip: T.moto ? 'rideFootL' : 'sit', hidden: false }; this.entering = { v, t: 0, dur: T.moto ? 0.8 : 1.4, from: P.pos.slice() }; if (!T.moto) { v.doorT = 0; g.audio.play('door', { at: [v.x, v.y, v.z] }); } g.audio.engineStart(); g.audio.play('engineStart', { at: [v.x, v.y, v.z] });
     g.cam.yaw = v.yaw; this._camDist = g.cam.targetDist; g.cam.targetDist = T.moto ? 5.5 : 7.5; g.ui.toast(`🚗 ${vName(v)} — W/S acelera e freia, A/D vira, Espaço freio de mão, E para sair`, 'info'); }
-  exit() { const g = this.g, P = g.player, v = this.driving; if (!v) return; const T = VTYPES[v.type]; this.driving = null; P.seat = null; g.audio.engineStop(); g.cam.targetDist = this._camDist || 4.2;
+  exit() { const g = this.g, P = g.player, v = this.driving; if (!v) return; const T = VTYPES[v.type]; this.driving = null; this.entering = null; P.seat = null; if (!T.moto) { v.doorT = 0; v.doorOut = true; g.audio.play('door', { at: [v.x, v.y, v.z] }); } g.audio.engineStop(); g.cam.targetDist = this._camDist || 4.2;
     const r = [Math.cos(v.yaw), -Math.sin(v.yaw)]; for (const side of [-1, 1, 2]) { const off = side === 2 ? [Math.sin(v.yaw) * -(T.L / 2 + 1), Math.cos(v.yaw) * -(T.L / 2 + 1)] : [r[0] * side * (T.W / 2 + 0.9), r[1] * side * (T.W / 2 + 0.9)];
       const x = v.x + off[0], z = v.z + off[1]; const blocked = g.physics.query(x, z, 0.5).some((c) => !c.dyn && !c.ghost && !c.camOnly && c.y1 > v.y + 0.4 && g.physics.insideXZ(c, x, z, 0.35)); if (!blocked || side === 2) { P.setPosition(x, g.world.height(x, z), z); break; } }
     P.vel = [0, 0, 0]; v.speed = 0; this._syncCol(v); }
   update(dt, act) { this._dt = dt; const v = this.driving; if (!v) return; const g = this.g, w = g.world, ph = g.physics, T = VTYPES[v.type], inp = g.input;
     if (act.interact) return this.exit();
-    let thr = act.mz || 0; if (v.fuel <= 0) { thr = 0; if (!this._noFuelTip) { this._noFuelTip = true; g.ui.toast('⛽ Acabou o combustível!', 'warn'); } } else this._noFuelTip = false;
+    const ent = this.entering; if (ent) { ent.t += dt; if (ent.t >= ent.dur) this.entering = null; }
+    let thr = ent ? 0 : act.mz || 0; if (v.fuel <= 0) { thr = 0; if (!this._noFuelTip) { this._noFuelTip = true; g.ui.toast('⛽ Acabou o combustível!', 'warn'); } } else this._noFuelTip = false;
     const hand = inp.down('Space');
     if (thr > 0) v.speed = Math.min(T.max, v.speed + T.acc * thr * dt * (v.speed < 0 ? 2.2 : 1));
     else if (thr < 0) v.speed = v.speed > 0.4 ? Math.max(0, v.speed - 16 * dt) : Math.max(-6, v.speed - 4 * dt);
@@ -177,7 +220,6 @@ export class VehicleSystem {
     for (let k = 0; k < n; k++) { const f = [Math.sin(v.yaw), Math.cos(v.yaw)]; v.x += f[0] * mv / n; v.z += f[1] * mv / n; let dx = 0, dz = 0;
       for (const o of T.moto ? [0.55, -0.55] : [T.L * 0.3, 0, -T.L * 0.3]) { const pt = [v.x + f[0] * o, v.y + 0.3, v.z + f[1] * o]; const b = [pt[0], pt[2]]; ph.resolve(pt, T.W / 2 + 0.05, 1.2, 0.55); dx += pt[0] - b[0]; dz += pt[2] - b[1]; }
       if (dx || dz) { v.x += dx; v.z += dz; bump = Math.max(bump, Math.hypot(dx, dz)); } }
-    v.col.ghost = false;
     if (bump > 0.03) { if (Math.abs(v.speed) > 7) { g.audio.play('metalHit', { at: [v.x, v.y + 0.5, v.z] }); g.cam.shake = Math.min(0.8, Math.abs(v.speed) / 30); if (Math.abs(v.speed) > 14) g.damage(Math.abs(v.speed) * 0.6, 'acidente de carro'); } v.speed *= -0.25; }
     // chão: altura das 4 rodas → inclinação e rolagem
     const f = [Math.sin(v.yaw), Math.cos(v.yaw)], rr = [Math.cos(v.yaw), -Math.sin(v.yaw)]; const gy = (x, z) => ph.ground(x, z, 0.3, v.y + 0.7, 0.9)[0];
@@ -185,13 +227,16 @@ export class VehicleSystem {
     if (!T.moto) { hl = gy(v.x - rr[0] * T.W / 2, v.z - rr[1] * T.W / 2); hr = gy(v.x + rr[0] * T.W / 2, v.z + rr[1] * T.W / 2); }
     const ty = (hf + hb) / 2; v.y = v.y > ty + 0.05 ? Math.max(ty, v.y - 9 * dt) : ty; v.pitch = damp(v.pitch, -Math.atan2(hf - hb, wb), 10, dt);
     v.roll = T.moto ? damp(v.roll, -v.steer * Math.min(1, Math.abs(v.speed) / 12) * 0.9, 5, dt) : damp(v.roll, Math.atan2(hr - hl, T.W), 10, dt);
+    v.col.ghost = false; // (o próprio colisor fica fantasma enquanto mede o chão: senão o carro "sobe em si mesmo")
     if (w.height(v.x, v.z) < WATER - 0.7) { v.speed *= 0.6; if (!this._waterTip) { this._waterTip = true; g.ui.toast('🌊 Água demais — o veículo atolou', 'warn'); } } else this._waterTip = false;
     // atropelar criaturas
     for (const c of g.creatures.list) { if (c.dead || Math.abs(v.speed) < 4) continue; const d = Math.hypot(c.pos[0] - v.x, c.pos[2] - v.z); if (d < T.L / 2 + c.def.radius * c.def.scale && Math.abs(c.pos[1] - v.y) < 2) { if ((c._runT || 0) > g.env.elapsed) continue; c._runT = g.env.elapsed + 0.8;
         g.creatures.damage(c, Math.abs(v.speed) * (c.def.heavyArmor ? 0 : 6), v.yaw); v.speed *= c.def.scale > 1.5 ? 0.2 : 0.75; g.audio.play('metalHit', { at: c.pos }); } }
     v.fuel = Math.max(0, v.fuel - Math.abs(v.speed) * dt / T.km - (thr ? 0.004 * dt : 0.0015 * dt)); v.spin += v.speed * dt / T.wr; this._syncCol(v);
     // o motorista acompanha o banco; câmera segue atrás quando o mouse fica parado
-    const seat = T.moto ? -0.25 : 0; P.pos = [v.x + f[0] * seat, v.y + (T.moto ? 0.0 : 0.05), v.z + f[1] * seat]; P.yaw = v.yaw; P.vel = [0, 0, 0];
+    { const sp = this.seatPos(v); if (ent) { const k = Math.max(0, Math.min(1, (ent.t - ent.dur * 0.3) / (ent.dur * 0.55))); const e2 = k * k * (3 - 2 * k); P.pos = [ent.from[0] + (sp[0] - ent.from[0]) * e2, ent.from[1] + (sp[1] - ent.from[1]) * e2 + Math.sin(Math.PI * k) * 0.12, ent.from[2] + (sp[2] - ent.from[2]) * e2]; } else P.pos = sp; P.yaw = v.yaw; P.vel = [0, 0, 0]; }
+    // moto: parado ou em curva fechada põe o pé no chão (do lado de dentro da curva); fora disso, pés nas pedaleiras
+    if (T.moto && P.seat) { const sl = Math.abs(v.speed) < 1.3, sharp = Math.abs(v.steer) > 0.32 && Math.abs(v.speed) < 9; P.seat.clip = ent ? 'rideFootL' : sl ? 'rideFootL' : sharp ? (v.steer > 0 ? 'rideFootL' : 'rideFootR') : 'ride'; }
     if (Math.abs(inp.mouse.dx) > 1) this._camHold = 1.5; this._camHold = (this._camHold || 0) - dt; if (this._camHold <= 0 && Math.abs(v.speed) > 1) g.cam.yaw += angleDiff(g.cam.yaw, v.yaw + (v.speed < 0 ? Math.PI : 0)) * Math.min(1, dt * 2.2);
     g.audio.engineSet(Math.abs(v.speed) / T.max, thr !== 0 ? 1 : 0.3); g.ui.driveHud && g.ui.driveHud(v, T); }
   // ---------- desenho ----------
@@ -208,14 +253,19 @@ export class VehicleSystem {
         items.push({ mesh: this._mesh('jack' + jh.toFixed(2), () => jackMesh(jh)), model: jm, sphere: sph });
         const pulse = 0.26 + 0.08 * Math.sin((this.g.env.elapsed || 0) * 3); const gm = mat4.mul(mat4.create(), m, mat4.fromTRS(mat4.create(), [0, -0.02, 0], [0, 0, 0, 1], [1.05, 1.04, 1.03]));
         items.push({ mesh: T.moto ? this._mesh('moto' + v.color, () => motoBodyMesh(v.color)) : this._mesh(v.type + v.color, () => carBodyMesh(v.type, v.color)), model: gm, sphere: sph, alpha: pulse * v.lift, tint: [0.3, 0.75, 1.9, 1], emissive: 2.2, fogMul: 0.5, shadow: false, cull: false }); }
+      { const tgt = v.trunkOpen ? 1 : 0; v.trunkAng = (v.trunkAng || 0) + (tgt - (v.trunkAng || 0)) * Math.min(1, (this._dt || 1 / 60) * 4); }
+      if (!T.moto && v.trunkAng > 0.01) { const a = v.trunkAng; let hz, hy, rx; if (v.type === 'sedan') { hz = T.cab[0] - 0.02; hy = T.belt + 0.02; rx = a * 1.25; } else if (v.type === 'pickup') { hz = -T.L / 2 + 0.06; hy = T.clear + 0.2; rx = -a * 1.45; } else { hz = T.cab[0] - 0.02; hy = T.roof - 0.02; rx = a * 1.45; }
+        const lm = mat4.mul(mat4.create(), m, mat4.compose([0, hy, hz], 0, 1, rx)); items.push({ mesh: this._mesh('lid' + v.type + v.color, () => trunkLidMesh(v.type, v.color)), model: lm, sphere: sph }); }
       if (!this.usable(v) && !this.driving && Math.abs(v.x - eye[0]) < 70 && Math.abs(v.z - eye[2]) < 70) this._smoke(v, T);
-      if (T.moto) { items.push({ mesh: this._mesh('moto' + v.color, () => motoBodyMesh(v.color)), model: m, sphere: sph }); if (v.engine) items.push({ mesh: this._mesh('motoeng', motoEngineMesh), model: m, sphere: sph }); }
-      else { items.push({ mesh: this._mesh(v.type + v.color, () => carBodyMesh(v.type, v.color)), model: m, sphere: sph }); if (v.engine) items.push({ mesh: this._mesh('hood' + v.type + v.color, () => carHoodMesh(v.type, v.color)), model: m, sphere: sph }); }
+      if (T.moto) { items.push({ mesh: this._mesh('moto' + v.color, () => motoBodyMesh(v.color)), model: m, sphere: sph }); { const bm = mat4.mul(mat4.create(), m, mat4.compose(MOTO_PIVOT, 0, 1, -MOTO_RAKE)); mat4.mul(bm, bm, mat4.compose([0, 0, 0], v.steer || 0)); mat4.mul(bm, bm, mat4.compose([0, 0, 0], 0, 1, MOTO_RAKE)); items.push({ mesh: this._mesh('motobars' + v.color, () => motoBarsMesh(v.color)), model: bm, sphere: sph }); } if (v.engine) items.push({ mesh: this._mesh('motoeng', motoEngineMesh), model: m, sphere: sph }); if (v.bag) items.push({ mesh: this._mesh('motobag', motoBagMesh), model: m, sphere: sph }); }
+      else { items.push({ mesh: this._mesh(v.type + v.color, () => carBodyMesh(v.type, v.color)), model: m, sphere: sph }); items.push({ mesh: this._mesh('glass' + v.type, () => carBodyMesh(v.type, 0, 'glass')), model: m, sphere: sph, alpha: 0.42, shadow: false });
+        if (v.doorT !== undefined) { const dur = v.doorOut ? 0.9 : 1.4; v.doorT += this._dt || 1 / 60; const u = v.doorT / dur; const a = u < 0.25 ? u / 0.25 : u < 0.7 ? 1 : Math.max(0, 1 - (u - 0.7) / 0.3); if (u >= 1) { v.doorT = undefined; v.doorOut = false; }
+          else if (a > 0.01) { const dm = mat4.mul(mat4.create(), m, mat4.compose(this.doorHinge(v), -1.05 * a)); items.push({ mesh: this._mesh('door' + v.type + v.color, () => doorMesh(v.type, v.color)), model: dm, sphere: sph }); } } if (v.engine) items.push({ mesh: this._mesh('hood' + v.type + v.color, () => carHoodMesh(v.type, v.color)), model: m, sphere: sph }); }
       const wm = this._mesh('wheel' + T.wr, () => wheelMesh(T.wr, T.moto ? 0.12 : 0.24)); const pos = T.moto ? [[0, T.wf], [0, T.wb]] : [[T.W / 2 - 0.12, T.wf], [-(T.W / 2 - 0.12), T.wf], [T.W / 2 - 0.12, T.wb], [-(T.W / 2 - 0.12), T.wb]];
       for (let i = 0; i < Math.min(v.wheels, pos.length); i++) { const [x, z] = pos[i]; const steerA = z > 0 ? v.steer : 0; const loc = mat4.fromTRS(mat4.create(), [x, T.wr - sink, z], quat.fromEuler(x < 0 ? -v.spin : v.spin, steerA + (x < 0 ? Math.PI : 0), 0), [1, 1, 1]);
         items.push({ mesh: wm, model: mat4.mul(mat4.create(), m, loc), sphere: sph }); } }
     // galão na mão durante o abastecimento/enchimento já vem do sistema de ferramentas
   }
 }
-export function partIsFor(id, v) { const T = VTYPES[v.type]; return id === T.tire || (id === 'tire' && !T.moto) ? 'wheels' : id === T.engine ? 'engine' : id === 'gearbox' ? 'gear' : null; }
+export function partIsFor(id, v) { const T = VTYPES[v.type]; if (id === 'motobag') return T.moto ? 'bag' : null; return id === T.tire || (id === 'tire' && !T.moto) ? 'wheels' : id === T.engine ? 'engine' : id === 'gearbox' ? 'gear' : null; }
 export { ITEMS };

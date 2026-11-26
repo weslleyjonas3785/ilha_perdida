@@ -199,7 +199,7 @@ export class UI {
   get anyOpen() { return !!this.open; }
   openPanel(name, opts = {}) {
     this.closePanels(true); this.open = name; this.game.input.exitLock();
-    if (name === 'inv') { $('invPanel').classList.remove('hidden'); this.tab(opts.tab || 'inv'); }
+    if (name === 'inv') { this.craftAt = opts.at || null; $('invPanel').classList.remove('hidden'); this.tab(opts.tab || 'inv'); }
     if (name === 'build') { $('buildPanel').classList.remove('hidden'); this.renderBuild(); }
     if (name === 'chest') { this.chest = opts.piece; $('chestPanel').classList.remove('hidden'); this.renderChest(); }
     if (name === 'fire') { this.fire = opts.piece; $('firePanel').classList.remove('hidden'); this.renderFire(); }
@@ -207,7 +207,7 @@ export class UI {
     if (name === 'map') this.game.map.open();
     if (name === 'vehicle') { this.veh = opts.v; this.veh._wasComplete = this.game.vehicles.complete(opts.v); $('vehiclePanel').classList.remove('hidden'); this.renderVehicle(); }
   }
-  closePanels(silent) { this.closeItemMenu(); this.closeGunCheck(); if (this.game.admin && this.game.admin.isOpen) this.game.admin.close(true); for (const id of ['invPanel', 'buildPanel', 'chestPanel', 'firePanel', 'powerPanel', 'vehiclePanel']) $(id).classList.add('hidden'); if (this.veh) { const g = this.game, v = this.veh; this.veh = null; if (!v._wasComplete && g.vehicles.complete(v)) { g.audio.play('craft'); g.ui.toast(`🚗 Veículo montado! Abasteça com o galão e aperte E para dirigir.`, 'ok'); } } this.power = null; if (this.game.map) this.game.map.close(); const was = this.open; this.open = null; this.sel = null; this.chest = null; if (was && !silent) this.game.onPanelClosed(); }
+  closePanels(silent) { this.craftAt = null; if (this.game.furnace) this.game.furnace.close(); this.closeItemMenu(); this.closeGunCheck(); if (this.game.admin && this.game.admin.isOpen) this.game.admin.close(true); for (const id of ['invPanel', 'buildPanel', 'chestPanel', 'firePanel', 'powerPanel', 'vehiclePanel']) $(id).classList.add('hidden'); if (this.veh) { const g = this.game, v = this.veh; this.veh = null; if (!v._wasComplete && g.vehicles.complete(v)) { g.audio.play('craft'); g.ui.toast(`🚗 Veículo montado! Abasteça com o galão e aperte E para dirigir.`, 'ok'); } } this.power = null; if (this.game.map) this.game.map.close(); const was = this.open; this.open = null; this.sel = null; this.chest = null; if (was && !silent) this.game.onPanelClosed(); }
   tab(t) { for (const b of document.querySelectorAll('.tabs button')) b.classList.toggle('on', b.dataset.tab === t); for (const p of document.querySelectorAll('#invPanel .pane')) p.classList.toggle('on', p.dataset.pane === t); this.curTab = t; this.refresh(); }
   refresh() { if (this.open === 'inv') { if (this.curTab === 'inv') this.renderInv(); if (this.curTab === 'craft') this.renderCraft(); if (this.curTab === 'equip') this.renderEquip(); if (this.curTab === 'skills') this.renderSkills(); } if (this.open === 'chest') this.renderChest(); if (this.open === 'build') this.renderBuild(); if (this.open === 'power') this.renderPower(true); }
   // caixa de pergunta Sim/Não dentro do jogo
@@ -297,6 +297,7 @@ export class UI {
     if (it.place && PIECES[it.place]) add(`Posicionar ${PIECES[it.place].name.toLowerCase()}`, () => { if (!g.inv.has(PIECES[it.place].cost)) return this.toast(`Precisa de: ${Object.entries(PIECES[it.place].cost).map(([k, n]) => n + '× ' + ITEMS[k].name).join(', ')}`, 'warn'); this.closePanels(true); g.build.start(it.place); g.onPanelClosed(); });
     if (it.slot || it.type === 'backpack' || it.type === 'suit') add(it.type === 'backpack' ? '🎒 Usar (equipar mochila)' : '👕 Usar (vestir)', () => g.equipFromSlot(idx)); if (LARGE.has(s.id)) add('Pôr nas costas', () => g.invToBack(idx, !g.equip.backA ? 'backA' : 'backB')); if (it.type === 'attachment' && g.equip.hand && fits(g.equip.hand, s.id)) add('Encaixar na arma da mão', () => g.attachItem(idx)); if (GUNS[s.id] && it.tool === 'gun') add('🔧 Verificar', () => this.gunCheck(s.id));
     if (s.id === 'nvg') { if (g.equip.nvgCell != null) add('Tirar bateria', () => this.askRemoveCell()); }
+    if (s.id === 'repairkit') add('🧰 Usar (consertar o que está vestindo)', () => g.useRepairKit());
     if (it.fish) add(`🔪 Tirar ${it.fish} filé${it.fish > 1 ? 's' : ''}`, () => g.fillet(idx));
     if (it.type === 'book') add(g.skills.has(it.skill) ? '📖 Ler (já sabe)' : '📖 Ler', () => g.readBook(idx));
     if (s.id === 'nvcell' && (g.equip.hat === 'nvg' || g.countAll('nvg') > 0)) add('Anexar ao óculos', () => this.askAttachCell(idx));
@@ -333,34 +334,36 @@ export class UI {
   }
   renderCraft() {
     const g = this.game, list = $('craftList'); list.innerHTML = '';
-    const bench = g.nearPiece('bench', 3.5), fire = g.nearPiece('campfire', 3, (p) => p.lit);
-    $('craftStation').innerHTML = `Estações próximas: ${bench ? '🛠️ Bancada ✔' : '🛠️ Bancada ✘'} · ${fire ? '🔥 Fogueira acesa ✔' : '🔥 Fogueira acesa ✘'}`;
+    const ST = { bench: !!g.nearPiece('bench', 3.5), bench_mech: !!g.nearPiece('bench_mech', 3.5), bench_guns: !!g.nearPiece('bench_guns', 3.5) }; const fire = g.nearPiece('campfire', 3, (p) => p.lit); const bench = ST.bench;
+    $('craftStation').innerHTML = `Estações próximas: ${['bench', 'bench_mech', 'bench_guns'].map((k) => `${PIECES[k].icon} ${PIECES[k].name} ${ST[k] ? '✔' : '✘'}`).join(' · ')} · ${fire ? '🔥 Fogueira acesa ✔' : '🔥 Fogueira acesa ✘'}`;
+    const at = this.craftAt && ST[this.craftAt] ? this.craftAt : null; // aberto pela bancada: mostra primeiro as receitas dela
     // estações de trabalho: fogueira e bancada podem ser construídas direto daqui
     const head = (t) => { const h = document.createElement('div'); h.className = 'craftHead'; h.textContent = t; list.appendChild(h); };
     head('Estações (posicionar no chão)');
-    for (const type of ['campfire', 'bench']) {
+    for (const type of ['campfire', 'bench', 'bench_mech', 'bench_guns', 'furnace']) {
       const pc = PIECES[type]; const skOk = g.hasSkillFor(type); const can = skOk && g.inv.has(pc.cost); const el = document.createElement('div'); el.className = 'recipe' + (skOk ? '' : ' locked noskill');
-      el.innerHTML = `<div class="ic">${pc.icon}</div><div><div class="nm">${pc.name}</div><div class="muted">${pc.desc}${type === 'bench' ? ' Necessária para receitas marcadas com "requer bancada".' : ' Acenda-a para cozinhar.'}</div><div class="cost">${costText(pc.cost, g.inv)}</div></div>`;
+      el.innerHTML = `<div class="ic">${pc.icon}</div><div><div class="nm">${pc.name}</div><div class="muted">${pc.desc}${type === 'campfire' ? ' Acenda-a para cozinhar.' : ''}${!skOk ? ` <span class="lk">🔒 ${g.skillName(SKILL_OF[type])}</span>` : ''}</div><div class="cost">${costText(pc.cost, g.inv)}</div></div>`;
       const b = document.createElement('button'); b.textContent = 'Construir'; b.disabled = !can; b.dataset.piece = type; b.onclick = () => { this.closePanels(true); g.build.start(type); g.onPanelClosed(); }; el.appendChild(b); list.appendChild(el);
     }
     head('Itens');
-    for (const r of RECIPES) { if (FIRE.isCookRecipe(r)) continue; // assar é na grelha da fogueira (E na fogueira)
-      const it = ITEMS[r.out]; const sk = SKILL_OF[r.id], skOk = g.hasSkillFor(r.id); const stOk = !r.station || (r.station === 'bench' && bench) || (r.station === 'fire' && fire); const can = skOk && stOk && g.inv.has(r.cost);
+    const order = [...RECIPES].sort((a, b) => (at ? (b.station === at) - (a.station === at) : 0));
+    for (const r of order) { if (FIRE.isCookRecipe(r)) continue; // assar é na grelha da fogueira (E na fogueira)
+      const it = ITEMS[r.out]; const sk = SKILL_OF[r.id], skOk = g.hasSkillFor(r.id); const stOk = !r.station || (r.station === 'fire' ? !!fire : !!ST[r.station]); const can = skOk && stOk && g.inv.has(r.cost);
       const d = document.createElement('div'); d.className = 'recipe' + (stOk && skOk ? '' : ' locked') + (skOk ? '' : ' noskill');
-      d.innerHTML = `<div class="ic">${this._icon(r.out)}</div><div><div class="nm">${it.name}${r.station ? ` <span class="muted">· requer ${r.station === 'bench' ? 'bancada' : 'fogueira acesa'}</span>` : ''}</div><div class="muted">${it.desc}</div>${skOk ? '' : `<div class="lk">🔒 Precisa da habilidade ${g.skillName(sk)}</div>`}<div class="cost">${costText(r.cost, g.inv)}</div></div>`;
+      d.innerHTML = `<div class="ic">${this._icon(r.out)}</div><div><div class="nm">${it.name}${r.station ? ` <span class="muted">· requer ${r.station === 'fire' ? 'fogueira acesa' : PIECES[r.station].name.toLowerCase()}</span>` : ''}</div><div class="muted">${it.desc}</div>${skOk ? '' : `<div class="lk">🔒 Precisa da habilidade ${g.skillName(sk)}</div>`}<div class="cost">${costText(r.cost, g.inv)}</div></div>`;
       const b = document.createElement('button'); b.textContent = !skOk ? '🔒' : r.station === 'fire' ? 'Cozinhar' : 'Fabricar'; b.disabled = !can; b.dataset.recipe = r.id; b.onclick = () => { g.craft(r); this.refresh(); }; d.appendChild(b); list.appendChild(d);
     }
   }
   // menu do veículo: arraste as peças do inventário para os encaixes (pneus, motor, câmbio)
   renderVehicle() { const g = this.game, v = this.veh; if (!v) return; const VS = g.vehicles, VEH = VEHMOD; const T = VEH.VTYPES[v.type]; $('vehTitle').textContent = `${T.moto ? '🏍' : '🚗'} ${VEH.vName(v)}`;
     const body = $('vehBody'); const skill = g.skills.has('mecanica'); const slots = []; for (let i = 0; i < T.wheels; i++) slots.push({ key: 'wheels', i, item: T.tire, on: v.wheels > i, label: T.moto ? (i ? 'Pneu traseiro' : 'Pneu dianteiro') : ['Pneu diant. esq.', 'Pneu diant. dir.', 'Pneu tras. esq.', 'Pneu tras. dir.'][i] });
-    slots.push({ key: 'engine', item: T.engine, on: v.engine, label: T.moto ? 'Motor de moto' : 'Motor' }); slots.push({ key: 'gear', item: 'gearbox', on: v.gear, label: 'Câmbio (engrenagens)' }); const bd = v.bad || {}; for (const q of slots) q.bad = q.on && (q.key === 'engine' ? bd.engine : q.key === 'gear' ? bd.gear : q.i < (bd.flat || 0));
+    slots.push({ key: 'engine', item: T.engine, on: v.engine, label: T.moto ? 'Motor de moto' : 'Motor' }); slots.push({ key: 'gear', item: 'gearbox', on: v.gear, label: 'Câmbio (engrenagens)' }); if (T.moto) slots.push({ key: 'bag', item: 'motobag', on: !!v.bag, label: 'Bolsa (150 de espaço)' }); const bd = v.bad || {}; for (const q of slots) q.bad = q.on && (q.key === 'engine' ? bd.engine : q.key === 'gear' ? bd.gear : q.i < (bd.flat || 0));
     const need = [...VS.missing(v), ...VS.damaged(v)]; const pct = Math.round(v.fuel / T.tank * 100);
     body.innerHTML = `<div class="vehwrap"><div><div class="vstat">${need.length ? `Faltam: <b>${need.join(', ')}</b>` : '<b class="ok">✔ Completo — finalize o serviço (TAB → botão direito no macaco), abasteça e aperte E para dirigir</b>'}</div>${v.jack ? '' : '<div class="lk">🔧 Coloque o macaco (segure na mão e aperte E no carro) para trocar peças</div>'}${VS.damaged(v).length ? `<div class="lk bad">⚠ ${VS.damaged(v).join(', ')} — consertar precisa da habilidade Mecânica${skill ? '' : ' (você não tem: leia o livro)'}</div>` : ''}
       <div class="vslots ${T.moto ? 'moto' : 'car'}">${slots.map((s, k) => `<div class="vslot ${s.on ? 'on' : ''} ${s.bad ? 'dmg' : ''} ${s.key}" data-vs="${k}" title="${s.label}${s.bad ? ' — danificado' : ''}"><div class="vi">${s.on ? this._icon(s.item) : '➕'}</div><small>${s.label}${s.bad ? ' ⚠' : ''}</small>${s.bad ? `<button class="vfix" data-fix="${k}">🔧 Consertar</button>` : ''}</div>`).join('')}</div>
       <div class="vfuel">⛽ Combustível: ${v.fuel.toFixed(1)} / ${T.tank} L<div class="fb"><i style="width:${pct}%"></i></div></div></div>
       <div><h3 class="hbtitle">Suas peças <span class="muted">— arraste até o encaixe (ou clique)</span></h3><div class="vparts"></div><p class="muted">Clique com o botão direito num encaixe preenchido para tirar a peça.</p></div></div>`;
-    const parts = body.querySelector('.vparts'); const ids = [T.tire, ...(T.moto ? [] : ['tire']), T.engine, 'gearbox']; let any = false;
+    const parts = body.querySelector('.vparts'); const ids = [T.tire, ...(T.moto ? ['motobag'] : ['tire']), T.engine, 'gearbox']; let any = false;
     for (const id of ids) { const n = g.inv.count(id); if (!n) continue; any = true; const d = document.createElement('div'); d.className = 'vpart'; d.dataset.id = id; d.innerHTML = `<div class="vi">${ITEMS[id].icon}</div><div>${ITEMS[id].name}<br><span class="muted">× ${n}</span></div>`; parts.appendChild(d);
       d.addEventListener('pointerdown', (e) => { if (e.button !== 0) return; const gh = d.cloneNode(true); gh.classList.add('vghost'); document.body.appendChild(gh); const mv = (ev) => { gh.style.left = ev.clientX - 30 + 'px'; gh.style.top = ev.clientY - 20 + 'px'; }; mv(e);
         const up = (ev) => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); gh.remove(); const t = document.elementFromPoint(ev.clientX, ev.clientY); const sl = t && t.closest && t.closest('[data-vs]');
@@ -369,7 +372,7 @@ export class UI {
     if (!any) parts.innerHTML = `<p class="muted">Você não tem peças para este veículo. Procure ${T.moto ? 'pneus de moto, motor de moto e câmbio' : 'pneus e motor'} em indústrias, carros abandonados, vilarejos, bases militares e na lojinha dos postos.</p>`;
     body.querySelectorAll('[data-fix]').forEach((b) => { b.onclick = (e) => { e.stopPropagation(); g.repairPart(v, slots[+b.dataset.fix]); this.renderVehicle(); }; });
     body.querySelectorAll('[data-vs]').forEach((el) => { const s = slots[+el.dataset.vs]; el.onclick = () => { if (s.on) return; if (g.inv.count(s.item)) this._vInstall(s, s.item); else if (s.key === 'wheels' && !T.moto && g.inv.count('tire')) this._vInstall(s, 'tire'); };
-      el.oncontextmenu = (e) => { e.preventDefault(); if (!s.on) return; if (!v.jack) return this.toast('🔧 Coloque o macaco no carro antes de tirar peças', 'warn'); if (s.key === 'wheels' && s.i !== v.wheels - 1) return this.toast('Tire primeiro o último pneu colocado', 'info'); if (g.inv.add(s.item, 1) < 1) return this.toast('Inventário cheio', 'warn'); if (s.key === 'wheels') v.wheels--; else v[s.key] = false; g.audio.play('cloth'); this.renderVehicle(); }; }); }
+      el.oncontextmenu = (e) => { e.preventDefault(); if (!s.on) return; if (!v.jack) return this.toast('🔧 Coloque o macaco no carro antes de tirar peças', 'warn'); if (s.key === 'wheels' && s.i !== v.wheels - 1) return this.toast('Tire primeiro o último pneu colocado', 'info'); if (g.inv.add(s.item, 1) < 1) return this.toast('Inventário cheio', 'warn'); if (s.key === 'bag' && (v.trunk || []).some(Boolean)) { g.inv.remove(s.item, 1); return this.toast('Esvazie a bolsa antes de tirar', 'warn'); } if (s.key === 'wheels') v.wheels--; else v[s.key] = false; g.audio.play('cloth'); this.renderVehicle(); }; }); }
   _vInstall(s, id) { const g = this.game, v = this.veh; if (!v || s.on) return; if (s.item !== id && !(id === 'tire' && s.key === 'wheels' && !VEHMOD.VTYPES[v.type].moto)) return this.toast(`Essa peça não vai nesse encaixe${s.key === 'wheels' ? ` (precisa de ${ITEMS[s.item].name})` : ''}`, 'warn'); if (!v.jack) return this.toast('🔧 Coloque o macaco no carro antes de trocar peças', 'warn');
     if (g.inv.count(id) < 1) return; if (s.key === 'wheels' && s.i !== v.wheels) { s = { ...s, i: v.wheels }; } g.inv.remove(id, 1); if (s.key === 'wheels') v.wheels++; else v[s.key] = true; g.audio.play('craft'); this.renderVehicle(); }
   // roda de opções do projeto/martelo
@@ -484,15 +487,16 @@ export class UI {
   }
   renderChest() {
     const g = this.game, p = this.chest; if (!p) return; const T = g.territory; const box = new Inventory(T ? T.cap(p) : 16); box.load(p.items); const cab = p.type === 'cabinet';
-    { const h = $('chestPanel').querySelector('h2'); if (h) h.textContent = (PIECES[p.type] || PIECES.chest).name; }
+    { const h = $('chestPanel').querySelector('h2'); if (h) h.textContent = p.title || (PIECES[p.type] || PIECES.chest).name; }
     // armário: só materiais de manutenção; mostra o gasto por dia e quantos dias o estoque aguenta
     { let info = $('chestInfo'); if (!info) { info = document.createElement('div'); info.id = 'chestInfo'; $('chestGrid').parentNode.insertBefore(info, $('chestGrid')); }
       const L = T && T.lockOf(p); let html = '';
       if (cab && T) { const f = T.flagFor(p.x, p.z); const N = { wood: '🪵 madeira', stone: '🪨 pedra', scrap: '⚙ sucata/ferro', iron: 'ferro' }; if (f) { const r = T.daysLeft(f); const need = Object.entries(r.need); html += need.length ? `Gasto por dia: ${need.map(([k, n]) => `${n < 10 ? n.toFixed(1) : Math.round(n)} ${N[k] || k}`).join(' · ')}<br>Mantém a base de pé por <b>${isFinite(r.days) ? r.days.toFixed(1) : '∞'} dia(s)</b>${r.days < 1 ? ' — ⚠ coloque mais material!' : ''}` : 'Nenhuma construção do Projeto neste território ainda.'; info.className = 'chestInfo' + (need.length && r.days < 1 ? ' bad' : ''); } else { html = 'Fora de um território: não mantém nada.'; info.className = 'chestInfo bad'; } html += '<br><span class="muted">Aceita madeira, pedra, sucata e barras de ferro (1 barra = 2 sucatas).</span>'; }
       else info.className = 'chestInfo';
       if (L) html += `${html ? '<br>' : ''}🔒 ${LOCKS[L.id].name} (${Math.round(L.hp)}/${LOCKS[L.id].hp})${L.owner === T.me() ? ' <button class="itb" id="unlockBtn">Tirar tranca</button>' : ''}`;
-      else if (!cab) html += `${html ? '<br>' : ''}<span class="muted">Sem tranca: qualquer um pode abrir. Crie uma tranca e, com ela na mão, clique no baú.</span>`;
-      info.innerHTML = html; info.style.display = html ? 'block' : 'none'; const ub = $('unlockBtn'); if (ub) ub.onclick = () => { T.removeLock(p); this.renderChest(); }; }
+      else if (!cab) html += `${html ? '<br>' : ''}<span class="muted">Sem tranca: qualquer um pode abrir${p.type === 'trunk' ? ' (e ver pelo TAB → Próximo enquanto estiver aberto)' : ''}. Crie uma tranca e, com ela na mão, clique ${p.type === 'trunk' ? 'no veículo' : 'no baú'}.</span>`;
+      if (p.type === 'trunk') html += `${html ? '<br>' : ''}<button class="itb" id="trunkClose">${p.veh.type === 'moto' ? 'Fechar a bolsa' : 'Fechar o porta-malas'}</button> <span class="muted">(se sair sem fechar, ele fica aberto)</span>`;
+      info.innerHTML = html; info.style.display = html ? 'block' : 'none'; const ub = $('unlockBtn'); if (ub) ub.onclick = () => { T.removeLock(p); this.renderChest(); }; const tc = $('trunkClose'); if (tc) tc.onclick = () => { g.closeTrunk(p.veh); this.closePanels(); }; }
     if (cab) { const bad = box.slots.map((q, k) => q && !CABINET_OK.includes(q.id) ? k : -1).filter((k) => k >= 0); for (const k of bad) { const q = box.slots[k]; const n = g.inv.add(q.id, q.qty); if (n < q.qty) g.dropItem(q.id, q.qty - n, [p.x, p.y + 0.5, p.z]); box.takeSlot(k, q.qty); } if (bad.length) { p.items = box.serialize(); this.toast('O armário só guarda madeira, pedra, sucata e ferro', 'warn'); } }
     const cg = $('chestGrid'), ig = $('chestInv'); cg.innerHTML = ''; ig.innerHTML = '';
     this.cmulti = this.cmulti || new Set(); this.imulti = this.imulti || new Set(); this.xferDir = this.xferDir || 'up';

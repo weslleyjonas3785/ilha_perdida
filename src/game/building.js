@@ -17,7 +17,7 @@ export class BuildSystem {
     this.game = game; this.pieces = []; this.meshes = {}; this.mode = null; this.rotStep = 0; this.ghost = null;
     for (const t of ['campfire', 'tent', 'shelter', 'wall', 'floor', 'bench', 'door', 'planter', 'collector', 'composter', 'gtrap']) this.meshes[t] = game.renderer.createMesh(pieceMesh(t === 'door' ? 'doorframe' : t));
     // baús, armário e Territoritek: o desenho fica no sistema de território (aqui só para a prévia)
-    for (const [t, k] of Object.entries(CHESTS)) this.meshes[t] = game.renderer.createMesh(BM.chestMesh(k.kind)); this.meshes.cabinet = game.renderer.createMesh(BM.cabinetMesh()); this.meshes.flag = game.renderer.createMesh(BM.tkBaseMesh()); this.meshes.bed = game.renderer.createMesh(BM.bedMesh());
+    for (const [t, k] of Object.entries(CHESTS)) this.meshes[t] = game.renderer.createMesh(BM.chestMesh(k.kind)); this.meshes.cabinet = game.renderer.createMesh(BM.cabinetMesh()); this.meshes.flag = game.renderer.createMesh(BM.tkBaseMesh()); this.meshes.bed = game.renderer.createMesh(BM.bedMesh()); this.meshes.bench = game.renderer.createMesh(BM.benchCommonMesh()); this.meshes.bench_mech = game.renderer.createMesh(BM.benchMechMesh()); this.meshes.bench_guns = game.renderer.createMesh(BM.benchGunsMesh()); this.meshes.furnace = game.renderer.createMesh(BM.furnaceMesh());
     this.doorLeaf = game.renderer.createMesh(pieceMesh('door'));
     for (const [t, fn] of Object.entries(MACHINE_MESH)) this.meshes[t] = game.renderer.createMesh(fn());
   }
@@ -72,7 +72,7 @@ export class BuildSystem {
     }
     if (!reason && Math.hypot(x - P.pos[0], z - P.pos[2]) > 6) reason = 'Longe demais';
     if (!reason && type === 'flag' && g.struct && g.struct.foreignFlagNear(x, z, FLAG_GAP)) reason = 'Perto demais do território de outro jogador';
-    if (!reason && (type === 'bench' || isContainer(type)) && g.struct && !g.struct.ownFlagAt(x, z)) reason = g.struct.flags().length ? 'Fora do seu território (Territoritek)' : 'Coloque um Territoritek primeiro (marca o território)';
+    if (!reason && (type === 'bench' || type === 'bench_mech' || type === 'bench_guns' || isContainer(type)) && g.struct && !g.struct.ownFlagAt(x, z)) reason = g.struct.flags().length ? 'Fora do seu território (Territoritek)' : 'Coloque um Territoritek primeiro (marca o território)';
     if (!reason && type === 'cabinet' && g.territory) { const f = g.struct.ownFlagAt(x, z); if (f && g.territory.cabinetFor(f)) reason = 'Esse território já tem um armário'; }
     const afford = g.inv.has(def.cost);
     this.ghost = { type, x, y, z, rot, water, valid: !reason && afford, reason: reason || (afford ? null : 'Recursos insuficientes') };
@@ -105,7 +105,8 @@ export class BuildSystem {
       case 'chest': case 'chest_wi': case 'chest_iron': return [box(0, 0, 0.45, 0.29, -0.05, 0.66)];
       case 'cabinet': return [box(0, 0, 0.55, 0.3, -0.05, 1.8)];
       case 'gtrap': return [box(0, 0, 1.2, 0.1, -0.05, 0.3, { ghost: true, noClimb: true })];
-      case 'bench': return [box(0, 0, 0.95, 0.48, -0.05, 1.0)];
+      case 'bench': case 'bench_mech': case 'bench_guns': return [box(0, 0, 0.95, 0.48, -0.05, 1.0)];
+      case 'furnace': return [{ type: 'cyl', x, z, r: 0.85, y0: y - 0.1, y1: y + 1.9 }, box(0.95, 0.15, 0.24, 0.24, -0.1, 0.55)];
       case 'planter': return [box(0, 0, 0.95, 0.6, -0.05, 0.45)];
       case 'collector': return [box(-0.02, 0.06, 0.62, 0.42, -0.1, 1.24)];
       case 'composter': return [box(0, 0, 0.77, 0.57, -0.05, 1.0)];

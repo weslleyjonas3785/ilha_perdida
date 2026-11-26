@@ -430,7 +430,10 @@ export class World {
       } else if (rr[4] < 0.05 && h > 2.5) bushes.push({ x: px + 1, y: this.height(px + 1, pz), z: pz, s: 0.8 + rr[1] * 0.5, rot: rr[2] * 6.28, berries: true, id: id(nb++) });
     }
     for (let q = 0; q < 50 && rocks.length < 18; q++) { const x = x0 + r() * TILE, z = z0 + r() * TILE, rs = [r(), r(), r(), r()]; const h = ok(x, z, 1.5, 0.6); if (h === null || this.inRuins(x, z) || this.onRoad(x, z, 1)) continue;
-      if (rs[0] > (h > 25 ? 1 : 0.35)) continue; rocks.push({ x, y: h, z, s: 0.8 + rs[1] * 1.1, rot: rs[2] * 6.28, seed: Math.floor(rs[3] * 1e6), id: id(nr++) }); }
+      if (rs[0] > (h > 25 ? 1 : 0.35)) continue; const rk = { x, y: h, z, s: 0.8 + rs[1] * 1.1, rot: rs[2] * 6.28, seed: Math.floor(rs[3] * 1e6), id: id(nr++) };
+      // rochas de minério (sem sortear nada a mais: usa dígitos do próprio sorteio para não mexer no resto do mundo)
+      { const ov = (rs[3] * 7919) % 1, ok2 = (rs[1] * 4513) % 1; if (ov < (h > 25 ? 0.42 : 0.2)) { rk.ore = ok2 < (h > 30 ? 0.42 : 0.55) ? 'iron' : ok2 < (h > 30 ? 0.68 : 0.82) ? 'copper' : ok2 < (h > 30 ? 0.86 : 0.95) ? 'silver' : 'gold'; rk.s = Math.max(0.85, Math.min(1.3, rk.s)); } }
+      rocks.push(rk); }
     for (let q = 0; q < 330; q++) { const x = x0 + r() * TILE, z = z0 + r() * TILE, t = r(), rs = [r(), r()]; const h = ok(x, z, 2.2); if (h === null || h > 90) continue;
       const fd = this.forestDensity(x, z);
       if (this.inRuins(x, z)) { if (t < 0.08) pickups.push({ kind: 'stone', x, y: h, z, rot: rs[0] * 6.28, id: id(np++) }); continue; }
@@ -444,7 +447,7 @@ export class World {
     for (const c of this.caves) { const [ci, cj] = this.tileAt(c.x, c.z); if (ci !== ti || cj !== tj) continue; const rc = rng(c.id * 31 + 5);
       for (let q = 0; q < 7; q++) { const a = rc() * 6.28, d = 2 + rc() * (c.R - 4); const x = c.x + Math.cos(a) * d, z = c.z + Math.sin(a) * d; pickups.push({ kind: q < 4 ? 'mushroom' : 'crystal', x, y: this.height(x, z), z, rot: rc() * 6.28, id: id(np++) }); }
       for (let q = 0; q < 3; q++) { const a = c.ent + Math.PI + (rc() - 0.5) * 2, d = c.R - 3.5; const x = c.x + Math.cos(a) * d, z = c.z + Math.sin(a) * d; rocks.push({ x, y: this.height(x, z), z, s: 1.1, rot: rc() * 6.28, seed: Math.floor(rc() * 1e6), rich: true, id: id(nr++) }); } }
-    const T = trees.map((t) => ({ ...t, hp: t.type === 'pine' ? 5 : 6, felled: false, regrowAt: 0 })), R = rocks.map((t) => ({ ...t, hp: t.rich ? 10 : 6, mined: false, regrowAt: 0 }));
+    const T = trees.map((t) => ({ ...t, hp: t.type === 'pine' ? 5 : 6, felled: false, regrowAt: 0 })), R = rocks.map((t) => ({ ...t, hp: t.rich || t.ore ? 10 : 6, mined: false, regrowAt: 0 }));
     const B = bushes.map((t) => ({ ...t, regrowAt: 0 })), PK = pickups.map((t) => ({ ...t, taken: false, regrowAt: 0 }));
     // colmeia de abelhas robóticas: no máximo uma por bloco, em árvore de folhas largas de floresta densa
     const hives = []; const sp = this.spawn;

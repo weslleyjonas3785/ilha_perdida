@@ -311,6 +311,22 @@ Todos entram na mesma VPN (Radmin VPN, Hamachi, ZeroTier…) ou na mesma rede de
 - **Androide soldado**: capacete com visor vermelho e submetralhadora.
 - **Borboleta solar**: do tamanho do jogador. Abatida, cai no chão e dá **placas solares** no formato das asas. Na bancada, placa solar + circuito + sucata viram uma **lanterna solar**.
 
+## Bancadas, forno, minérios e veículos com porta-malas
+- **Bancadas** (modelos do desenho):
+  - **Bancada comum**: coisas comuns, ferramentas, roupas, trancas, máquinas, **kit de conserto** (Usar: volta a durabilidade de tudo que você está vestindo), circuitos e fio com os lingotes.
+  - **Bancada mecânica**: só com a habilidade **Engenharia**. Faz pneus, motor, motor de moto, câmbio, macaco, galão e a **bolsa da moto**.
+  - **Bancada de armas**: pistolas, escopeta, fuzil, sniper, peças de armas, silenciadores, pentes, lunetas e **munições** (cobre + carvão).
+  - A receita mostra qual bancada precisa; abrindo pela bancada, as receitas dela aparecem primeiro.
+- **Rochas de minério** pelo mapa (mais nas montanhas): **ferro** (cinza com ferrugem), **cobre** (avermelhada com verde), **prata** e **ouro** (cristais). Com a picareta sai o minério.
+- **Forno de pedra** (pedra 30, madeira 6): coloque combustível (lenha, carvão, galhos) e minério, depois acenda. Cada minério leva 12 s e vira **lingote** (ferro, cobre, prata, ouro); 3 sucatas viram 1 lingote de ferro. Sai fumaça pela chaminé e luz pela boca. A lenha queimada vira carvão.
+- **Trancas nos veículos**: com a tranca na mão, clique perto do veículo. Depois disso só o dono ou quem tiver a senha entra, abre o porta-malas ou mexe no macaco.
+- **Porta-malas**: SUV 650, Ret (hatch) 300, Sedã 500, Picape 750, moto 150 (só com a bolsa instalada no menu da moto; sem bolsa não leva nada). Cada espaço da grade vale 10.
+  - Atrás do carro: **E Abrir o porta-malas**. A tampa levanta de verdade (na picape, a tampa traseira desce) e aparecem os espaços.
+  - Se sair sem **Fechar**, ele fica aberto; sem tranca, qualquer um vê os itens dele no **TAB → Próximo**.
+- **Entrar no carro**: a porta do motorista abre, ele entra, senta e a porta fecha. A cabine agora é oca, com bancos, painel e volante, e os vidros são transparentes: dá para ver o motorista. Ao sair, a porta abre de novo.
+- **Moto**: senta na moto. O **guidão** (com garfo, farol e para-lama) vira para o lado da curva. **Parado**, ou em **curva fechada** devagar, ele põe o **pé no chão** (do lado de dentro da curva), equilibrando.
+- Correção: o veículo "subia em si mesmo" ao dirigir (o próprio colisor contava como chão) — agora fica no chão.
+
 ## Gancho, janelas, carros com macaco, cama e choque
 - **Gancho** (antigo arpão-gancho): pistola de corda do tamanho de uma pistola, com gancho de garras em cima do cano. Vai sempre para o **atalho 3**. Ao disparar, o personagem é puxado **deitado**, com o corpo acompanhando a corda. Se o gancho cravar numa beirada (casa, prédio, muro, contêiner, paredão de montanha), ele se **agarra e fica pendurado**: **E** sobe (ou escala o paredão aos poucos), **Espaço** solta. Se cravar em cima de uma laje, já sobe de uma vez.
 - **Janelas**: perto de uma janela e de frente para ela aparece **Espaço — Pular a janela**: ele passa por cima do peitoril para o outro lado (vidro inteiro quebra).
@@ -507,6 +523,7 @@ python3 tests/play30.py  # 7 verificações: arma grande direto para as costas, 
 python3 tests/play31.py  # 10 verificações: helicóptero (som, voo, circula e atira, fumaça esconde, tripulação NPC, tiro no piloto, atirador cai, queda, caixas, fumaça)
 python3 tests/play34.py  # 6 verificações: tênis no começo, mochila maior veste sozinha, bateria e roupa perguntam onde equipar, cortar em retalhos
 python3 tests/play35.py  # 11 verificações: Territoritek (finca, arma, dispara a luz, marca a área no chão), baús, trancas com senha, tiro/C4, armário de manutenção
+python3 tests/play38.py  # 20 verificações: minérios e forno (lingotes), 3 bancadas e estações, kit de conserto, porta-malas (espaços, tampa, aberto no TAB), tranca no veículo, entrar no carro (porta, sentado visível), moto (pé no chão, guidão), bolsa da moto
 python3 tests/play37.py  # 39 verificações: gancho (atalho 3, deitado, pendura e sobe), janela, loot de frente, carro no macaco/consertar/finalizar, menu do item, resolução, pings, BASE, Espaço gira, cama/dormir/multiplayer 2/3, choque, renascer no mapa, robô com duas mãos
 python3 tests/play36.py  # 10 verificações: minhocas com a faca (não na areia da praia), vara com isca na ponta, fisgar e puxar o peixe, filés por peixe, luz do Territoritek apaga e a marcação fica
 python3 tests/play33.py  # 9 verificações: voz (CAPS LOCK, ícone pisca, NPC/robô vêm, voz de outro jogador), botões VOZ e bala no celular

@@ -20,7 +20,7 @@ const BOOM = { c4: 1500, rocket: 420, grenade: 110 };
 export class Territory {
   constructor(game) { this.g = game; this.t = 0; this.aim = null; this._warnT = 0; }
   me() { return this.g.struct ? this.g.struct.myId() : 'me'; }
-  cap(p) { return p.type === 'cabinet' ? 8 : (CHESTS[p.type] || CHESTS.chest).cap; }
+  cap(p) { if (p.type === 'trunk') return this.g.trunkSlots(p.veh); return p.type === 'cabinet' ? 8 : (CHESTS[p.type] || CHESTS.chest).cap; }
   deployed(f) { const d = f.data || {}; return !d.dep || d.dep === 'done'; }
 
   // ---------- Territoritek ----------
@@ -44,7 +44,8 @@ export class Territory {
     const ok = () => { const v = inp.value.trim(); close(); done(v); }; d.querySelector('.y').onclick = ok; inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') ok(); if (e.key === 'Escape') close(); };
     d.querySelector('.n').onclick = close; const s = d.querySelector('.s'); if (s) s.onclick = () => { close(); done(''); }; return d; }
   // matriz do ponto onde a tranca fica (acompanha a folha da porta)
-  lockModel(p) { const base = p.model || mat4.fromTRS(mat4.create(), [p.x, p.y, p.z], quat.fromEuler(0, p.rot, 0), [1, 1, 1]); const T = (x, y, z, ry = 0) => mat4.fromTRS(mat4.create(), [x, y, z], quat.fromEuler(0, ry, 0), [1, 1, 1]);
+  isVeh(p) { return !!(p && (p.veh || (this.g.vehicles && this.g.vehicles.list.includes(p)))); }
+  lockModel(p) { if (this.isVeh(p)) return this.g.vehicles.lockModel(p.veh || p); const base = p.model || mat4.fromTRS(mat4.create(), [p.x, p.y, p.z], quat.fromEuler(0, p.rot, 0), [1, 1, 1]); const T = (x, y, z, ry = 0) => mat4.fromTRS(mat4.create(), [x, y, z], quat.fromEuler(0, ry, 0), [1, 1, 1]);
     if (isChest(p.type)) return mat4.mul(mat4.create(), base, T(...BM.CHEST_LOCK)); if (p.type === 'cabinet') return mat4.mul(mat4.create(), base, T(...BM.CABINET_LOCK));
     const a = p.openAng || 0;
     if (p.type === 's_doorway') { const m = mat4.mul(mat4.create(), base, T(-0.6, 0, 0, -a)); mat4.mul(m, m, T(0.6, 0, 0)); return mat4.mul(m, m, T(0.36, 1.0, 0.075)); }
@@ -57,16 +58,16 @@ export class Territory {
     for (const p of g.build.pieces) { if (!LOCKABLE(p.type) || Math.hypot(p.x - P.pos[0], p.z - P.pos[2]) > 4) continue; const q = this.lockPos(p); const v = [q[0] - e[0], q[1] - e[1], q[2] - e[2]]; const tt = v[0] * d[0] + v[1] * d[1] + v[2] * d[2]; if (tt < 0) continue;
       const off = Math.hypot(v[0] - d[0] * tt, v[1] - d[1] * tt, v[2] - d[2] * tt); const dist = Math.hypot(q[0] - P.pos[0], q[1] - P.pos[1] - 1, q[2] - P.pos[2]); if (dist > 3 || off > 0.9) continue; const sc = off + dist * 0.15; if (sc < bs) { bs = sc; best = p; } }
     return best; }
-  lockHand(act) { const g = this.g, id = g.equip.hand; const p = this._aim(); this.aim = p ? { p, id } : null; const L = p && this.lockOf(p);
-    this._hint(p ? (L ? (L.owner === this.me() ? '🔓 Clique: tirar a tranca' : '🔒 Já tem tranca') : `🔒 Clique: colocar a ${LOCKS[id].name} em ${PIECES[p.type].name}`) : `🔒 Mire numa porta, baú ou armário para colocar a ${LOCKS[id].name}`);
+  lockHand(act) { const g = this.g, id = g.equip.hand; let p = this._aim(); if (!p && !g.vehicles.driving) { const v = g.vehicles.near(g.player.pos, 3.2); if (v) p = v; } this.aim = p ? { p, id } : null; const L = p && this.lockOf(p);
+    this._hint(p ? (L ? (L.owner === this.me() ? '🔓 Clique: tirar a tranca' : '🔒 Já tem tranca') : `🔒 Clique: colocar a ${LOCKS[id].name} em ${this.isVeh(p) ? g.vehicles.name(p) : PIECES[p.type].name}`) : `🔒 Mire numa porta, baú, armário ou veículo para colocar a ${LOCKS[id].name}`);
     if (!act.use) return; if (!p) { g.ui.toast('Mire numa porta, baú ou armário (até 3 m) para colocar a tranca', 'warn'); return; }
     if (L) { if (L.owner !== this.me()) return g.ui.toast('Essa tranca não é sua', 'warn'); this.removeLock(p); return; }
     if (g.inv.count(id) < 1) return; const place = (code) => { if (!g.inv.remove(id, 1)) return; p.data = p.data || {}; p.data.lock = { id, kind: LOCKS[id].kind, hp: LOCKS[id].hp, owner: this.me(), code: code || null, auth: [] };
       if (p.open && (p.type === 'door' || p.type === 's_doorway' || p.type === 's_hatch')) g.build.toggleDoor(p); g.audio.play('magIn'); g.audio.play('click'); g.player.doAction('pickup', null);
-      g.ui.toast(`🔒 ${LOCKS[id].name} colocada${code ? ' com senha' : ' (só você abre)'}`, 'ok'); if (g.inv.count(id) <= 0 && g.equip.hand === id) g.equip.hand = null; g.net && g.net.onBuild && g.net.onBuild('data', p); };
+      g.ui.toast(`🔒 ${LOCKS[id].name} colocada${code ? ' com senha' : ' (só você abre)'}`, 'ok'); if (g.inv.count(id) <= 0 && g.equip.hand === id) g.equip.hand = null; if (!this.isVeh(p)) g.net && g.net.onBuild && g.net.onBuild('data', p); };
     this.askCode(`🔒 ${LOCKS[id].name}: crie uma senha (números) para amigos abrirem, ou tranque só para você.`, place, { ok: 'Trancar com senha', skip: 'Só eu abro' }); }
   _hint(t) { let el = document.getElementById('tkHint'); if (!t) { if (el) el.style.display = 'none'; return; } if (!el) { el = document.createElement('div'); el.id = 'tkHint'; document.body.appendChild(el); } el.style.display = 'block'; if (el.textContent !== t) el.textContent = t; }
-  removeLock(p) { const g = this.g, L = this.lockOf(p); if (!L) return; delete p.data.lock; if (L.hp >= LOCKS[L.id].hp * 0.5) { if (g.inv.add(L.id, 1) < 1) g.dropItem(L.id, 1, [p.x, p.y + 0.5, p.z]); } g.audio.play('click'); g.ui.toast(`🔓 ${LOCKS[L.id].name} retirada`, 'ok'); g.net && g.net.onBuild && g.net.onBuild('data', p); }
+  removeLock(p) { const g = this.g, L = this.lockOf(p); if (!L) return; delete p.data.lock; if (L.hp >= LOCKS[L.id].hp * 0.5) { if (g.inv.add(L.id, 1) < 1) g.dropItem(L.id, 1, [p.x, p.y + 0.5, p.z]); } g.audio.play('click'); g.ui.toast(`🔓 ${LOCKS[L.id].name} retirada`, 'ok'); if (!this.isVeh(p)) g.net && g.net.onBuild && g.net.onBuild('data', p); }
   // tiro: se acertar perto da tranca, ela vai se desgastando (madeira < ferro < ouro); o baú em si aguenta tiro
   shot(p, dmg, at) { const L = this.lockOf(p); if (!L || !at) return false; const q = this.lockPos(p); if (Math.hypot(q[0] - at[0], q[1] - at[1], q[2] - at[2]) > 0.32) return false; this.damageLock(p, dmg, at); return true; }
   damageLock(p, dmg, at) { const g = this.g, L = this.lockOf(p); if (!L) return; L.hp -= dmg; g.fx.burst(at || this.lockPos(p), 8, L.kind === 'gold' ? [5, 4, 1] : [3, 2.4, 1.2], 4, 0.25, 0.02, 6); g.audio.play('impactMetal', { at: at || this.lockPos(p), vol: 0.8 });
@@ -130,6 +131,7 @@ export class Territory {
       if (isChest(p.type)) items.push({ mesh: m.chest[CHESTS[p.type].kind], model: p.model, sphere: [p.x, p.y + 0.4, p.z, 1] });
       if (p.type === 'cabinet') items.push({ mesh: m.cab, model: p.model, sphere: [p.x, p.y + 0.9, p.z, 1.2] });
       const L = this.lockOf(p); if (L && dist < 80) { const lm = this.lockModel(p); items.push({ mesh: m.lock[L.kind], model: lm, sphere: [lm[12], lm[13], lm[14], 0.3] }); if (p.type === 's_doorway' || p.type === 'door') { const back = mat4.mul(mat4.create(), lm, T(0, 0, p.type === 'door' ? -0.18 : -0.15, Math.PI)); items.push({ mesh: m.lock[L.kind], model: back, sphere: [back[12], back[13], back[14], 0.3] }); } } }
+    for (const v of g.vehicles.list) { const L = this.lockOf(v); if (!L || Math.hypot(v.x - eye[0], v.z - eye[2]) > 60) continue; const lm = this.lockModel(v); items.push({ mesh: m.lock[L.kind], model: lm, sphere: [lm[12], lm[13], lm[14], 0.3] }); }
     // prévia da tranca (verde) no lugar onde vai encaixar
     if (this.aim && !this.lockOf(this.aim.p)) { const lm = this.lockModel(this.aim.p); items.push({ mesh: m.lock[LOCKS[this.aim.id].kind], model: lm, alpha: 0.6, tint: [0.6, 1.6, 0.7, 1], emissive: 0.25, shadow: false, sphere: [lm[12], lm[13], lm[14], 0.3] }); }
     this._lockBar(); }
