@@ -116,7 +116,7 @@ export class Player {
     // inclinação do terreno ao longo da direção do escorregão
     const e = 1.2, gx = (w.height(p[0] + e, p[2]) - w.height(p[0] - e, p[2])) / (2 * e), gz = (w.height(p[0], p[2] + e) - w.height(p[0], p[2] - e)) / (2 * e);
     const along = -(S.dir[0] * gx + S.dir[1] * gz); const slope = along / Math.sqrt(1 + gx * gx + gz * gz); // >0 = descida
-    S.s += (9.8 * slope * 1.3 - 4.6) * dt; S.s = Math.min(S.s, 19);
+    S.s += (9.8 * slope * 1.3 - (S.drag || 4.6)) * dt; S.s = Math.min(S.s, S.cap || 19); if (S.cap && S.s < 19) S.cap = 0; // embalo do gancho: começa bem mais rápido e vai perdendo até o normal
     // em descida a direção puxa para o lado que desce
     const gl = Math.hypot(gx, gz); if (gl > 0.05) { const k = Math.min(1, gl * 1.6 * dt); S.dir[0] -= gx / gl * k; S.dir[1] -= gz / gl * k; const l = Math.hypot(S.dir[0], S.dir[1]); S.dir[0] /= l; S.dir[1] /= l; }
     this.yaw = dampAngle(this.yaw, Math.atan2(S.dir[0], S.dir[1]), 8, dt);
@@ -220,6 +220,11 @@ export class Player {
     const g = this.game, ph = g.physics, p = this.pos, v = this.vel, G = this.grapple; G.t += dt;
     const Lg = G.ledge; const tgt = Lg ? Lg.hangAt : [G.p[0], G.p[1] - 1.0, G.p[2]]; const d = [tgt[0] - p[0], tgt[1] - p[1], tgt[2] - p[2]]; const L = Math.hypot(...d);
     const done = (why) => { this.grapple = null; g.grapple.hook = null; this.endGrapple(); if (why) g.ui.toast(why, 'info'); };
+    // perto do chão: SHIFT + C (ou DESLIZAR no celular) solta a corda e escorrega aproveitando o embalo do gancho (mais rápido que o escorregão normal)
+    if ((act.crouch || act.slide) && (act.sprint || act.slide) && G.t > 0.15 && !this.swimming) { const hv = Math.hypot(v[0], v[2]); const [gy] = ph.ground(p[0], p[2], RAD, p[1] + 0.3, 0.6); const hgt = p[1] - Math.max(gy, g.world.height(p[0], p[2]));
+      if (hgt < 1.7 && hv > 3) { this.grapple = null; g.grapple.hook = null; p[1] = p[1] - hgt; v[1] = 0; this.onGround = true; this.airTime = 0; this.lastGroundY = p[1]; this.leanX = Math.min(this.leanX || 0, 0.5);
+        this.slide = { dir: [v[0] / hv, v[2] / hv], s: Math.min(30, Math.max(14, hv * 1.35)), cap: 30, drag: 3.2, t: 0, air: 0, lastSprint: true, boost: true }; this.crouch = true; this.stats.stamina = Math.max(0, this.stats.stamina - 8);
+        g.audio.play('land', { vol: 0.7 }); g.cam.shake = Math.max(g.cam.shake || 0, 0.25); return; } }
     // deitado: o corpo acompanha a corda (cabeça na frente), voando como se estivesse sendo arrastado
     { const hz = Math.hypot(d[0], d[2]); const el = Math.atan2(d[1], hz); this._lean(dt, clamp(Math.PI / 2 - el, 0.35, 1.45)); }
     if (Lg && L < 0.55) { this.grapple = null; g.grapple.hook = null; v[0] = v[1] = v[2] = 0; p[0] = tgt[0]; p[1] = tgt[1]; p[2] = tgt[2]; return Lg.auto ? this._ledgeClimb(Lg) : this.startHang(Lg); }
