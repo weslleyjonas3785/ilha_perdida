@@ -19,9 +19,9 @@ export class Input {
     window.addEventListener('mouseup', (e) => { if (e.button === 0) this.mouse.left = false; if (e.button === 2) this.mouse.right = false; });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     // soma o movimento de todos os eventos do quadro; ignora só os saltos falsos do navegador (um evento isolado enorme ao travar/destravar)
-    window.addEventListener('mousemove', (e) => { this._cx = e.clientX; this._cy = e.clientY; if (!(this.locked || this.dragCam || this.free)) return; const mx = e.movementX || 0, my = e.movementY || 0; if (Math.abs(mx) > 300 || Math.abs(my) > 300) return; this.mouse.dx += mx; this.mouse.dy += my; });
+    window.addEventListener('mousemove', (e) => { this._cx = e.clientX; this._cy = e.clientY; if (!(this.locked || this.dragCam || this.free)) return; const mx = e.movementX || 0, my = e.movementY || 0; if ((performance.now() - (this._lockT || 0) < 160 && (Math.abs(mx) > 250 || Math.abs(my) > 250)) || Math.abs(mx) > 2500 || Math.abs(my) > 2500) return; this.mouse.dx += mx; this.mouse.dy += my; });
     canvas.addEventListener('wheel', (e) => { this.mouse.wheel += Math.sign(e.deltaY); e.preventDefault(); }, { passive: false });
-    document.addEventListener('pointerlockchange', () => { const L = document.pointerLockElement === canvas; if (L) { this.free = false; this.noLock = false; this.canvas.style.cursor = ''; this.locked = true; return; } if (this.free) return; this.locked = false; if (this.onUnlock) this.onUnlock(); });
+    document.addEventListener('pointerlockchange', () => { const L = document.pointerLockElement === canvas; this._lockT = performance.now(); if (L) { this.free = false; this.noLock = false; this.canvas.style.cursor = ''; this.locked = true; return; } if (this.free) return; this.locked = false; if (this.onUnlock) this.onUnlock(); });
     // Sem pointer lock (iframe restrito): arrastar com o botão direito/esquerdo gira a câmera
     canvas.addEventListener('mousedown', () => { if (!this.locked && !this.touchActive) this.dragCam = true; });
     window.addEventListener('mouseup', () => { this.dragCam = false; });
@@ -36,7 +36,8 @@ export class Input {
     if (!this._plErr) { this._plErr = true; document.addEventListener('pointerlockerror', fail); }
     clearTimeout(this._plT); this._plT = setTimeout(() => { if (!this.locked && !document.pointerLockElement && this.wantLock) fail(); }, 700);
   }
-  _freeOn() { if (this.touchActive || !this.wantLock) return; this.free = true; this.locked = true; this.canvas.style.cursor = 'none'; }
+  _freeOn() { if (this.touchActive || !this.wantLock) return; this.free = true; this.locked = true; this.canvas.style.cursor = 'none';
+    if (this.noLock && !this._freeWarned) { this._freeWarned = true; const g = window.__game; if (g && g.ui) g.ui.toast('🖱️ Esta página não deixou travar o mouse — o giro para na borda da tela. Clique no jogo de novo para travar, ou abra o arquivo direto no navegador para girar 360°.', 'warn'); } }
   exitLock() { if (document.pointerLockElement) document.exitPointerLock(); if (this.free) { this.free = false; this.locked = false; this.canvas.style.cursor = ''; if (this.onUnlock) this.onUnlock(); } }
   _initTouch(ui) {
     const zone = ui.touchZone, joy = ui.joy, knob = ui.joyKnob; const T = this.touch;
