@@ -16,8 +16,8 @@ export class GameAudio {
     this.amb.water = this._loop(this.noise, 'bandpass', 350);
     this.applyVolumes();
     // sons de tiro gravados (arquivos): pistola, fuzil de assalto, escopeta e fuzil de precisão
-    this.samples = {}; this.sampleGain = { pistol: 1.5, rifle: 1.0, shotgun: 0.95, sniper: 1.0, tinnitus: 0.7, smokegren: 1.0, barulhenta: 1.0, helicoptero: 1.1, armando_bastao: 1.0, disparo: 1.2, dor: 1.0, vomit: 1.1, galo: 0.9, coruja: 0.7, natureza: 1.0 };
-    for (const k of ['pistol', 'rifle', 'shotgun', 'sniper', 'skill', 'mechastep', 'spindown', 'tinnitus', 'smokegren', 'barulhenta', 'helicoptero', 'armando_bastao', 'disparo', 'dor', 'vomit', 'galo', 'coruja', 'natureza']) fetch(`assets/audio/${k}.mp3`).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)).then((buf) => { this.samples[k] = buf; }).catch(() => {});
+    this.samples = {}; this.sampleGain = { pistol: 1.5, rifle: 1.0, shotgun: 0.95, sniper: 1.0, tinnitus: 0.7, smokegren: 1.0, barulhenta: 1.0, helicoptero: 1.1, armando_bastao: 1.0, disparo: 1.2, dor: 1.0, vomit: 1.1, galo: 0.9, coruja: 0.7, natureza: 1.0, treefall: 1.0, toras: 1.0, pedras_caindo: 1.0, ferro: 1.0 };
+    for (const k of ['pistol', 'rifle', 'shotgun', 'sniper', 'skill', 'mechastep', 'spindown', 'tinnitus', 'smokegren', 'barulhenta', 'helicoptero', 'armando_bastao', 'disparo', 'dor', 'vomit', 'galo', 'coruja', 'natureza', 'treefall', 'toras', 'pedras_caindo', 'ferro']) fetch(`assets/audio/${k}.mp3`).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)).then((buf) => { this.samples[k] = buf; }).catch(() => {});
   }
   // som longo posicional que segue a distância/direção do jogador e pode ser abaixado aos poucos (sirene da granada barulhenta)
   voice(name, o = {}) {

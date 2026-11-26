@@ -39,3 +39,7 @@ try {
       .catch(() => { if (g && g.ui) g.ui.toast('Esta página não deixa usar tela cheia — abra o arquivo direto no navegador (Chrome/Edge)', 'warn'); }); });
   const upd = () => B.classList.toggle('isFs', isFs()); document.addEventListener('fullscreenchange', upd); document.addEventListener('webkitfullscreenchange', upd);
 })();
+// botão de voz no celular: liga o microfone direto no toque (o navegador só mostra "Permitir" dentro de um toque/clique)
+(() => { const b = document.querySelector('#mobile [data-id=mic], [data-act=mic]'); if (!b) return; let t0 = 0;
+  const go = (e) => { const g = window.__game; if (!g || !g.voice || document.body.classList.contains('tedit')) return; const now = performance.now(); if (now - t0 < 500) return; t0 = now; g.voice._dT = now; g.voice.toggle(); };
+  b.addEventListener('touchend', go, { passive: true }); b.addEventListener('click', go); })();

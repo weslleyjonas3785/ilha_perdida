@@ -13,12 +13,30 @@ export class Voice {
   // o navegador só libera o microfone em página segura (https) ou no próprio computador (localhost)
   available() { return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia); }
   async toggle() { if (this.busy) return; if (this.on) return this.stop(); return this.start(); }
-  async start() {
+  _closePerm() { const d = document.getElementById('micPerm'); if (d) d.remove(); }
+  // janela "Permitir microfone": o botão chama o pedido do navegador direto no toque/clique (exigência do celular)
+  permPanel(kind) { const g = this.g; this._closePerm(); const d = document.createElement('div'); d.id = 'micPerm';
+    const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })(); const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const steps = ios ? '<li>Toque em <b>aA</b> (ou no ícone ao lado do endereço) → <b>Ajustes do Site</b> → <b>Microfone</b> → <b>Permitir</b>.</li><li>Ou: Ajustes do iPhone → Safari → Microfone → Permitir.</li>'
+      : '<li>Toque no <b>cadeado</b> (ou ⓘ) ao lado do endereço do site → <b>Permissões</b> → <b>Microfone</b> → <b>Permitir</b>.</li><li>Ou: menu ⋮ → Configurações → Configurações do site → Microfone → libere este site.</li>';
+    const msg = kind === 'ask' ? '<p>Para falar com quem está perto no jogo, o navegador precisa da sua permissão para usar o microfone.</p>'
+      : kind === 'nodev' ? '<p>Nenhum microfone foi encontrado neste aparelho.</p>'
+      : '<p>O microfone está <b>bloqueado</b> para este site. Libere assim e toque em <b>Tentar de novo</b>:</p><ol>' + steps + '</ol>' + (inFrame ? '<p class="mut">Se o jogo estiver aberto dentro de outra página (pré-visualização), ela pode não deixar usar o microfone: abra o arquivo direto no navegador.</p>' : '');
+    d.innerHTML = '<div class="mpBox"><h3>🎤 Microfone</h3>' + msg + '<div class="mpBtns">' + (kind === 'nodev' ? '' : '<button class="mpOk">' + (kind === 'ask' ? 'Permitir microfone' : 'Tentar de novo') + '</button>') + '<button class="mpNo">Agora não</button></div></div>';
+    document.body.appendChild(d); g.input && g.input.exitLock && g.input.exitLock();
+    const ok = d.querySelector('.mpOk'); if (ok) ok.addEventListener('click', (e) => { e.stopPropagation(); this.start({ fromPanel: true }); });
+    d.querySelector('.mpNo').addEventListener('click', (e) => { e.stopPropagation(); this._closePerm(); }); for (const ev of ['touchstart', 'touchend', 'mousedown']) d.addEventListener(ev, (e) => e.stopPropagation()); }
+  async start(opts = {}) {
     const g = this.g; g.audio.init(); const c = g.audio.ctx; if (!c) return;
     if (!this.available()) { g.ui.toast('🎤 O navegador bloqueou o microfone: ele só funciona com o jogo aberto em https (site) ou no próprio PC (localhost). No Chrome dá para liberar o IP em chrome://flags → "Insecure origins treated as secure".', 'warn'); return; }
+    // permissão já negada antes: o navegador não pergunta de novo sozinho — mostra como liberar
+    let st = null; try { if (navigator.permissions && navigator.permissions.query) st = (await navigator.permissions.query({ name: 'microphone' })).state; } catch (e) {}
+    if (st === 'denied') { this.permPanel('denied'); return; }
+    if (st !== 'granted' && !opts.fromPanel) { this.permPanel('ask'); return; } // pede com um botão (toque do jogador = o navegador abre a janelinha de permitir)
     this.busy = true;
     try { this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
-    catch (e) { this.busy = false; g.ui.toast('🎤 Sem permissão para usar o microfone', 'warn'); return; }
+    catch (e) { this.busy = false; this.permPanel(e && (e.name === 'NotFoundError' || e.name === 'DevicesNotFoundError') ? 'nodev' : 'denied'); return; }
+    this._closePerm();
     this.busy = false; this.on = true; this.src = c.createMediaStreamSource(this.stream); this.an = c.createAnalyser(); this.an.fftSize = 1024; this.td = new Float32Array(this.an.fftSize); this.src.connect(this.an);
     const ratio = c.sampleRate / RATE; let acc = 0;
     this.proc = c.createScriptProcessor(2048, 1, 1); this.mute = c.createGain(); this.mute.gain.value = 0; this.src.connect(this.proc); this.proc.connect(this.mute); this.mute.connect(c.destination);

@@ -177,7 +177,7 @@ export class StructSystem {
   _hint(html) { const el = document.getElementById('buildHint'); if (!el) return; if (!html) { if (this._hintOn) { el.classList.add('hidden'); this._hintOn = false; } return; } el.classList.remove('hidden'); el.innerHTML = html; this._hintOn = true; }
   cancel() { this.mode = null; this.ghost = null; if (this.radial) this.closeRadial(false); this.g.ui.buildStatus && this.g.ui.buildStatus(null); }
   update(dt) { // fora do input: animação das peças subindo e soltar o botão
-    this._hpBar(dt);
+    this._hpBar(dt); this._debUpdate(dt);
     for (const [p, t] of this.grow) { const n = t + dt / 1.4; if (n >= 1) this.grow.delete(p); else this.grow.set(p, n); }
     const g = this.g; if (!(g.input.mouse.right) && !g.input.btn('block')) this._needRelease = false;
     if (this.radial && (g.ui.anyOpen || !['blueprint', 'hammer'].includes(g.equip.hand))) this.closeRadial(false);
@@ -292,8 +292,8 @@ export class StructSystem {
         if (sup) { ok.add(p); changed = true; } } }
     return ok;
   }
-  collapse() { const g = this.g; const ok = this.supported(); const fall = this.structs().filter((p) => !ok.has(p)); for (const p of fall) { this.onRemoved(p); g.build.remove(p, false); g.fx.burst([p.x, p.y + 1, p.z], 18, [0.45, 0.4, 0.32], 3, 1.0, 0.1); g.net && g.net.onBuild && g.net.onBuild('del', p); }
-    if (fall.length) { g.audio.play('treeFall', { vol: 0.5 }); g.ui.toast(`${fall.length} peça${fall.length > 1 ? 's' : ''} sem apoio caíram`, 'warn'); } }
+  collapse() { const g = this.g; const ok = this.supported(); const fall = this.structs().filter((p) => !ok.has(p)); for (const p of fall) { this.onRemoved(p); g.build.remove(p, false); this.debris(p); g.fx.burst([p.x, p.y + 1, p.z], 18, [0.45, 0.4, 0.32], 3, 1.0, 0.1); g.net && g.net.onBuild && g.net.onBuild('del', p); }
+    if (fall.length) { g.ui.toast(`${fall.length} peça${fall.length > 1 ? 's' : ''} sem apoio caíram`, 'warn'); } }
   // explosões danificam construções. Por nível [galhos, madeira, pedra, metal]:
   //  C4: galhos/madeira caem na hora em todo o raio (20 m); pedra perde 360 (2 C4); metal perde 370 (aguenta 2, cai na 3ª).
   //  Foguete, granada de fragmentação e do lança-granadas: dano bom na madeira, pouco na pedra e quase nada no metal.
@@ -311,12 +311,40 @@ export class StructSystem {
     if (kind === 'c4') for (const q of [...g.build.pieces]) { if (STYPES[q.type] || ['flag', 'chest', 'chest_wi', 'chest_iron', 'cabinet'].includes(q.type) || Math.hypot(q.x - p0[0], q.z - p0[2]) > R || Math.abs(q.y - p0[1]) > 8) continue; g.build.remove(q, false); g.fx.burst([q.x, q.y + 0.6, q.z], 20, [0.45, 0.4, 0.32], 4, 1, 0.1); g.net && g.net.onBuild && g.net.onBuild('del', q); hit = true; }
     if (hit) this.collapse(); }
   blowDoor(p, side) { const g = this.g, D = p.data; D.blown = side; delete D.lock; p.open = false; p._blowT = performance.now(); for (const c of p.colliders || []) if (c.leaf) c.ghost = true;
-    const n = [Math.sin(p.rot) * -side, Math.cos(p.rot) * -side]; g.fx.burst([p.x + n[0] * 0.6, p.y + 1.1, p.z + n[1] * 0.6], 26, [0.35, 0.3, 0.26], 6, 1.2, 0.1); g.fx.burst([p.x, p.y + 1.2, p.z], 14, [1, 0.6, 0.25], 5, 0.4, 0.05); g.audio.play('treeFall', { at: [p.x, p.y + 1, p.z], vol: 0.8 }); }
+    const n = [Math.sin(p.rot) * -side, Math.cos(p.rot) * -side]; g.fx.burst([p.x + n[0] * 0.6, p.y + 1.1, p.z + n[1] * 0.6], 26, [0.35, 0.3, 0.26], 6, 1.2, 0.1); g.fx.burst([p.x, p.y + 1.2, p.z], 14, [1, 0.6, 0.25], 5, 0.4, 0.05); g.audio.play('ferro', { at: [p.x, p.y + 1, p.z], vol: 0.7 }); }
+  // destroços quando a peça quebra: madeira = troncos que rolam (som de toras), pedra = blocos que caem (som de pedras),
+  // metal = chapas retorcidas (som de ferro). Ficam ~12 s no chão e afundam.
+  debris(p) { const g = this.g, d = p.data || {}, st = STYPES[p.type]; if (!st) return; const tier = st.fixed ? 1 : (d.tier || 0); const kind = tier >= 3 ? 'metal' : tier === 2 ? 'stone' : 'wood';
+    const L = this.deb || (this.deb = []); if (L.length > 160) L.splice(0, L.length - 160); const wall = st.kind === 'wall', h = st.h || 3, c = Math.cos(p.rot), sn = Math.sin(p.rot);
+    const nx = sn, nz = c, ax = c, az = -sn; // normal da parede e direção ao longo dela
+    const add = (o) => L.push({ t: 0, life: 11 + Math.random() * 4, spin: 0, roll: 0, rx: 0, rz: 0, ...o });
+    const n = kind === 'wood' ? (wall ? Math.max(2, Math.round(h / 0.6)) : 4) : kind === 'stone' ? (wall ? 9 : 7) : 4;
+    for (let i = 0; i < n; i++) { const sd = Math.random() < 0.5 ? -1 : 1, along = (Math.random() - 0.5) * (wall ? 2.4 : 2.4), up = wall ? 0.3 + (i + 0.5) / n * (h - 0.4) : 0.2;
+      const x = p.x + ax * along + (wall ? 0 : (Math.random() - 0.5) * 2.4) * nx, z = p.z + az * along + (wall ? 0 : (Math.random() - 0.5) * 2.4) * nz, sp = 1.2 + Math.random() * 2.6;
+      if (kind === 'wood') add({ kind, x: p.x + ax * (Math.random() - 0.5) * 0.3, y: p.y + up, z: p.z + az * (Math.random() - 0.5) * 0.3, yaw: p.rot + (Math.random() - 0.5) * 0.4, vx: nx * sd * sp, vz: nz * sd * sp, vy: 0.5 + Math.random() * 2, len: tier === 0 ? 2.6 : 2.9, r: tier === 0 ? 0.08 : 0.15, tier });
+      else add({ kind, x, y: p.y + up, z, yaw: Math.random() * 6.28, vx: nx * sd * sp + (Math.random() - 0.5) * 1.5, vz: nz * sd * sp + (Math.random() - 0.5) * 1.5, vy: 1 + Math.random() * 2.5, sc: kind === 'stone' ? 0.6 + Math.random() * 0.7 : 0.8 + Math.random() * 0.4, w: (Math.random() - 0.5) * 6, rx: Math.random() * 3, rz: Math.random() * 3 }); }
+    const now = performance.now(), k = 'sndT_' + kind; if (!this[k] || now - this[k] > 350) { this[k] = now; g.audio.play(kind === 'wood' ? 'toras' : kind === 'stone' ? 'pedras_caindo' : 'ferro', { at: [p.x, p.y + 1, p.z], vol: 1, max: 120 }); } }
+  _debUpdate(dt) { const L = this.deb; if (!L || !L.length) return; const ph = this.g.physics;
+    for (let i = L.length - 1; i >= 0; i--) { const o = L[i]; o.t += dt; if (o.t > o.life + 1.5) { L.splice(i, 1); continue; }
+      const [gy] = ph.ground(o.x, o.z, 0.1, o.y + 0.4, 0.6); const rad = o.kind === 'wood' ? o.r : o.kind === 'stone' ? 0.2 * o.sc : 0.05; o.vy -= 9.8 * dt; o.x += o.vx * dt; o.z += o.vz * dt; o.y += o.vy * dt;
+      if (o.y < gy + rad) { o.y = gy + rad; if (o.vy < -2) o.vy *= -0.25; else o.vy = 0; const fr = o.kind === 'wood' ? 0.55 : o.kind === 'stone' ? 3.5 : 5; const sp = Math.hypot(o.vx, o.vz); const ns = Math.max(0, sp - fr * dt); if (sp > 1e-4) { o.vx *= ns / sp; o.vz *= ns / sp; }
+        // tronco no chão rola morro abaixo
+        if (o.kind === 'wood') { const e = 0.6, sx = this.g.world.height(o.x + e, o.z) - this.g.world.height(o.x - e, o.z), sz = this.g.world.height(o.x, o.z + e) - this.g.world.height(o.x, o.z - e); const nx = Math.sin(o.yaw), nz = Math.cos(o.yaw); const sl = -(sx * nx + sz * nz) / (2 * e); o.vx += nx * sl * 6 * dt; o.vz += nz * sl * 6 * dt; }
+        o.w *= Math.max(0, 1 - dt * 4); }
+      if (o.kind === 'wood') { const nx = Math.sin(o.yaw), nz = Math.cos(o.yaw); o.roll += (o.vx * nx + o.vz * nz) * dt / o.r; } else { o.rx += (o.w || 0) * dt; o.rz += (o.w || 0) * 0.7 * dt; }
+      if (o.t > o.life) o.y -= dt * 0.4; } }
+  _debMeshes() { if (this.debM) return this.debM; const R = this.g.renderer; const log = (r, bark) => { const mb = new MeshBuilder(); mb.setColor(hex(bark), 0.85); mb.cylinder(M(-1.45, 0, 0, 0, 1, 0, -Math.PI / 2), r, r * 0.92, 2.9, 7, hex(bark)); mb.setColor(hex(0xc8a070), 0.85); return R.createMesh(mb.build()); };
+    const stone = (() => { const mb = new MeshBuilder(); mb.setColor(hex(0x8e8b84), 0.95); mb.roundBox(M(0, 0, 0), 0.5, 0.34, 0.42, hex(0x8e8b84), 0.06, 1); mb.setColor(hex(0x7a776f), 0.95); mb.box(M(0.1, 0.12, 0.05, 0.4), 0.3, 0.16, 0.26, hex(0x7a776f)); return R.createMesh(mb.build()); })();
+    const plate = (() => { const mb = new MeshBuilder(); const c = hex(0x6c737a); mb.setColor(c, 0.5); mb.box(M(-0.4, 0, 0, 0, 1, 0, 0.25), 0.85, 0.05, 0.9, c); mb.box(M(0.38, 0.12, 0, 0, 1, 0, -0.45), 0.8, 0.05, 0.9, shade(c, 0.85)); mb.box(M(0, -0.02, 0.48, 0.3), 1.4, 0.06, 0.08, shade(c, 0.7)); return R.createMesh(mb.build()); })();
+    return (this.debM = { log: log(0.15, 0x6a4a2c), stick: log(0.08, 0x8a6a40), stone, plate }); }
+  _debRender(items) { const L = this.deb; if (!L || !L.length) return; const D = this._debMeshes();
+    for (const o of L) { let m; if (o.kind === 'wood') { m = mat4.fromTRS(mat4.create(), [o.x, o.y, o.z], quat.fromEuler(0, o.yaw, 0), [1, 1, 1]); mat4.mul(m, m, mat4.fromTRS(mat4.create(), [0, 0, 0], quat.fromEuler(o.roll, 0, 0), [1, 1, 1])); items.push({ mesh: o.tier === 0 ? D.stick : D.log, model: m, sphere: [o.x, o.y, o.z, 1.6] }); }
+      else { m = mat4.fromTRS(mat4.create(), [o.x, o.y, o.z], quat.fromEuler(o.rx, o.yaw, o.rz), [o.sc, o.sc, o.sc]); items.push({ mesh: o.kind === 'stone' ? D.stone : D.plate, model: m, sphere: [o.x, o.y, o.z, 1] }); } } }
   // tiro em construção: aguenta muitos (madeira ~30 tiros de fuzil); pedra e metal quase não sentem
   shot(p, dmg, at) { const g = this.g; if (!STYPES[p.type] || !p.data) return; const D = p.data, tier = STYPES[p.type].fixed ? 1 : (D.tier || 0); D.hp -= dmg * [0.35, 0.28, 0.08, 0.03][tier]; this.showHp(p);
     if (at) g.fx.burst(at, 5, tier >= 2 ? [0.6, 0.6, 0.6] : [0.6, 0.45, 0.3], 2.5, 0.35, 0.04);
     if (D.hp <= 0) { this._break(p); this.collapse(); } else { this._netT = (this._netT || 0); if (g.net && g.net.onBuild && performance.now() - this._netT > 300) { this._netT = performance.now(); g.net.onBuild('data', p); } } }
-  _break(p) { const g = this.g; this.onRemoved(p); g.build.remove(p, false); g.fx.burst([p.x, p.y + 1, p.z], 30, [0.45, 0.4, 0.32], 4, 1.1, 0.12); g.audio.play('treefall', { at: [p.x, p.y, p.z], vol: 0.5 }); g.net && g.net.onBuild && g.net.onBuild('del', p); if (this.hpT && this.hpT.p === p) this.hpT = null; }
+  _break(p) { const g = this.g; this.onRemoved(p); g.build.remove(p, false); g.fx.burst([p.x, p.y + 1, p.z], 30, [0.45, 0.4, 0.32], 4, 1.1, 0.12); this.debris(p); g.net && g.net.onBuild && g.net.onBuild('del', p); if (this.hpT && this.hpT.p === p) this.hpT = null; }
   // barra de vida da peça atingida (some depois de alguns segundos)
   showHp(p) { this.hpT = { p, t: 3.5 }; }
   _hpBar(dt) {
@@ -331,13 +359,13 @@ export class StructSystem {
   // ---------- desenho ----------
   modelOf(p) { const t = this.grow.get(p); const base = mat4.fromTRS(mat4.create(), [p.x, p.y, p.z], quat.fromEuler(0, p.rot, 0), [1, 1, 1]); if (t === undefined) return base;
     const k = STYPES[p.type].kind; const e = 1 - Math.pow(1 - t, 3); if (k === 'floor') return mat4.fromTRS(mat4.create(), [p.x, p.y - (1 - e) * 1.2, p.z], quat.fromEuler(0, p.rot, 0), [1, 1, 1]); return mat4.mul(mat4.create(), base, mat4.fromTRS(mat4.create(), [0, k === 'ceil' ? -(1 - e) * 0.25 : 0, 0], [0, 0, 0, 1], [1, Math.max(0.02, e), 1])); }
-  render(items, eye) {
+  render(items, eye) { this._debRender(items);
     const g = this.g, B = g.build; if (!this.flagM) { this.flagM = g.renderer.createMesh(flagMesh()); this.flagF = g.renderer.createMesh(flagMesh(0x2a6ac0)); this.leafM = g.renderer.createMesh((() => { const mb = new MeshBuilder(); const c = hex(0x6a4a2c); mb.setColor(c, 0.8); mb.box(M(0, 1.1, 0), 1.18, 2.18, 0.08, c); mb.setColor(hex(0x2a2a2a), 0.5); mb.box(M(0.45, 1.1, 0.06), 0.06, 0.06, 0.05, hex(0x2a2a2a)); return mb.build(); })()); this.lidM = g.renderer.createMesh((() => { const mb = new MeshBuilder(); const c = hex(0x6a4a2c); mb.setColor(c, 0.8); mb.box(M(0, -0.06, 0.6), 1.18, 0.1, 1.18, c); mb.setColor(hex(0x3a3a3a), 0.5); mb.box(M(0, 0.0, 1.05), 0.3, 0.04, 0.06, hex(0x3a3a3a)); return mb.build(); })()); }
     const me = this.myId();
     for (const p of B.pieces) {
       if (p.type === 'flag') continue; // Territoritek: desenhado pelo sistema de território
       if (!STYPES[p.type]) continue; const d = p.data || {}; const dist = Math.hypot(p.x - eye[0], p.z - eye[2]); if (dist > 400) continue;
-      const m = this.modelOf(p); const dmg = d.hp !== undefined ? d.hp / maxHp(p.type, d.tier || 0) : 1; items.push({ mesh: this.mesh(p.type, d.tier || 0), model: m, sphere: [p.x, p.y + 1, p.z, 3], tint: dmg < 0.5 ? [0.75 + dmg * 0.5, 0.7 + dmg * 0.5, 0.65 + dmg * 0.5, 1] : undefined });
+      let m = this.modelOf(p); const dmg = d.hp !== undefined ? d.hp / maxHp(p.type, d.tier || 0) : 1; if ((d.tier || 0) >= 3 && !STYPES[p.type].fixed && dmg < 0.97) { const k = 1 - dmg, sg = (p.id || 0) % 2 ? 1 : -1; m = mat4.mul(mat4.create(), m, mat4.fromTRS(mat4.create(), [0, 0, 0], quat.fromEuler(sg * k * 0.22, sg * k * 0.12, k * 0.16), [1, 1 - k * 0.1, 1])); } // metal amassado: vai retorcendo com o dano items.push({ mesh: this.mesh(p.type, d.tier || 0), model: m, sphere: [p.x, p.y + 1, p.z, 3], tint: dmg < 0.5 ? [0.75 + dmg * 0.5, 0.7 + dmg * 0.5, 0.65 + dmg * 0.5, 1] : undefined });
       if (p.type === 's_doorway' && d.blown) { for (const c of p.colliders || []) if (c.leaf && !c.ghost) c.ghost = true; // folha arrancada pela C4: caída e torta no chão
         const k = p._blowT ? Math.min(1, (performance.now() - p._blowT) / 650) : 1, f = k * k, sd = d.blown; const lm = mat4.mul(mat4.create(), m, mat4.fromTRS(mat4.create(), [0.12 * sd * f, 0.1 * f, -sd * (0.15 + 0.4 * f)], quat.fromEuler(-sd * f * 1.36, 0.35 * f * sd, 0.2 * f), [1, 1, 1]));
         items.push({ mesh: this.leafM, model: lm, sphere: [p.x, p.y + 1, p.z, 3], tint: [0.45, 0.4, 0.36, 1] }); continue; }

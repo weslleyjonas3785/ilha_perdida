@@ -435,6 +435,15 @@ Todos entram na mesma VPN (Radmin VPN, Hamachi, ZeroTier…) ou na mesma rede de
 7. Os inimigos são androides (lista abaixo). À noite aparecem mais e mais fortes. Destruídos, eles podem ser desmontados (E) e rendem sucata, circuitos e núcleos de energia, usados na bancada para a **Lança de choque** e a armadura de sucata. As ruínas guardam caixas com sucata, pano, comida enlatada e água.
 8. Ao morrer, a mochila fica no local da morte para ser recuperada.
 
+## Destroços e sons de quebra
+
+- Construção de **madeira** que quebra vira troncos que rolam (som de toras rolando); de **pedra** vira blocos que caem (som de pedras caindo); de **metal** vai **amassando e retorcendo** conforme leva dano e, ao quebrar, vira chapas tortas (som de ferro caindo). Os destroços ficam ~12 s e afundam.
+- **Árvore caindo** (cortada ou derrubada por explosão) usa o som gravado `treefall.mp3`, vindo do lugar da árvore.
+
+## Microfone no celular
+
+Ao tocar no botão **Voz** aparece a janela "Permitir microfone": o botão dela abre o pedido de permissão do navegador. Se o microfone já estiver bloqueado para o site, a janela mostra o passo a passo para liberar (Android: cadeado → Permissões → Microfone; iPhone: aA → Ajustes do Site → Microfone).
+
 ## C4 na porta
 
 A C4 arranca a folha da **parede com porta** que estiver a até ~5 m: a porta cai no chão (para o lado contrário da explosão), a tranca é destruída e o vão fica aberto para sempre, mesmo que a parede de pedra ou metal aguente a explosão.

@@ -339,7 +339,7 @@ export class Game {
     const act = this._idleUpd ? { mx: 0, mz: 0, analog: 0, slot: 0 } : inp.actions();
     if (act.jump && (this.build.mode || (this.struct && this.struct.mode && this.equip.hand === 'blueprint'))) { act.jump = false; act.rotate = true; } // Espaço gira a peça enquanto posiciona (construções, bancadas, baús, armário, cama…)
     if (act.pause) { if (this.build.mode) this.build.cancel(); else if (ui.anyOpen) ui.closePanels(); else { this.pause(); return; } }
-    if (act.mic) this.voice.toggle(); this.voice.update(dt); this.rest.decay(dt);
+    if (act.mic && !(this.voice._dT && performance.now() - this.voice._dT < 900)) this.voice.toggle(); this.voice.update(dt); this.rest.decay(dt);
     if (this.player.sleeping && this.player.bed && this.input.enabled && (act.jump || act.interact)) this.rest.getUp();
     if (act.map) { if (ui.open === 'map') ui.closePanels(); else ui.openPanel('map'); }
     if (act.nvg) this.toggleNvg();
@@ -1323,7 +1323,7 @@ export class Game {
   _fellTree(t, dirOverride) {
     const P = this.player; t.felled = true; t.regrowAt = this.env.day + 3; t.collider.ghost = true; this.groups[t.type].dirty(t); this.groups.stump.dirty(t);
     for (const hv of this.world.hives) if (hv.tree === t) { hv.angry = 30; hv.robbed = 40; this.ui.toast('🐝 Você derrubou uma colmeia! As abelhas atacam!', 'warn'); }
-    const dir = dirOverride ?? Math.atan2(t.x - P.pos[0], t.z - P.pos[2]); this.falling.push({ t, dir, a: 0, v: 0, time: 0 }); this.audio.play('treefall');
+    const dir = dirOverride ?? Math.atan2(t.x - P.pos[0], t.z - P.pos[2]); this.falling.push({ t, dir, a: 0, v: 0, time: 0 }); this.audio.play('treefall', { at: [t.x, (t.y ?? this.world.height(t.x, t.z)) + 2, t.z], max: 160 });
     this.ui.toast('🌲 Madeira! A árvore está caindo', 'info');
   }
   _updateFalling(dt) {

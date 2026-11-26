@@ -80,7 +80,7 @@ export class Territory {
       if (isChest(p.type)) { p.data = p.data || {}; if (p.data.hp === undefined) p.data.hp = CHESTS[p.type].hp; p.data.hp -= D * f; if (p.data.hp <= 0) this.breakChest(p); } } }
   breakChest(p) { const g = this.g; const items = (p.items || []).filter((s) => s && s[1] > 0).map((s) => [s[0], s[1]]); p.items = []; g.build.remove(p, false);
     if (items.length) g.drops.push({ items, x: p.x, y: p.y, z: p.z, rot: p.rot, box: true });
-    g.fx.burst([p.x, p.y + 0.4, p.z], 30, [0.5, 0.4, 0.3], 4, 1, 0.08); g.audio.play('treefall', { at: [p.x, p.y, p.z], vol: 0.4 }); g.ui.toast(`💥 ${PIECES[p.type].name} destruído — o loot caiu no chão`, 'ok'); g.net && g.net.onBuild && g.net.onBuild('del', p); }
+    g.fx.burst([p.x, p.y + 0.4, p.z], 30, [0.5, 0.4, 0.3], 4, 1, 0.08); g.audio.play('ferro', { at: [p.x, p.y, p.z], vol: 0.8 }); g.ui.toast(`💥 ${PIECES[p.type].name} destruído — o loot caiu no chão`, 'ok'); g.net && g.net.onBuild && g.net.onBuild('del', p); }
 
   // ---------- armário de manutenção ----------
   cabinetFor(f) { return this.g.build.pieces.find((p) => p.type === 'cabinet' && Math.hypot(p.x - f.x, p.z - f.z) <= FLAG_R && (!p.data || !f.data || p.data.owner === f.data.owner)); }

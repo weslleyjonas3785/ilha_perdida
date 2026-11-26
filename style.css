@@ -635,3 +635,9 @@ body.touch #clockTime { font-size: 15px; } body.touch #clockIcon { font-size: 15
 body.fsShow #fsBtn{opacity:1;pointer-events:auto;transform:scale(1)} #fsBtn:hover{background:rgba(40,46,56,.92);border-color:#ffd66e}
 #clock{transition:right .18s} body.fsShow #clock{right:60px}
 body.touch #fsBtn{opacity:.85;pointer-events:auto;transform:scale(.8);top:2px;right:2px} body.touch #clock{right:48px}
+/* janela de permissão do microfone */
+#micPerm{position:fixed;inset:0;z-index:9500;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);padding:16px}
+#micPerm .mpBox{max-width:440px;width:100%;background:#1c2026;border:1px solid rgba(255,214,110,.5);border-radius:14px;padding:18px 18px 14px;color:#eee;font-size:15px;line-height:1.45;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+#micPerm h3{margin:0 0 8px;font-size:19px;color:#ffe9b0} #micPerm ol{padding-left:20px;margin:6px 0} #micPerm li{margin:4px 0} #micPerm .mut{color:#aab;font-size:13px}
+#micPerm .mpBtns{display:flex;gap:10px;justify-content:flex-end;margin-top:12px} #micPerm button{font:inherit;padding:10px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:#2c323a;color:#eee;cursor:pointer}
+#micPerm .mpOk{background:#d9a93a;color:#1a1a1a;border-color:#d9a93a;font-weight:700}
