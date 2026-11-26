@@ -77,5 +77,8 @@ export class TouchControls {
     if (show !== this._show) { this._show = show; document.body.classList.toggle('tplay', show); }
     const inp = g.input, T = inp.touch; document.body.classList.toggle('sprintOn', !!T.sprintOn || !!T.autoRun || !!T.runLock); document.body.classList.toggle('runNear', !!T.runNear && !T.runLock); document.body.classList.toggle('runLock', !!(T.runLock || T.autoRun));
     // com arma de fogo na mão (e nada para pegar/usar por perto) o botão USAR vira ATIRAR
-    const h = g.equip && g.equip.hand; const gunUse = !!(h && GUNS[h]) && !g._cur && !(g.build && g.build.mode); if (gunUse !== this._gunUse) { this._gunUse = gunUse; document.body.classList.toggle('gunUse', gunUse); } }
+    const h = g.equip && g.equip.hand; const gunUse = !!(h && GUNS[h]) && !g._cur && !(g.build && g.build.mode); if (gunUse !== this._gunUse) { this._gunUse = gunUse; document.body.classList.toggle('gunUse', gunUse); }
+    // botões de MIRAR / RECARREGAR só com arma de fogo (ou arco) na mão; ATIRAR/BATER só com algo na mão (arma, ferramenta) — mãos vazias: some
+    const it = h && this.g.equip ? h : null; const gun = !!(it && GUNS[it]); const tool = !!it; const sig = (gun ? 2 : 0) | (tool ? 1 : 0);
+    if (sig !== this._wsig) { this._wsig = sig; document.body.classList.toggle('hasGun', gun); document.body.classList.toggle('hasTool', tool); } }
 }

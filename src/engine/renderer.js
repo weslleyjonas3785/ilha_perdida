@@ -197,7 +197,7 @@ export class Renderer {
     gl.uniform3fv(u.u_camPos, this.camPos); gl.uniform1f(u.u_fogDensity, e.fogDensity); gl.uniform3fv(u.u_scatterCol, e.scatterCol); gl.uniform1f(u.u_fogHeight, e.fogHeight); gl.uniform1f(u.u_detail, this.detail);
     gl.uniform1f(u.u_shadowOn, this.shadowsEnabled ? 1 : 0); gl.uniform1f(u.u_wet, e.wet);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.shadowTex); gl.uniform1i(u.u_shadow, 0);
-    const n = Math.min(this.pointLights.length, MAX_PL);
+    const n = Math.min(this.pointLights.length, this.maxLights || MAX_PL, MAX_PL);
     if (n) {
       const pp = new Float32Array(MAX_PL * 4), pc = new Float32Array(MAX_PL * 4);
       for (let i = 0; i < n; i++) { const l = this.pointLights[i]; pp.set([l.pos[0], l.pos[1], l.pos[2], l.range], i * 4); pc.set([l.col[0], l.col[1], l.col[2], 1], i * 4); }

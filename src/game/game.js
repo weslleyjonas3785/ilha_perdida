@@ -95,7 +95,7 @@ export class Game {
   constructor(canvas) {
     this.canvas = canvas; this.state = 'loading'; this.storageOk = true;
     const mobile = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-    const defaults = { master: 0.8, sfx: 0.9, ambient: 0.7, music: 0.35, sens: 1, invertY: false, shadows: !mobile, grass: mobile ? 0.25 : 1, viewDist: mobile ? 'curta' : 'normal', res: mobile ? 0.65 : 1, enemyMul: 1, autoRes: mobile, v: 4, quality: mobile ? 'baixa' : 'alta', ssao: !mobile, bloom: !mobile, fxaa: !mobile, detail: mobile ? 0.5 : 1 };
+    const defaults = { master: 0.8, sfx: 0.9, ambient: 0.7, music: 0.35, sens: 1, invertY: false, shadows: !mobile, grass: mobile ? 0.25 : 1, viewDist: mobile ? 'curta' : 'normal', res: mobile ? 0.65 : 1, enemyMul: 1, autoRes: mobile, fpsCap: mobile ? 30 : 0, v: 4, quality: mobile ? 'baixa' : 'alta', ssao: !mobile, bloom: !mobile, fxaa: !mobile, detail: mobile ? 0.5 : 1 };
     const saved = this._loadJSON(SET_KEY) || {}; if (!(saved.v >= 2)) { delete saved.res; delete saved.autoRes; } // migração: resolução cheia, nítida
     if (mobile && !(saved.v >= 4)) { for (const k of ['res', 'autoRes', 'quality', 'shadows', 'ssao', 'bloom', 'fxaa', 'grass', 'viewDist', 'detail']) delete saved[k]; } // celular: nova escala de resolução (pixel da tela, sem multiplicar pela densidade)
     this.mobile = mobile;
@@ -183,7 +183,7 @@ export class Game {
     const s = this.settings; this._saveJSON(SET_KEY, s);
     Object.assign(this.audio.vol, { master: s.master, sfx: s.sfx, ambient: s.ambient, music: s.music }); this.audio.musicOn = s.music > 0.01; this.audio.applyVolumes();
     this.input.sens = s.sens; this.input.invertY = s.invertY; this.renderer.shadowsEnabled = s.shadows;
-    this.renderer.post = { ssao: !!s.ssao, bloom: !!s.bloom, fxaa: !!s.fxaa }; this.renderer.detail = s.detail ?? 1; if (s.camSide === -1 || s.camSide === 1) this.cam.side = this.cam.sideCur = s.camSide;
+    this.renderer.post = { ssao: !!s.ssao, bloom: !!s.bloom, fxaa: !!s.fxaa }; this.renderer.maxLights = this.mobile ? 3 : 0; this.renderer.detail = s.detail ?? 1; if (s.camSide === -1 || s.camSide === 1) this.cam.side = this.cam.sideCur = s.camSide;
     this.renderer.pixelRatio = (this.mobile ? 1 : Math.min(window.devicePixelRatio || 1, 2)) * s.res; this.renderer.resize(); // no celular a escala é sobre o pixel da tela (densidade 3× travava)
     if (this._grassDensity !== s.grass) { for (const c of this.grassCells.values()) c.dead = true; this.grassCells.clear(); this._grassDensity = s.grass; }
   }
@@ -290,7 +290,10 @@ export class Game {
   // Avança a simulação sem renderizar (usado pelos testes automatizados)
   debugStep(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) { if (this.state === 'playing') this.update(dt); else if (this.state === 'dead') { this.player.update(dt, {}, this.cam.yaw); this.creatures.update(dt); } if (this.net.active) this.net.update(dt); this.input.endFrame(); } }
   frame(t) {
-    requestAnimationFrame((tt) => this.frame(tt)); if (this.touchUI) this.touchUI.tick();
+    requestAnimationFrame((tt) => this.frame(tt));
+    // limite de quadros (celular: 30 por padrão) — menos calor e o celular não engasga
+    const cap = this.settings.fpsCap || 0; if (cap && this.last && t - this.last < 1000 / cap - 2) return;
+    if (this.touchUI) this.touchUI.tick();
     let dt = (t - this.last) / 1000; this.last = t; if (!(dt > 0)) dt = 0.016; dt = Math.min(dt, 0.05);
     const tf0 = performance.now();
     try {
@@ -368,7 +371,8 @@ export class Game {
     P.update(dt, pa, this.cam.yaw);
     this.cam.aimT = this.guns.aimT; this.cam.update(dt, P, this.physics);
     { const st = this.world.siteAt(P.pos[0], P.pos[2]); const k = st ? st.kind : null; if (k !== this._siteK) { this._siteK = k; if (st) this.ui.toast(`📍 ${st.name}`, 'info'); } }
-    this.env.update(dt); this.furnace.update(dt); this.helis.update(dt); this.creatures.update(dt); this.npcs.update(dt); this.grenades.update(dt); this.blasts.update(dt); this.smoke.update(dt); this.admin.tick(dt); this.struct.update(dt); this.territory.update(dt, act); this.fishing.update(dt, act); this.fires.update(dt); this.convoys.update(dt); this._trapTick(dt); if (this.ui.open === 'fire' && this.ui.fire) { this._fireUiT = (this._fireUiT || 0) - dt; if (this._fireUiT <= 0) { this._fireUiT = 0.25; this.ui.renderFire(); } } this._updateButcher(dt); this.ui.flash && this.ui.flash(this.grenades.flashT); this._smokeOv(); this.build.update2(dt); this.power.update(dt); this.grapple.update(dt); this.geiger.update(dt);
+    this.env.update(dt); this.furnace.update(dt);
+    { const h = this.env.hours; if (this._prevH != null && ((this._prevH < 6 && h >= 6) || (this._prevH > 20 && h >= 6 && h < 7))) { this.audio._ambSample && this.audio._ambSample('galo', 1, Math.random() * 1.2 - 0.6); this.ui.toast('🐓 06:00 — o dia está amanhecendo', 'info'); } this._prevH = h; } /* galo canta às 06:00 */ this.helis.update(dt); this.creatures.update(dt); this.npcs.update(dt); this.grenades.update(dt); this.blasts.update(dt); this.smoke.update(dt); this.admin.tick(dt); this.struct.update(dt); this.territory.update(dt, act); this.fishing.update(dt, act); this.fires.update(dt); this.convoys.update(dt); this._trapTick(dt); if (this.ui.open === 'fire' && this.ui.fire) { this._fireUiT = (this._fireUiT || 0) - dt; if (this._fireUiT <= 0) { this._fireUiT = 0.25; this.ui.renderFire(); } } this._updateButcher(dt); this.ui.flash && this.ui.flash(this.grenades.flashT); this._smokeOv(); this.build.update2(dt); this.power.update(dt); this.grapple.update(dt); this.geiger.update(dt);
     if (this._reading) { this._reading.t += dt; this.ui.readProgress(Math.min(1, this._reading.t / this._reading.T)); if (this.player.dead) this._reading = null; }
     this._updateClouds(dt); this._survival(dt); this._updateFalling(dt); this._updateProjectiles(dt); this._updateArrows(dt); this._updateC4(dt); this._updateWebs(dt); this._interactPrompt();
     this.saveT -= dt; if (this.saveT <= 0) { this.saveT = 60; this.saveGame(false); }
@@ -743,7 +747,12 @@ export class Game {
 
   // ---------- Interação ----------
   // móvel/caixa: só revista de frente para ele e sem parede no meio (nada de lootear de fora da casa)
-  _facingLoot(c, f, fy) { const P = this.player, p = P.pos; const dx = c.x - p[0], dz = c.z - p[2], d = Math.hypot(dx, dz); if (d > 0.5) { const dot = Math.max((dx * f[0] + dz * f[1]) / d, (dx * fy[0] + dz * fy[1]) / d); if (dot < 0.55) return false; }
+  // prédio/casa que contém o ponto (grade preguiçosa sobre world.buildings); null = do lado de fora
+  _bldAt(x, z) { let G = this._bGrid; if (!G) { G = this._bGrid = new Map(); for (const b of this.world.buildings || []) { const R = Math.hypot(b.w, b.d) / 2; for (let gx = Math.floor((b.x - R) / 32); gx <= Math.floor((b.x + R) / 32); gx++) for (let gz = Math.floor((b.z - R) / 32); gz <= Math.floor((b.z + R) / 32); gz++) { const k = gx + ',' + gz; if (!G.has(k)) G.set(k, []); G.get(k).push(b); } } }
+    const L = G.get(Math.floor(x / 32) + ',' + Math.floor(z / 32)); if (!L) return null; for (const b of L) { const cr = Math.cos(b.rot || 0), sr = Math.sin(b.rot || 0), dx = x - b.x, dz = z - b.z; const lx = dx * cr - dz * sr, lz = dx * sr + dz * cr; if (Math.abs(lx) < b.w / 2 - 0.12 && Math.abs(lz) < b.d / 2 - 0.12) return b; } return null; }
+  // móvel de dentro de casa só pode ser vasculhado (e mostra a lupa) por quem está dentro do mesmo prédio
+  _sameRoomOk(o) { if (!o.furn || o.furn === 'milcontainer') return true; if (o._bld === undefined) o._bld = this._bldAt(o.x, o.z); if (!o._bld) return true; const P = this.player; return this._bldAt(P.pos[0], P.pos[2]) === o._bld; }
+  _facingLoot(c, f, fy) { if (!this._sameRoomOk(c.crate)) return false; const P = this.player, p = P.pos; const dx = c.x - p[0], dz = c.z - p[2], d = Math.hypot(dx, dz); if (d > 0.5) { const dot = Math.max((dx * f[0] + dz * f[1]) / d, (dx * fy[0] + dz * fy[1]) / d); if (dot < 0.65) return false; }
     const ty = (c.crate.y ?? c.y0) + 0.5, e = [p[0], p[1] + 1.25, p[2]]; const n = Math.max(2, Math.ceil(d / 0.12));
     for (let i = 1; i < n; i++) { const k = i / n, x = e[0] + dx * k, z = e[2] + dz * k, y = e[1] + (ty - e[1]) * k; if (Math.hypot(c.x - x, c.z - z) < 0.45) break;
       for (const q of this.physics.query(x, z, 0.1)) { if (q === c || q.ghost || q.crate || q.player || q.creature || q.dyn || q.glass || q.camOnly) continue; if (y < q.y0 || y > q.y1) continue; if (this.physics.insideXZ(q, x, z, 0)) return false; } }
@@ -1105,7 +1114,7 @@ export class Game {
     this._lmT -= dt; if (this._lmT <= 0) { this._lmT = 0.3; const w = this.world, R = 18, e = this.cam.eye || [P.pos[0], P.pos[1] + 1.6, P.pos[2]], cand = [];
       if (!this._lmCars) this._lmCars = w.props.filter((q) => q.kind === 'car');
       const test = (o, y, kind) => { const d = Math.hypot(o.x - P.pos[0], o.z - P.pos[2]); if (d > R) return; const t = [o.x, y, o.z], L = Math.hypot(t[0] - e[0], t[1] - e[1], t[2] - e[2]); if (this.physics.rayFree(e, t, 0.05) * L < L - 1.6) return; cand.push({ o, y, d, kind }); };
-      for (const o of w.crates) { if (o.looted || Math.abs(o.x - P.pos[0]) > R || Math.abs(o.z - P.pos[2]) > R) continue; test(o, (o.y ?? w.height(o.x, o.z)) + (o.furn ? 1.35 : 1.0), 'crate'); }
+      for (const o of w.crates) { if (o.looted || Math.abs(o.x - P.pos[0]) > R || Math.abs(o.z - P.pos[2]) > R || !this._sameRoomOk(o)) continue; test(o, (o.y ?? w.height(o.x, o.z)) + (o.furn ? 1.35 : 1.0), 'crate'); }
       for (const o of this._lmCars) { if (o.looted || Math.abs(o.x - P.pos[0]) > R || Math.abs(o.z - P.pos[2]) > R) continue; test(o, (o.y ?? w.height(o.x, o.z)) + 1.9, 'car'); }
       cand.sort((a, b) => a.d - b.d); this._lmList = cand.slice(0, 24); }
     const VP = this.renderer.viewProj, W = window.innerWidth, H = window.innerHeight; let n = 0;
@@ -1345,7 +1354,7 @@ export class Game {
   // ---------- Renderização ----------
   _dropGrass(x, z, R) { const GS = 16, gl = this.renderer.gl; for (let i = Math.floor((x - R) / GS); i <= Math.floor((x + R) / GS); i++) for (let j = Math.floor((z - R) / GS); j <= Math.floor((z + R) / GS); j++) { const k = i + ',' + j, c = this.grassCells.get(k); if (!c) continue; for (const b of [c.g, c.f]) if (b) { gl.deleteBuffer(b.mb); gl.deleteBuffer(b.cb); gl.deleteVertexArray(b.vao); } this.grassCells.delete(k); } }
   _grass(items, cam) {
-    if (this.settings.grass <= 0) return; const GS = 16, R = this.settings.viewDist === 'curta' ? 2 : 3; const ci = Math.floor(cam[0] / GS), cj = Math.floor(cam[2] / GS);
+    if (this.settings.grass <= 0) return; const GS = 16, R = this.settings.viewDist === 'minima' ? 1 : this.settings.viewDist === 'curta' ? 2 : 3; const ci = Math.floor(cam[0] / GS), cj = Math.floor(cam[2] / GS);
     const keep = new Set(); const w = this.world;
     for (let i = ci - R; i <= ci + R; i++) for (let j = cj - R; j <= cj + R; j++) {
       const key = i + ',' + j; keep.add(key); let c = this.grassCells.get(key);
@@ -1369,10 +1378,10 @@ export class Game {
     this.env.apply(r, P.pos, inCave);
     r.setCamera(eye, cam.target, cam.fov, 0.1, 1800);
     r.setShadowCenter(this.menuMode ? cam.target : [P.pos[0], P.pos[1], P.pos[2]]);
-    const maxD = this.settings.viewDist === 'curta' ? 260 : 520;
+    const VD = this.settings.viewDist; const maxD = VD === 'minima' ? 180 : VD === 'curta' ? 260 : 520;
     this.stream.update(this.menuMode ? cam.target : P.pos); r.waterOff = [Math.round(eye[0] / 12.5) * 12.5, Math.round(eye[2] / 12.5) * 12.5];
     this.stream.terrainItems(items, eye, maxD);
-    const objD = this.settings.viewDist === 'curta' ? 170 : 300;
+    const objD = VD === 'minima' ? 110 : VD === 'curta' ? 170 : 300;
     for (const [k, g] of Object.entries(this.groups)) { const d = ['stick', 'stone', 'fiber', 'mushroom', 'crystal', 'stump'].includes(k) ? 80 : k.startsWith('bush') ? 140 : objD; for (const gg of (Array.isArray(g) ? g : [g])) gg.render(items, eye, d); }
     this._grass(items, eye);
     this.stream.siteItems(items);
@@ -1478,7 +1487,7 @@ export class Game {
     if (this.state === 'playing' && this.settings.autoRes && !navigator.webdriver) { this._perfT = (this._perfT || 0) + dt; this._perfN = (this._perfN || 0) + 1;
       if (this._perfT > 4) { const avg = this._perfN / this._perfT; this._perfT = 0; this._perfN = 0;
         if (avg < 24 && this.settings.res > 0.55) { this.settings.res = Math.round((this.settings.res - 0.15) * 100) / 100; this.applySettings(); this.ui.toast(`Desempenho baixo: resolução ajustada para ${Math.round(this.settings.res * 100)}%`, 'info'); }
-        else if (avg < 22) { const S = this.settings; const k = S.shadows ? 'shadows' : S.ssao ? 'ssao' : S.grass > 0 ? 'grass' : S.bloom ? 'bloom' : S.viewDist !== 'curta' ? 'viewDist' : null; if (k) { if (k === 'grass') S.grass = 0; else if (k === 'viewDist') S.viewDist = 'curta'; else S[k] = false; S.quality = 'custom'; this.applySettings(); this.ui.toast(`Desempenho baixo: ${{ shadows: 'sombras', ssao: 'oclusão', grass: 'grama', bloom: 'brilho', viewDist: 'distância de visão' }[k]} desligado(a)`, 'info'); } } } }
+        else if (avg < 22) { const S = this.settings; const k = S.shadows ? 'shadows' : S.ssao ? 'ssao' : S.grass > 0 ? 'grass' : S.bloom ? 'bloom' : S.viewDist === 'normal' ? 'viewDist' : S.viewDist === 'curta' ? 'viewMin' : null; if (k) { if (k === 'grass') S.grass = 0; else if (k === 'viewDist') S.viewDist = 'curta'; else if (k === 'viewMin') S.viewDist = 'minima'; else S[k] = false; S.quality = 'custom'; this.applySettings(); this.ui.toast(`Desempenho baixo: ${{ shadows: 'sombras', ssao: 'oclusão', grass: 'grama', bloom: 'brilho', viewDist: 'distância de visão', viewMin: 'distância de visão (mínima)' }[k]} desligado(a)`, 'info'); } } } }
   }
   // cachoeiras (lâmina, laguinho, riacho, gotas e névoa), barra/✔ da composteira e visor do coletor de chuva
   _renderExtras(items, eye) {

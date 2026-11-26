@@ -17,7 +17,7 @@
   <div id="hud" class="hidden">
     <div id="micIcon" class="hidden" title="Microfone ligado (CAPS LOCK desliga)"><svg viewBox="0 0 24 24" class="micSvg"><path d="M12 14.5a3.2 3.2 0 0 0 3.2-3.2V5.2a3.2 3.2 0 0 0-6.4 0v6.1a3.2 3.2 0 0 0 3.2 3.2z" fill="currentColor"/><path d="M18.5 11.2a6.5 6.5 0 0 1-13 0M12 17.8v3.2M8.5 21h7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><line class="slash" x1="4" y1="3.5" x2="20" y2="20.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div>
     <div id="pname"></div><div id="compass"><div id="compassStrip"></div><div class="needle"></div></div>
-    <div id="clock"><span id="clockDay">Dia 1</span><span id="clockTime">07:00</span><span id="clockWeather">Céu limpo</span></div>
+    <div id="clock"><span id="clockDay">Dia 1</span><span id="clockIcon">🕖</span><span id="clockTime">07:00</span><span id="clockWeather">Céu limpo</span></div>
     <div id="bars">
       <div id="radHud" class="hidden"><div class="rh"><b>☢ RADIAÇÃO</b><span id="radPct">0%</span></div><div class="rtrack"><div class="rfill"></div><i class="r50"></i></div><div id="radInfo"></div></div>
       <div id="conds"></div>
@@ -171,7 +171,8 @@
     <label class="row">Anti-serrilhado (FXAA) <input type="checkbox" id="setFxaa"></label>
     <label>Detalhe de superfície <select id="setDetail"><option value="0">Desligado</option><option value="0.6">Médio</option><option value="1">Alto</option></select></label>
     <label>Densidade da grama <select id="setGrass"><option value="0">Desligada</option><option value="0.5">Baixa</option><option value="1">Média</option><option value="1.6">Alta</option></select></label>
-    <label>Distância de visão <select id="setView"><option value="curta">Curta (desempenho)</option><option value="normal">Normal</option></select></label>
+    <label>Distância de visão <select id="setView"><option value="minima">Mínima (celular fraco)</option><option value="curta">Curta (desempenho)</option><option value="normal">Normal</option></select></label>
+    <label>Limite de quadros <select id="setFps"><option value="0">Sem limite</option><option value="60">60 por segundo</option><option value="30">30 por segundo (celular)</option></select></label>
     <label>Resolução <select id="setRes"><option value="0.5">Baixa (celular fraco)</option><option value="0.6">Baixa+ (60%)</option><option value="0.75">Média</option><option value="1">Alta</option><option value="1.5">Muito alta (150%)</option></select></label>
     <label class="row">Ajustar resolução sozinho quando travar <input type="checkbox" id="setAutoRes"></label>
     <label>Dificuldade <select id="setDiff"><option value="0.6">Fácil</option><option value="1">Normal</option><option value="1.5">Difícil</option></select></label>

@@ -48,6 +48,9 @@ export function suburbPlan(b) {
     { wall: 'F', c: X(uSplit - 0.8), w: 1.05, y0: 0, y1: 2.25, door: true, front: true }];
   const sideL = sx > 0 ? 'L' : 'R', sideR = sx > 0 ? 'R' : 'L';
   ext.push(win(sideL, (zBath + hd) / 2 + 0.3, 1.3), win(sideR, (-hd + zMid) / 2, 1.2)); if (!b.garage) ext.push(win(sideR, hd - 1.2, 1.1));
+  { const dhs = []; for (const w of walls) { const ax = w.z0 === w.z1; for (const h of w.holes) if (h.door) dhs.push({ ax, c: h.c, fixed: ax ? w.z0 : w.u0, w: h.w }); }
+    for (const e of ext) if (e.door) { const ax = e.wall === 'F' || e.wall === 'B'; dhs.push({ ax, c: e.c, fixed: e.wall === 'F' ? hd : e.wall === 'B' ? -hd : e.wall === 'L' ? -hw : hw, w: e.w }); }
+    clearDoorways(dhs, P); }
   return { P, walls, ext, zMid, zBath, uBath, uBed, uSplit, sx };
 }
 
@@ -59,7 +62,7 @@ export function hospitalPlan(b) {
   const stair = { u0: -2.7, u1: 2.6, z0: -hd + 0.25, z1: -hd + 1.65, steps: 16 };
   for (let fl = 0; fl < 2; fl++) { const y0 = fl * FH;
     // paredes das alas (porta no corredor do saguão) e divisória frente/fundo de cada ala
-    for (const s of [-1, 1]) { walls.push({ u0: s * lob, z0: -hd, u1: s * lob, z1: hd, y0, holes: [{ c: 2.2, w: 1.3, door: true }, { c: -hd + 3.6, w: 1.3, door: true }] });
+    for (const s of [-1, 1]) { walls.push({ u0: s * lob, z0: -hd, u1: s * lob, z1: hd, y0, holes: [{ c: 2.2, w: 1.3, door: true, y1: 2.4 }, { c: -hd + 3.6, w: 1.3, door: true, y1: 2.4 }] });
       walls.push({ u0: s * lob, z0: 0.2, u1: s * hw, z1: 0.2, y0, holes: [] }); }
     // quartos: macas com biombos ao longo da parede externa (ordem e armários mudam por quarto)
     for (const s of [-1, 1]) for (const zz of [-1, 1]) {
@@ -81,6 +84,7 @@ export function hospitalPlan(b) {
     else { for (const s of [-1, 1]) { add('hbed', s * 2.6, hd - 2.0, Math.PI, null, { y0 }); add('screen', s * 1.5, hd - 2.0, Math.PI / 2, null, { y0 }); add('chairs3', s * (lob - 0.45), -0.8, -s * Math.PI / 2, null, { y0 }); }
       add('medcabinet', lob - 0.3, -3.0, -Math.PI / 2, 'hospital', { y0 }); add('plant', -lob + 0.45, hd - 0.45, 0, null, { y0 }); }
   }
+  { const dhs = []; for (const w of walls) { const ax = w.z0 === w.z1; for (const h of w.holes || []) if (h.door) dhs.push({ ax, c: h.c, fixed: ax ? w.z0 : w.u0, w: h.w, y: w.y0 || 0 }); } clearDoorways(dhs, P); }
   return { P, walls, stair, lob, FH };
 }
 
@@ -99,11 +103,11 @@ function makeKit(b) {
         const qx = ax ? c : fixed - o, qz = ax ? fixed - o : c; box(qx, yb + y0, qz, ax ? len : T / 2, y1 - y0, ax ? T / 2 : len, cIn, 0.86); }
       else box(ax ? c : fixed, yb + y0, ax ? fixed : c, ax ? len : T, y1 - y0, ax ? T : len, cIn, 0.86);
       if (collide) col(ax ? c : fixed, ax ? fixed : c, yb + y0 - (y0 === 0 ? 1 : 0), yb + y1, (ax ? len : T) / 2 + 0.02, (ax ? T : len) / 2 + 0.02, opts.colExtra || {}); };
-    const hs = [...holes].map((q) => ({ ...q, a: q.c - q.w / 2 - s0, b: q.c + q.w / 2 - s0 })).filter((q) => q.a > 0.05 && q.b < L - 0.05).sort((p, q) => p.a - q.a);
+    const hs = [...holes].map((q) => ({ y0: 0, y1: q.door ? 2.2 : 2.0, ...q, a: q.c - q.w / 2 - s0, b: q.c + q.w / 2 - s0 })).filter((q) => q.a > 0.05 && q.b < L - 0.05).sort((p, q) => p.a - q.a);
     let at = 0; const S = (v) => s0 + v;
     for (const q of hs) { piece(S(at), S(q.a), 0, h); piece(S(q.a), S(q.b), q.y1, h); if (q.y0 > 0) piece(S(q.a), S(q.b), 0, q.y0, true); at = q.b; }
     piece(S(at), S(L), 0, h);
-    return hs.map((q) => ({ ...q, c: S((q.a + q.b) / 2), ax, fixed }));
+    const out = hs.map((q) => ({ ...q, c: S((q.a + q.b) / 2), ax, fixed })); return out;
   };
   return { mb, colliders, glass, doors, wins, toW, box, col, wall };
 }
@@ -199,6 +203,17 @@ function fur(kit, p, r) {
   }
   return furniture(mb, p, T, r);
 }
+// vão livre das portas: móvel que invade a passagem de uma porta é empurrado ao longo da parede (ou sai, se não couber)
+function clearDoorways(dhs, list) { const dry = { mb: new MeshBuilder() }; const keep = [];
+  for (const p of list) { let sz = null; try { sz = fur(dry, { ...p }, () => 0.5); } catch (e) {} if (!sz) { keep.push(p); continue; }
+    const s = Math.abs(Math.sin(p.f)) > 0.7; const hu = (s ? sz[2] : sz[0]) / 2, hv = (s ? sz[0] : sz[2]) / 2; let ok = true;
+    for (let it = 0; it < 3; it++) { let moved = false;
+      for (const d of dhs) { if (Math.abs((p.y0 || 0) - (d.y || 0)) > 1.5) continue; const ca = d.ax ? p.u : p.v, cb = d.ax ? p.v : p.u, ha = d.ax ? hu : hv, hb = d.ax ? hv : hu; const A = d.w / 2 + 0.08, B = 0.85;
+        if (Math.abs(ca - d.c) >= A + ha || Math.abs(cb - d.fixed) >= B + hb) continue; const sh = (ca >= d.c ? 1 : -1) * (A + ha - Math.abs(ca - d.c) + 0.02);
+        if (Math.abs(sh) > 1.3) { ok = false; break; } if (d.ax) p.u += sh; else p.v += sh; moved = true; }
+      if (!ok || !moved) break; }
+    if (ok) keep.push(p); }
+  list.length = 0; list.push(...keep); }
 function placeFurniture(kit, list, r) {
   for (const p of list) { const box = fur(kit, p, r); if (!box) continue; const s = Math.abs(Math.sin(p.f)) > 0.7; kit.col(p.u, p.v, (p.y0 || 0) + 0.12, (p.y0 || 0) + 0.12 + box[1], (s ? box[2] : box[0]) / 2, (s ? box[0] : box[2]) / 2); }
 }

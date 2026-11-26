@@ -1,5 +1,6 @@
 // Áudio procedural (Web Audio): ambiente, passos por superfície, coleta, combate, clima e música.
 // Todos os sons são sintetizados em tempo real — não há arquivos de áudio externos.
+const GUNSND = new Set(['pistol', 'rifle', 'shotgun', 'sniper', 'harpoon']);
 export class GameAudio {
   constructor() { this.ctx = null; this.vol = { master: 0.8, sfx: 0.9, music: 0.35, ambient: 0.7 }; this.musicOn = true; this.lastPlay = {}; this.amb = {}; this.nextBird = 0; this.nextCricket = 0; this.nextMusic = 6; this.nextDrip = 0; }
   init() {
@@ -15,8 +16,8 @@ export class GameAudio {
     this.amb.water = this._loop(this.noise, 'bandpass', 350);
     this.applyVolumes();
     // sons de tiro gravados (arquivos): pistola, fuzil de assalto, escopeta e fuzil de precisão
-    this.samples = {}; this.sampleGain = { pistol: 1.5, rifle: 1.0, shotgun: 0.95, sniper: 1.0, tinnitus: 0.7, smokegren: 1.0, barulhenta: 1.0, helicoptero: 1.1, armando_bastao: 1.0, disparo: 1.2 };
-    for (const k of ['pistol', 'rifle', 'shotgun', 'sniper', 'skill', 'mechastep', 'spindown', 'tinnitus', 'smokegren', 'barulhenta', 'helicoptero', 'armando_bastao', 'disparo']) fetch(`assets/audio/${k}.mp3`).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)).then((buf) => { this.samples[k] = buf; }).catch(() => {});
+    this.samples = {}; this.sampleGain = { pistol: 1.5, rifle: 1.0, shotgun: 0.95, sniper: 1.0, tinnitus: 0.7, smokegren: 1.0, barulhenta: 1.0, helicoptero: 1.1, armando_bastao: 1.0, disparo: 1.2, dor: 1.0, vomit: 1.1, galo: 0.9, coruja: 0.7, natureza: 1.0 };
+    for (const k of ['pistol', 'rifle', 'shotgun', 'sniper', 'skill', 'mechastep', 'spindown', 'tinnitus', 'smokegren', 'barulhenta', 'helicoptero', 'armando_bastao', 'disparo', 'dor', 'vomit', 'galo', 'coruja', 'natureza']) fetch(`assets/audio/${k}.mp3`).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)).then((buf) => { this.samples[k] = buf; }).catch(() => {});
   }
   // som longo posicional que segue a distância/direção do jogador e pode ser abaixado aos poucos (sirene da granada barulhenta)
   voice(name, o = {}) {
@@ -29,7 +30,7 @@ export class GameAudio {
     s.onended = () => { v.done = true; }; v.update(); return v;
   }
   _sample(name, o) { const c = this.ctx, buf = this.samples && this.samples[name]; if (!buf) return false; const s = c.createBufferSource(); s.buffer = buf; s.playbackRate.value = (o.rate || 1) * (0.97 + Math.random() * 0.06);
-    const g = c.createGain(); g.gain.value = (o.vol ?? 1) * (this.sampleGain[name] || 1); s.connect(g); g.connect(this.sfx); s.start(); return true; }
+    const g = c.createGain(); g.gain.value = (o.vol ?? 1) * (this.sampleGain[name] || 1); s.connect(g); g.connect(this.sfx); s.start(c.currentTime + (o.delay || 0)); return true; }
   // contador Geiger real (arquivo de áudio) em laço, volume e ritmo conforme a exposição (0 = desligado)
   setGeiger(level) {
     if (!this.ctx || this.ctx.state !== 'running') return; const c = this.ctx;
@@ -55,8 +56,18 @@ export class GameAudio {
     const c = this.ctx; const o = c.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t); if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + a + dur);
     const g = c.createGain(); this._env(g, t, a, peak, dur); o.connect(g); g.connect(dest); o.start(t); o.stop(t + a + dur + 0.05); return o;
   }
+  // tiro de outro jogador/NPC: estéreo pela direção, bem alto perto da fonte e espalhando — mais baixo, abafado (perde os agudos)
+  // e atrasado com a distância (o som anda ~343 m/s); de longe ganha um eco. Atrás de você fica um pouco mais abafado.
+  _gunAt(name, o) { const c = this.ctx, L = this.listener(); if (!L) return; const dx = o.at[0] - L.eye[0], dz = o.at[2] - L.eye[2], dy = (o.at[1] || 0) - (L.eye[1] || 0); const d = Math.hypot(dx, dz, dy); const max = Math.max(o.max || 0, 900); if (d > max) return;
+    const fall = 1 / (1 + Math.pow(d / 22, 1.35)) * (1 - d / max); const ang = Math.atan2(dx, dz) - L.yaw; const side = -Math.sin(ang), front = Math.cos(ang);
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = Math.max(700, 16000 / (1 + d / 45)) * (front < -0.2 ? 0.7 : 1); lp.Q.value = 0.5;
+    const pan = c.createStereoPanner(); pan.pan.value = Math.max(-1, Math.min(1, side * Math.min(1, d / 2.5))); lp.connect(pan); pan.connect(this.sfx);
+    const delay = Math.min(2.5, d / 343); const saved = this.sfx; this.sfx = lp;
+    try { this._play(name, { ...o, at: null, vol: (o.vol ?? 1) * fall, delay }); if (d > 70 && this.samples && this.samples[name]) this._sample(name, { vol: (o.vol ?? 1) * fall * 0.35, delay: delay + 0.18 + Math.min(0.6, d / 900), rate: 0.94 }); } finally { this.sfx = saved; }
+    setTimeout(() => { try { pan.disconnect(); lp.disconnect(); } catch (e) {} }, 9000); }
   // som posicional estéreo: volume pela distância e lado (esquerda/direita) em relação à câmera
   play(name, o = {}) {
+    if (o.at && GUNSND.has(name) && this.ctx && this.ctx.state === 'running' && this.listener) return this._gunAt(name, o);
     if (o.at && this.ctx && this.ctx.state === 'running' && this.listener) { const L = this.listener(); if (L) { const dx = o.at[0] - L.eye[0], dz = o.at[2] - L.eye[2]; const d = Math.hypot(dx, dz); const max = o.max || 60; if (d > max) return; const fall = Math.pow(1 - d / max, 1.3);
       const ang = Math.atan2(dx, dz) - L.yaw; const pan = this.ctx.createStereoPanner(); pan.pan.value = Math.max(-1, Math.min(1, -Math.sin(ang) * Math.min(1, d / 3))); pan.connect(this.sfx); const saved = this.sfx; this.sfx = pan;
       try { this._play(name, { ...o, at: null, vol: (o.vol ?? 1) * fall }); } finally { this.sfx = saved; } setTimeout(() => { try { pan.disconnect(); } catch (e) {} }, 6000); return; } }
@@ -64,6 +75,7 @@ export class GameAudio {
   }
   _play(name, o = {}) {
     if (!this.ctx || this.ctx.state !== 'running') return;
+    if (name === 'groan' && this.samples && this.samples.dor) { const now0 = this.ctx.currentTime; if (this._dorT && now0 - this._dorT < 0.9) return; this._dorT = now0; return this._sample('dor', { ...o, rate: (o.big ? 0.95 : 1.02) * ((o.f0 || 150) > 180 ? 1.12 : 1), vol: (o.vol ?? 1) * (o.big ? 1.15 : 0.95) }); }
     if (this.samples && this.samples[name] && this._sample(name, o)) return;
     const now = this.ctx.currentTime; if (this.lastPlay[name] && now - this.lastPlay[name] < 0.04) return; this.lastPlay[name] = now;
     const t = now + 0.005, v = o.vol ?? 1, R = Math.random;
@@ -205,12 +217,19 @@ export class GameAudio {
     set('wind', (0.08 + e.wind * 0.12) * (e.inCave ? 0.3 : 1), 300 + e.wind * 300);
     set('rain', e.rain * 0.22 * (e.inCave ? 0.25 : 1)); set('fire', e.fire * 0.05); set('water', e.water * 0.07);
     if (e.fire > 0.05 && Math.random() < dt * 10 * e.fire) this._noise(t, 0.02, 'highpass', 3000, 1, 0.08 * e.fire, this.ambG);
+    // som de natureza (arquivo) em laço durante o dia; some à noite, na chuva forte e na caverna
+    if (this.samples && this.samples.natureza) { if (!this._nat) { const src = this.ctx.createBufferSource(); src.buffer = this.samples.natureza; src.loop = true; const g = this.ctx.createGain(); g.gain.value = 0; src.connect(g); g.connect(this.ambG); src.start(); this._nat = { src, g }; }
+      const dayK = Math.max(0, Math.min(1, (e.day - 0.35) / 0.4)); this._nat.g.gain.setTargetAtTime(0.55 * dayK * (1 - Math.min(1, e.rain * 1.4)) * (e.inCave ? 0 : 1), t, 1.5); }
+    // coruja de vez em quando à noite (de um lado qualquer)
+    this.nextOwl = (this.nextOwl ?? 15) - dt; if (this.nextOwl <= 0) { this.nextOwl = 22 + Math.random() * 40; if (e.day < 0.3 && e.rain < 0.3 && !e.inCave && this.samples && this.samples.coruja) this._ambSample('coruja', 0.5 + Math.random() * 0.4); }
     // pássaros (dia) e grilos (noite)
     this.nextBird -= dt; if (this.nextBird <= 0) { this.nextBird = 2 + Math.random() * 6; if (e.day > 0.5 && e.rain < 0.3 && !e.inCave) this._bird(); }
     this.nextCricket -= dt; if (this.nextCricket <= 0) { this.nextCricket = 0.4 + Math.random() * 1.2; if (e.day < 0.4 && e.rain < 0.3 && !e.inCave) this._cricket(); }
     if (e.inCave) { this.nextDrip -= dt; if (this.nextDrip <= 0) { this.nextDrip = 1 + Math.random() * 3; this._tone(t, 'sine', 1400 + Math.random() * 600, 600, 0.12, 0.05, this.ambG); } }
     this.nextMusic -= dt; if (this.nextMusic <= 0 && this.musicOn) { this.nextMusic = 28 + Math.random() * 20; this._music(e.day < 0.4); }
   }
+  // amostra de ambiente vinda de uma direção aleatória (coruja, galo ao longe)
+  _ambSample(name, vol = 1, pan) { const c = this.ctx, buf = this.samples && this.samples[name]; if (!buf) return; const s = c.createBufferSource(); s.buffer = buf; s.playbackRate.value = 0.95 + Math.random() * 0.1; const g = c.createGain(); g.gain.value = vol * (this.sampleGain[name] || 1); const p = c.createStereoPanner(); p.pan.value = pan ?? (Math.random() * 1.6 - 0.8); s.connect(g); g.connect(p); p.connect(this.ambG); s.start(); }
   _bird() { const t = this.ctx.currentTime; const base = 2200 + Math.random() * 1800; const n = 2 + Math.floor(Math.random() * 4);
     for (let i = 0; i < n; i++) this._tone(t + i * 0.13, 'sine', base, base * (1.2 + Math.random() * 0.3), 0.07, 0.025, this.ambG, 0.01); }
   _cricket() { const t = this.ctx.currentTime; for (let i = 0; i < 3; i++) this._tone(t + i * 0.05, 'sine', 4300, 4300, 0.03, 0.012, this.ambG, 0.005); }

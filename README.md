@@ -435,6 +435,20 @@ Todos entram na mesma VPN (Radmin VPN, Hamachi, ZeroTier…) ou na mesma rede de
 7. Os inimigos são androides (lista abaixo). À noite aparecem mais e mais fortes. Destruídos, eles podem ser desmontados (E) e rendem sucata, circuitos e núcleos de energia, usados na bancada para a **Lança de choque** e a armadura de sucata. As ruínas guardam caixas com sucata, pano, comida enlatada e água.
 8. Ao morrer, a mochila fica no local da morte para ser recuperada.
 
+## Sons do ambiente, relógio e tiros
+
+- **Relógio** no canto de cima, à direita (também no celular): mostra o dia, a hora do jogo (🕐 HH:MM) e o tempo.
+- **Dia:** som de natureza gravado (`assets/audio/natureza.mp3`) em laço. Some aos poucos ao escurecer, na chuva forte e dentro de cavernas.
+- **Noite:** grilos e, de vez em quando, uma **coruja** vinda de um lado qualquer (`coruja.mp3`).
+- **06:00:** o **galo** canta ao amanhecer (`galo.mp3`) e aparece o aviso "o dia está amanhecendo".
+- **Dor e vômito:** gemido de dor (`dor.mp3`) quando o personagem se machuca ou passa mal, e `vomit.mp3` ao vomitar.
+- **Tiros dos outros (jogadores, NPCs, helicóptero):** som em estéreo, que dá para saber de que lado vem. Perto da fonte o tiro é alto; com a distância fica mais baixo e abafado (perde os agudos) e chega atrasado (o som anda ~343 m/s). De longe ganha um eco. Ouve-se até ~900 m.
+
+## Casas e prédios
+
+- Todos os cômodos são acessíveis: as portas internas abertas não têm mais parede invisível. Os móveis que caíam no vão de uma porta são empurrados ao longo da parede, ou saem se não couberem.
+- Os móveis de dentro (armário, geladeira, criado-mudo…) só podem ser vasculhados **de dentro do mesmo prédio** e de frente para o móvel. A lupa de loot só aparece quando você está dentro.
+
 ## Androides inimigos (low-poly)
 
 Visual baseado na folha de referência: metal grafite facetado, frisos dourados luminosos e olhos âmbar ou vermelhos. O sombreamento é facetado e nítido, sem suavização.

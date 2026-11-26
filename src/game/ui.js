@@ -103,7 +103,7 @@ export class UI {
     const g = this.game, s = () => g.settings;
     const bind = (id, key, conv = (v) => v, prop = 'value') => { $(id).addEventListener('input', () => { s()[key] = conv($(id)[prop]); g.applySettings(); }); };
     bind('setMaster', 'master', Number); bind('setSfx', 'sfx', Number); bind('setAmb', 'ambient', Number); bind('setMusic', 'music', Number); bind('setSens', 'sens', Number);
-    bind('setInvert', 'invertY', Boolean, 'checked'); bind('setShadows', 'shadows', Boolean, 'checked'); bind('setGrass', 'grass', Number); bind('setView', 'viewDist'); bind('setRes', 'res', Number); bind('setDiff', 'enemyMul', Number); bind('setAutoRes', 'autoRes', Boolean, 'checked');
+    bind('setInvert', 'invertY', Boolean, 'checked'); bind('setShadows', 'shadows', Boolean, 'checked'); bind('setGrass', 'grass', Number); bind('setView', 'viewDist'); bind('setRes', 'res', Number); bind('setFps', 'fpsCap', Number); bind('setDiff', 'enemyMul', Number); bind('setAutoRes', 'autoRes', Boolean, 'checked');
     const custom = () => { s().quality = 'custom'; $('setQuality').value = 'custom'; };
     for (const [id, key, cv, pr] of [['setSsao', 'ssao', Boolean, 'checked'], ['setBloom', 'bloom', Boolean, 'checked'], ['setFxaa', 'fxaa', Boolean, 'checked'], ['setDetail', 'detail', Number, 'value']]) $(id).addEventListener('change', () => { s()[key] = cv($(id)[pr]); custom(); g.applySettings(); });
     for (const id of ['setShadows', 'setGrass', 'setRes']) $(id).addEventListener('change', custom);
@@ -111,7 +111,7 @@ export class UI {
     for (const id of ['setInvert', 'setShadows', 'setGrass', 'setView', 'setRes', 'setDiff']) $(id).addEventListener('change', () => $(id).dispatchEvent(new Event('input')));
   }
   _loadSettings() { const s = this.game.settings; $('setMaster').value = s.master; $('setSfx').value = s.sfx; $('setAmb').value = s.ambient; $('setMusic').value = s.music; $('setSens').value = s.sens;
-    $('setInvert').checked = s.invertY; $('setShadows').checked = s.shadows; $('setGrass').value = String(s.grass); $('setView').value = s.viewDist; $('setRes').value = String(s.res); if ($('setAutoRes')) $('setAutoRes').checked = !!s.autoRes; if (![...$('setRes').options].some((o) => o.value === String(s.res))) { const o = document.createElement('option'); o.value = String(s.res); o.textContent = Math.round(s.res * 100) + '%'; $('setRes').appendChild(o); $('setRes').value = String(s.res); } $('setDiff').value = String(s.enemyMul);
+    $('setInvert').checked = s.invertY; $('setShadows').checked = s.shadows; $('setGrass').value = String(s.grass); $('setView').value = s.viewDist; $('setRes').value = String(s.res); if ($('setFps')) $('setFps').value = String(s.fpsCap || 0); if ($('setAutoRes')) $('setAutoRes').checked = !!s.autoRes; if (![...$('setRes').options].some((o) => o.value === String(s.res))) { const o = document.createElement('option'); o.value = String(s.res); o.textContent = Math.round(s.res * 100) + '%'; $('setRes').appendChild(o); $('setRes').value = String(s.res); } $('setDiff').value = String(s.enemyMul);
     $('setQuality').value = s.quality || 'custom'; $('setSsao').checked = !!s.ssao; $('setBloom').checked = !!s.bloom; $('setFxaa').checked = !!s.fxaa; $('setDetail').value = String(s.detail ?? 1); }
 
   // ---------- HUD ----------
@@ -135,7 +135,7 @@ export class UI {
     if (this.open === 'inv' && this.curTab === 'inv' && (this._nearT = (this._nearT || 0) - 0.1) <= 0) { this._nearT = 0.4; this.renderNear(); }
     if (this.open === 'power') this.renderPower();
     for (const k of ['hp', 'hunger', 'thirst', 'energy', 'stamina']) { const b = this.bars[k]; const v = Math.max(0, st[k]); b.fill.style.width = v + '%'; b.val.textContent = Math.round(v); b.el.classList.toggle('low', v < 20); }
-    const e = g.env; const h = e.hours; $('clockDay').textContent = 'Dia ' + e.day; $('clockTime').textContent = String(Math.floor(h)).padStart(2, '0') + ':' + String(Math.floor((h % 1) * 60)).padStart(2, '0'); $('clockWeather').textContent = (e.isNight ? '☾ ' : '☀ ') + e.label;
+    const e = g.env; const h = e.hours; $('clockDay').textContent = 'Dia ' + e.day; { const ic = $('clockIcon'); if (ic) { const hh = Math.floor(h) % 12; const em = (h >= 6 && h < 18.5 ? '' : '') + String.fromCodePoint(0x1F550 + (hh === 0 ? 11 : hh - 1)); if (ic.textContent !== em) ic.textContent = em; ic.title = h >= 6 && h < 18.5 ? 'Dia' : 'Noite'; } } $('clockTime').textContent = String(Math.floor(h)).padStart(2, '0') + ':' + String(Math.floor((h % 1) * 60)).padStart(2, '0'); $('clockWeather').textContent = (e.isNight ? '☾ ' : '☀ ') + e.label;
     const deg = ((-g.cam.yaw * 180 / Math.PI) % 360 + 360 + 180) % 360; // 0 = norte (−Z)
     this.strip.style.transform = `translateX(${(this.strip.parentElement.clientWidth / 2) - (deg + 360) * this.pxPerDeg}px)`;
     const hm = $('homeMark'); if (g.home) { const a = Math.atan2(g.home[0] - P.pos[0], -(g.home[2] - P.pos[2])) * 180 / Math.PI; const hd = ((a % 360) + 360) % 360; hm.style.display = ''; hm.style.left = (hd + 360) * this.pxPerDeg + 'px'; } else hm.style.display = 'none';

@@ -12,7 +12,8 @@ export class Input {
     window.addEventListener('keyup', (e) => { this.keys.delete(e.code); if (e.code === 'CapsLock' && performance.now() - (this._capsT || 0) > 900) this.pressed.add('CapsLock'); }); // Mac: desligar o Caps Lock só manda keyup
     window.addEventListener('blur', () => { this.keys.clear(); this.mouse.left = this.mouse.right = false; });
     canvas.addEventListener('mousedown', (e) => {
-      if (!this.locked && !this.touchActive && !this.mobile && this.wantLock) { if (this.noLock) this._freeOn(); else this.requestLock(); }
+      // sempre tenta travar o mouse de verdade (o navegador recusa logo depois do Esc; aí entra no mouse livre e tenta de novo no próximo clique)
+      if ((!this.locked || this.free) && !this.touchActive && !this.mobile && this.wantLock) { if (this.free) { if (!this._relockT || performance.now() - this._relockT > 1200) { this._relockT = performance.now(); this.requestLock(true); } } else this.requestLock(); }
       if (e.button === 0) { this.mouse.left = true; this.mouse.leftPressed = true; } if (e.button === 2) { this.mouse.right = true; this.mouse.rightPressed = true; } if (e.button === 1) { this.mouse.midPressed = true; e.preventDefault(); }
     });
     window.addEventListener('mouseup', (e) => { if (e.button === 0) this.mouse.left = false; if (e.button === 2) this.mouse.right = false; });
@@ -20,7 +21,7 @@ export class Input {
     // soma o movimento de todos os eventos do quadro; ignora só os saltos falsos do navegador (um evento isolado enorme ao travar/destravar)
     window.addEventListener('mousemove', (e) => { this._cx = e.clientX; this._cy = e.clientY; if (!(this.locked || this.dragCam || this.free)) return; const mx = e.movementX || 0, my = e.movementY || 0; if (Math.abs(mx) > 300 || Math.abs(my) > 300) return; this.mouse.dx += mx; this.mouse.dy += my; });
     canvas.addEventListener('wheel', (e) => { this.mouse.wheel += Math.sign(e.deltaY); e.preventDefault(); }, { passive: false });
-    document.addEventListener('pointerlockchange', () => { this.locked = document.pointerLockElement === canvas; if (!this.locked && this.onUnlock) this.onUnlock(); });
+    document.addEventListener('pointerlockchange', () => { const L = document.pointerLockElement === canvas; if (L) { this.free = false; this.noLock = false; this.canvas.style.cursor = ''; this.locked = true; return; } if (this.free) return; this.locked = false; if (this.onUnlock) this.onUnlock(); });
     // Sem pointer lock (iframe restrito): arrastar com o botão direito/esquerdo gira a câmera
     canvas.addEventListener('mousedown', () => { if (!this.locked && !this.touchActive) this.dragCam = true; });
     window.addEventListener('mouseup', () => { this.dragCam = false; });
@@ -29,8 +30,8 @@ export class Input {
   // trava o mouse no jogo (a setinha some e o mouse gira a câmera). Se o navegador/site não deixar (alguns sites
   // abrem o jogo numa moldura restrita), entra no modo "mouse livre": a setinha some do mesmo jeito e o movimento
   // do mouse gira a câmera; Esc solta.
-  requestLock() {
-    const fail = () => { if (this.locked) return; this.noLock = true; this._freeOn(); };
+  requestLock(quiet) {
+    const fail = () => { if (document.pointerLockElement === this.canvas) return; if (quiet) return; if (this.locked && !this.free) return; this.noLock = true; this._freeOn(); };
     try { const p = this.canvas.requestPointerLock(); if (p && p.catch) p.catch(fail); } catch (e) { fail(); return; }
     if (!this._plErr) { this._plErr = true; document.addEventListener('pointerlockerror', fail); }
     clearTimeout(this._plT); this._plT = setTimeout(() => { if (!this.locked && !document.pointerLockElement && this.wantLock) fail(); }, 700);

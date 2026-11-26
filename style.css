@@ -623,3 +623,9 @@ body.mobile .imenu button { padding: 10px 12px; font-size: 15px; }
 #spawnBar { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); background: rgba(16,10,12,.92); border: 1px solid #6a2a2a; border-radius: 12px; padding: 10px 18px 12px; text-align: center; z-index: 5; min-width: 300px; }
 #spawnBar h3 { margin: 0 0 2px; color: #ff8a7a; font-size: 24px; } #spawnBar p { margin: 2px 0 6px; } #spawnBar .acts { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 #spawnBar button { padding: 8px 14px; font-size: 15px; }
+/* celular: mira, recarregar e atirar só aparecem com arma/ferramenta na mão (no modo de editar controles aparecem todos) */
+body.mobile:not(.tedit):not(.hasGun) #mobile [data-id=block], body.mobile:not(.tedit):not(.hasGun) #mobile [data-id=reload] { display: none !important; }
+body.mobile:not(.tedit):not(.hasTool) #mobile [data-id=attack] { display: none !important; }
+/* relógio do jogo mais visível */
+#clock { align-items: center; } #clockIcon { font-size: 17px; line-height: 1; } #clockTime { font-size: 17px; font-weight: 700; letter-spacing: .5px; color: #ffe9b0; }
+body.touch #clockTime { font-size: 15px; } body.touch #clockIcon { font-size: 15px; }
