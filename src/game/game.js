@@ -95,8 +95,9 @@ export class Game {
   constructor(canvas) {
     this.canvas = canvas; this.state = 'loading'; this.storageOk = true;
     const mobile = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-    const defaults = { master: 0.8, sfx: 0.9, ambient: 0.7, music: 0.35, sens: 1, invertY: false, shadows: !mobile, grass: mobile ? 0.25 : 1, viewDist: mobile ? 'curta' : 'normal', res: mobile ? 0.65 : 1, enemyMul: 1, autoRes: mobile, fpsCap: mobile ? 30 : 0, v: 4, quality: mobile ? 'baixa' : 'alta', ssao: !mobile, bloom: !mobile, fxaa: !mobile, detail: mobile ? 0.5 : 1 };
+    const defaults = { master: 0.8, sfx: 0.9, ambient: 0.7, music: 0.35, sens: 1, invertY: false, shadows: !mobile, grass: mobile ? 0.25 : 1, viewDist: mobile ? 'curta' : 'normal', res: mobile ? 0.8 : 1, enemyMul: 1, autoRes: mobile, fpsCap: mobile ? 30 : 0, v: 5, quality: mobile ? 'baixa' : 'alta', ssao: !mobile, bloom: !mobile, fxaa: !mobile, detail: mobile ? 0.5 : 1 };
     const saved = this._loadJSON(SET_KEY) || {}; if (!(saved.v >= 2)) { delete saved.res; delete saved.autoRes; } // migração: resolução cheia, nítida
+    if (mobile && saved.v === 4) { delete saved.res; delete saved.autoRes; } // celular: imagem mais nítida (antes ficava pixelada)
     if (mobile && !(saved.v >= 4)) { for (const k of ['res', 'autoRes', 'quality', 'shadows', 'ssao', 'bloom', 'fxaa', 'grass', 'viewDist', 'detail']) delete saved[k]; } // celular: nova escala de resolução (pixel da tela, sem multiplicar pela densidade)
     this.mobile = mobile;
     this.settings = Object.assign(defaults, saved); this.settings.v = 4;
@@ -176,7 +177,7 @@ export class Game {
 
   // predefinições de qualidade gráfica
   applyQuality(q) {
-    const P = { baixa: { shadows: false, ssao: false, bloom: false, fxaa: !this.mobile, detail: 0, grass: this.mobile ? 0 : 0.5, res: this.mobile ? 0.6 : 0.75, viewDist: 'curta' }, media: { shadows: true, ssao: false, bloom: true, fxaa: true, detail: 0.6, grass: 1, res: 1, viewDist: 'normal' },
+    const P = { baixa: { shadows: false, ssao: false, bloom: false, fxaa: !this.mobile, detail: 0, grass: this.mobile ? 0 : 0.5, res: this.mobile ? 0.75 : 0.75, viewDist: 'curta' }, media: { shadows: true, ssao: false, bloom: true, fxaa: true, detail: 0.6, grass: 1, res: 1, viewDist: 'normal' },
       alta: { shadows: true, ssao: true, bloom: true, fxaa: true, detail: 1, grass: 1, res: 1, viewDist: 'normal' }, ultra: { shadows: true, ssao: true, bloom: true, fxaa: true, detail: 1, grass: 1.6, res: 1.5, viewDist: 'normal' } }[q];
     if (!P) return; Object.assign(this.settings, P, { quality: q }); this.applySettings();
   }
@@ -185,7 +186,7 @@ export class Game {
     Object.assign(this.audio.vol, { master: s.master, sfx: s.sfx, ambient: s.ambient, music: s.music }); this.audio.musicOn = s.music > 0.01; this.audio.applyVolumes();
     this.input.sens = s.sens; this.input.invertY = s.invertY; this.renderer.shadowsEnabled = s.shadows;
     this.renderer.post = { ssao: !!s.ssao, bloom: !!s.bloom, fxaa: !!s.fxaa }; this.renderer.maxLights = this.mobile ? 3 : 0; this.renderer.detail = s.detail ?? 1; if (s.camSide === -1 || s.camSide === 1) this.cam.side = this.cam.sideCur = s.camSide;
-    this.renderer.pixelRatio = (this.mobile ? 1 : Math.min(window.devicePixelRatio || 1, 2)) * s.res; this.renderer.resize(); // no celular a escala é sobre o pixel da tela (densidade 3× travava)
+    this.renderer.pixelRatio = (this.mobile ? Math.min(window.devicePixelRatio || 1, 1.5) : Math.min(window.devicePixelRatio || 1, 2)) * s.res; this.renderer.resize(); // no celular a escala é sobre o pixel da tela (densidade 3× travava)
     if (this._grassDensity !== s.grass) { for (const c of this.grassCells.values()) c.dead = true; this.grassCells.clear(); this._grassDensity = s.grass; }
   }
 
@@ -1487,7 +1488,7 @@ export class Game {
     // resolução dinâmica: reduz a escala de renderização se o desempenho cair muito
     if (this.state === 'playing' && this.settings.autoRes && !navigator.webdriver) { this._perfT = (this._perfT || 0) + dt; this._perfN = (this._perfN || 0) + 1;
       if (this._perfT > 4) { const avg = this._perfN / this._perfT; this._perfT = 0; this._perfN = 0;
-        if (avg < 24 && this.settings.res > 0.55) { this.settings.res = Math.round((this.settings.res - 0.15) * 100) / 100; this.applySettings(); this.ui.toast(`Desempenho baixo: resolução ajustada para ${Math.round(this.settings.res * 100)}%`, 'info'); }
+        if (avg < 24 && this.settings.res > 0.6) { this.settings.res = Math.round((this.settings.res - 0.15) * 100) / 100; this.applySettings(); this.ui.toast(`Desempenho baixo: resolução ajustada para ${Math.round(this.settings.res * 100)}%`, 'info'); }
         else if (avg < 22) { const S = this.settings; const k = S.shadows ? 'shadows' : S.ssao ? 'ssao' : S.grass > 0 ? 'grass' : S.bloom ? 'bloom' : S.viewDist === 'normal' ? 'viewDist' : S.viewDist === 'curta' ? 'viewMin' : null; if (k) { if (k === 'grass') S.grass = 0; else if (k === 'viewDist') S.viewDist = 'curta'; else if (k === 'viewMin') S.viewDist = 'minima'; else S[k] = false; S.quality = 'custom'; this.applySettings(); this.ui.toast(`Desempenho baixo: ${{ shadows: 'sombras', ssao: 'oclusão', grass: 'grama', bloom: 'brilho', viewDist: 'distância de visão', viewMin: 'distância de visão (mínima)' }[k]} desligado(a)`, 'info'); } } } }
   }
   // cachoeiras (lâmina, laguinho, riacho, gotas e névoa), barra/✔ da composteira e visor do coletor de chuva

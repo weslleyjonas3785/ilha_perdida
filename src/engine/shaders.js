@@ -117,9 +117,9 @@ vec3 bump(vec3 N, float h, float k){
   vec3 r1 = cross(dpdy, N), r2 = cross(N, dpdx); float det = dot(dpdx, r1);
   if (abs(det) < 1e-8) return N;
   vec3 g = sign(det) * (dhx * r1 + dhy * r2);
-  return normalize(abs(det) * N - g * k);
+  vec3 r = abs(det) * N - g * k; float rl = length(r); return rl > 1e-6 ? r / rl : N;
 }
-float D_GGX(float NoH, float a){ float a2 = a*a; float d = NoH*NoH*(a2-1.0)+1.0; return a2/(PI*d*d); }
+float D_GGX(float NoH, float a){ float a2 = max(a*a, 0.0025); float d = max(NoH*NoH*(a2-1.0)+1.0, 1e-3); return min(a2/(PI*d*d), 200.0); }
 float V_Smith(float NoV, float NoL, float a){ float k = a*0.5; return 0.25/((NoV*(1.0-k)+k)*(NoL*(1.0-k)+k)); }
 vec3 F_Schlick(vec3 f0, float VoH){ return f0 + (1.0-f0)*pow(clamp(1.0-VoH, 0.0, 1.0), 5.0); }
 void main(){
@@ -132,7 +132,7 @@ void main(){
   if (alphaTex < 0.5) discard;
 #endif
   base *= u_tint.rgb;
-  vec3 N = normalize(v_nrm);
+  vec3 N = v_nrm; { float nl0 = length(N); N = nl0 > 1e-6 ? N / nl0 : vec3(0.0, 1.0, 0.0); }
   if(!gl_FrontFacing) N = -N;
   // ---- material (codificado no alfa da cor do vértice) ----
   float specK = 1.0; float a = v_col.a; float rough = 0.78, metal = 0.0, glow = 0.0, sheen = 0.0, trans = 0.0, wrap = 0.0;
@@ -236,6 +236,9 @@ void main(){
   float sunAmt = pow(max(dot(normalize(ray), u_sunDir), 0.0), 8.0);
   vec3 fogC = u_fogCol + u_scatterCol * sunAmt;
   col = mix(col, fogC, clamp(fogAmt * u_fogMul, 0.0, 1.0));
+  // celular: o buffer HDR é de meia precisão (máx. ~65000); valor infinito ou inválido vira mancha preta — limita e troca pela névoa
+  if (!(col.r == col.r && col.g == col.g && col.b == col.b) || any(isinf(col))) col = fogC;
+  col = clamp(col, 0.0, 3.0e4);
   o = vec4(col, u_alpha * u_tint.a);
 }`;
 
@@ -280,6 +283,7 @@ void main(){
   col = mix(col, fogL, clamp(u_fogAmt*(1.0-y*0.5),0.0,1.0));
   col = mix(col, fogL, smoothstep(0.06, -0.12, d.y));
   col += vec3(0.6,0.65,0.8)*u_flash*2.0;
+  if (!(col.r == col.r && col.g == col.g && col.b == col.b) || any(isinf(col))) col = fogL; col = clamp(col, 0.0, 3.0e4);
   o = vec4(col, 1.0);
 }`;
 
@@ -314,6 +318,7 @@ void main(){
   float dist = length(v_wpos - u_camPos);
   float fog = 1.0 - exp(-dist*u_fogDensity);
   col = mix(col, u_fogCol, clamp(fog,0.0,1.0));
+  if (!(col.r == col.r && col.g == col.g && col.b == col.b) || any(isinf(col))) col = vec3(0.3, 0.4, 0.45); col = clamp(col, 0.0, 3.0e4);
   o = vec4(col, max(a, fog));
 }`;
 
@@ -372,6 +377,11 @@ vec3 aces(vec3 x){ return clamp(x*(2.51*x+0.03)/(x*(2.43*x+0.59)+0.14), 0.0, 1.0
 float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233)))*43758.5453); }
 void main(){
   vec3 c = texture(u_hdr, v_uv).rgb;
+  // pixel inválido (NaN/infinito): usa a média dos vizinhos válidos em vez de deixar um ponto preto
+  if (!(c.r == c.r && c.g == c.g && c.b == c.b) || any(isinf(c)) || c.r < 0.0 || c.g < 0.0 || c.b < 0.0) { vec3 acc = vec3(0.0); float n = 0.0;
+    for (int i = 0; i < 4; i++) { vec2 off = vec2(i == 0 ? 1.0 : i == 1 ? -1.0 : 0.0, i == 2 ? 1.0 : i == 3 ? -1.0 : 0.0) * u_texel; vec3 q = texture(u_hdr, v_uv + off).rgb; if (q.r == q.r && q.g == q.g && q.b == q.b && !any(isinf(q)) && q.r >= 0.0 && q.g >= 0.0 && q.b >= 0.0) { acc += q; n += 1.0; } }
+    c = n > 0.0 ? acc / n : vec3(0.0); }
+  c = min(c, vec3(3.0e4));
   if (u_aoOn > 0.5) { float ao = 0.0; for (int x=-1;x<=1;x++) for (int y=-1;y<=1;y++) ao += texture(u_ao, v_uv + vec2(x,y)*u_texel*2.0).r; ao /= 9.0; c *= mix(1.0, ao, 0.9); }
   if (u_bloomOn > 0.5) c += texture(u_bloom, v_uv).rgb * 0.35;
   c = mix(c, u_overlay.rgb * dot(c, vec3(0.3)), u_overlay.a);
