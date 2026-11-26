@@ -435,6 +435,10 @@ Todos entram na mesma VPN (Radmin VPN, Hamachi, ZeroTier…) ou na mesma rede de
 7. Os inimigos são androides (lista abaixo). À noite aparecem mais e mais fortes. Destruídos, eles podem ser desmontados (E) e rendem sucata, circuitos e núcleos de energia, usados na bancada para a **Lança de choque** e a armadura de sucata. As ruínas guardam caixas com sucata, pano, comida enlatada e água.
 8. Ao morrer, a mochila fica no local da morte para ser recuperada.
 
+## Tela cheia
+
+Leve o mouse ao canto superior direito: aparece o botão ⤢. Clique para o jogo ocupar a tela inteira (sem barra de tarefas nem abas). **Esc** sai da tela cheia. No celular o botão fica sempre visível.
+
 ## Sons do ambiente, relógio e tiros
 
 - **Relógio** no canto de cima, à direita (também no celular): mostra o dia, a hora do jogo (🕐 HH:MM) e o tempo.

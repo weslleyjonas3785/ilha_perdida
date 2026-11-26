@@ -23,3 +23,19 @@ try {
   console.error(e); if (/Erro de shader: null/.test(e.message)) gpuReload('shader'); else
   fail(e.message.includes('WebGL2') ? 'Seu navegador não suporta WebGL2. Use uma versão recente do Chrome, Edge, Firefox ou Safari.' : 'Falha ao iniciar: ' + e.message);
 }
+
+// tela cheia: botão no canto superior direito (aparece quando o mouse chega perto do canto). Esc sai da tela cheia.
+(() => { const btn = document.getElementById('fsBtn'); if (!btn) return; const B = document.body; let hideT = 0;
+  const isFs = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const show = (on) => { B.classList.toggle('fsShow', on); if (on) { clearTimeout(hideT); hideT = setTimeout(() => { if (!btn.matches(':hover')) B.classList.remove('fsShow'); }, 2500); } };
+  window.addEventListener('mousemove', (e) => { if (document.pointerLockElement) return; const near = e.clientX > innerWidth - 130 && e.clientY < 110; if (near) show(true); else if (B.classList.contains('fsShow') && !btn.matches(':hover')) B.classList.remove('fsShow'); });
+  document.addEventListener('mouseleave', () => { if (!btn.matches(':hover')) B.classList.remove('fsShow'); });
+  btn.addEventListener('mousedown', (e) => e.stopPropagation());
+  btn.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); const g = window.__game;
+    if (isFs()) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+    const d = document.documentElement, req = d.requestFullscreen || d.webkitRequestFullscreen; if (!req) { if (g && g.ui) g.ui.toast('Este navegador não deixa usar tela cheia aqui', 'warn'); return; }
+    let p; try { p = req.call(d, { navigationUI: 'hide' }); } catch (err) { p = Promise.reject(err); }
+    Promise.resolve(p).then(() => { B.classList.remove('fsShow'); B.classList.add('isFs'); if (g && g.state === 'playing' && g.input && !g.input.touchActive && !g.ui.anyOpen) g.input.requestLock(true); })
+      .catch(() => { if (g && g.ui) g.ui.toast('Esta página não deixa usar tela cheia — abra o arquivo direto no navegador (Chrome/Edge)', 'warn'); }); });
+  const upd = () => B.classList.toggle('isFs', isFs()); document.addEventListener('fullscreenchange', upd); document.addEventListener('webkitfullscreenchange', upd);
+})();
