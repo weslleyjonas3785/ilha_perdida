@@ -783,7 +783,7 @@ export class Game {
     for (const l of this.logs) { consider(l, 'log', l.x, l.z, 2.4, l.y); const s = score(l.x, l.z, 2.4, l.y); if (s !== null && s < toolS) { toolS = s; tool = { o: l, kind: 'log' }; } }
     for (const a of this.arrows) if (a.stuck && a.arrow) consider(a, 'arrow', a.p[0], a.p[2], 2.2, a.p[1]);
     for (const c of this.creatures.list) if (c.dead && !c.looted) consider(c, 'corpse', c.pos[0], c.pos[2], 2.4, c.pos[1]);
-    for (const q of this.build.pieces) if ((['campfire', 'tent', 'shelter', 'bed', 'door', 'chest', 'chest_wi', 'chest_iron', 'cabinet', 'bench', 'bench_mech', 'bench_guns', 'furnace', 'collector', 'composter', 'planter', 's_doorway', 's_hatch', 'flag'].includes(q.type) || q.data) && !(STR.STYPES[q.type] && q.type !== 's_doorway' && q.type !== 's_hatch')) consider(q, 'piece', q.x, q.z, q.type === 'shelter' || q.type === 'waterwheel' ? 3 : 2.4, q.y);
+    for (const q of this.build.pieces) if ((['campfire', 'tent', 'shelter', 'bed', 'door', 'chest', 'chest_wi', 'chest_iron', 'cabinet', 'bench', 'bench_mech', 'bench_guns', 'furnace', 'collector', 'composter', 'planter', 's_doorway', 's_hatch', 'flag'].includes(q.type) && !(q.type === 's_doorway' && q.data && q.data.blown) || q.data) && !(STR.STYPES[q.type] && q.type !== 's_doorway' && q.type !== 's_hatch')) consider(q, 'piece', q.x, q.z, q.type === 'shelter' || q.type === 'waterwheel' ? 3 : 2.4, q.y);
     if (!P.ladder) { const L = w.ladderNear(p[0], p[2], p[1], 1.5); if (L && Math.abs(p[1] - L.y0) < 1.2) { if (0.2 < bestS) { bestS = 0.2; best = { o: L, kind: 'ladder' }; } }
       else for (const L2 of w.ladders) if (Math.hypot(L2.ex - p[0], L2.ez - p[2]) < 1.6 && Math.abs(p[1] - L2.y1) < 0.8) { if (0.2 < bestS) { bestS = 0.2; best = { o: L2, kind: 'ladder', top: true }; } break; } }
     // água à frente
@@ -958,7 +958,7 @@ export class Game {
     if (p.data && PIECES[p.type].power) { const W = this.power.wiring; if (W) { if (W.from === p) this.power.cancelWire('Ligação de fio cancelada'); else if (this.power.connect(W.from, p)) this.power.wiring = null; return; } this.ui.openPanel('power', { piece: p }); this.audio.play('door', { vol: 0.4 }); return; }
     switch (p.type) {
       case 'campfire': FIRE.fireData(p); this.ui.openPanel('fire', { piece: p }); this.audio.play('cloth', { vol: 0.5 }); break;
-      case 'door': case 's_doorway': case 's_hatch': if (p.open) this.build.toggleDoor(p); else this.territory.access(p, () => this.build.toggleDoor(p)); break;
+      case 'door': case 's_doorway': case 's_hatch': if (p.data && p.data.blown) { this.ui.toast('💥 A porta foi arrancada pela explosão — o vão ficou aberto', 'info'); break; } if (p.open) this.build.toggleDoor(p); else this.territory.access(p, () => this.build.toggleDoor(p)); break;
       case 'flag': { const r = this.territory.daysLeft(p); this.ui.toast(`📡 Territoritek: área de construção de 32 m. ${r.cab ? (Object.keys(r.need).length ? `Manutenção: ${isFinite(r.days) ? r.days.toFixed(1) + ' dia(s)' : 'ok'}` : 'Sem construções para manter') : 'Sem Armário de manutenção: as construções vão perder vida'}`, 'info'); break; }
       case 'planter': this._usePlanter(p); break;
       case 'collector': this._useCollector(p); break;

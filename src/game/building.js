@@ -123,7 +123,7 @@ export class BuildSystem {
     const g = this.game; const piece = { id: PID++, uid: p.uid, type: p.type, x: p.x, y: p.y, z: p.z, rot: p.rot, lit: p.lit ?? (p.type === 'campfire'), open: !!p.open, items: p.items || null, openAng: p.open ? 1.6 : 0, data: p.data ? JSON.parse(JSON.stringify(p.data)) : null };
     if (isContainer(piece.type) && !piece.items) piece.items = [];
     piece.model = mat4.fromTRS(mat4.create(), [p.x, p.y, p.z], quat.fromEuler(0, p.rot, 0), [1, 1, 1]);
-    piece.colliders = this._shapes(piece.type, p.x, p.y, p.z, p.rot).map((s) => { s.piece = piece; if (s.leaf && piece.open) s.ghost = true; return g.physics.add(s); });
+    piece.colliders = this._shapes(piece.type, p.x, p.y, p.z, p.rot).map((s) => { s.piece = piece; if (s.leaf && (piece.open || (piece.data && piece.data.blown))) s.ghost = true; return g.physics.add(s); });
     this.pieces.push(piece); if (g.power) g.power.init(piece); if (g.struct) g.struct.onAdded(piece); return piece;
   }
   remove(piece, refund = true) {
@@ -137,7 +137,7 @@ export class BuildSystem {
     for (const p of this.pieces) { const dx = p.x - P.pos[0], dz = p.z - P.pos[2]; const d = Math.hypot(dx, dz); if (d > 5) continue; const dot = (dx * f[0] + dz * f[1]) / (d || 1); const score = d - dot * 2; if (dot > 0.3 && score < bd) { bd = score; best = p; } }
     if (best) { this.remove(best); g.audio.play('build'); g.ui.toast(`${PIECES[best.type].name} desmontado (50% devolvido)`, 'ok'); } else g.ui.toast('Mire em uma construção para desmontar', 'warn');
   }
-  toggleDoor(p) { p.open = !p.open; for (const c of p.colliders) if (c.leaf) c.ghost = p.open; this.game.audio.play('door');
+  toggleDoor(p) { if (p.data && p.data.blown) { p.open = false; return; } p.open = !p.open; for (const c of p.colliders) if (c.leaf) c.ghost = p.open; this.game.audio.play('door');
     if (!p.open) { const P = this.game.player; for (const c of p.colliders) if (c.leaf && this.game.physics.insideXZ(c, P.pos[0], P.pos[2], 0.36)) { p.open = true; c.ghost = true; this.game.ui.toast('Saia da porta para fechá-la', 'warn'); } } }
   update2(dt) { for (const p of this.pieces) if (p.type === 'door' || p.type === 's_doorway' || p.type === 's_hatch') { const t = p.open ? 1.6 : 0; p.openAng += (t - p.openAng) * Math.min(1, dt * 6); } }
   renderItems(items) {

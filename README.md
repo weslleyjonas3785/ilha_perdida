@@ -435,6 +435,10 @@ Todos entram na mesma VPN (Radmin VPN, Hamachi, ZeroTier…) ou na mesma rede de
 7. Os inimigos são androides (lista abaixo). À noite aparecem mais e mais fortes. Destruídos, eles podem ser desmontados (E) e rendem sucata, circuitos e núcleos de energia, usados na bancada para a **Lança de choque** e a armadura de sucata. As ruínas guardam caixas com sucata, pano, comida enlatada e água.
 8. Ao morrer, a mochila fica no local da morte para ser recuperada.
 
+## C4 na porta
+
+A C4 arranca a folha da **parede com porta** que estiver a até ~5 m: a porta cai no chão (para o lado contrário da explosão), a tranca é destruída e o vão fica aberto para sempre, mesmo que a parede de pedra ou metal aguente a explosão.
+
 ## Tela cheia
 
 Leve o mouse ao canto superior direito: aparece o botão ⤢. Clique para o jogo ocupar a tela inteira (sem barra de tarefas nem abas). **Esc** sai da tela cheia. No celular o botão fica sempre visível.

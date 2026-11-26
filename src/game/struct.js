@@ -303,9 +303,15 @@ export class StructSystem {
       else { const k = [1, 0.8, 0.45, 0.28][tier]; dd = dmg * 4 * k * (1 - Math.min(1, d / (R + 1.5)) * 0.6); }
       D.hp -= dd; hit = true; this.showHp(p);
       if (D.hp <= 0) this._break(p); else g.net && g.net.onBuild && g.net.onBuild('data', p); }
+    // C4 arranca a folha da porta das paredes com porta próximas: ela cai no chão (para o lado contrário da explosão),
+    // a tranca vai junto e o vão fica aberto para sempre (mesmo que a parede aguente)
+    if (kind === 'c4') for (const p of [...this.structs()]) { if (p.type !== 's_doorway' || !p.data || p.data.blown || !g.build.pieces.includes(p)) continue; if (Math.hypot(p.x - p0[0], p.y + 1 - p0[1], p.z - p0[2]) > 5) continue;
+      const side = Math.sign((p0[0] - p.x) * Math.sin(p.rot) + (p0[2] - p.z) * Math.cos(p.rot)) || 1; this.blowDoor(p, side); hit = true; g.net && g.net.onBuild && g.net.onBuild('data', p); }
     // C4 leva junto tudo o que foi construído no raio (bancadas, baús, fogueiras, máquinas…)
     if (kind === 'c4') for (const q of [...g.build.pieces]) { if (STYPES[q.type] || ['flag', 'chest', 'chest_wi', 'chest_iron', 'cabinet'].includes(q.type) || Math.hypot(q.x - p0[0], q.z - p0[2]) > R || Math.abs(q.y - p0[1]) > 8) continue; g.build.remove(q, false); g.fx.burst([q.x, q.y + 0.6, q.z], 20, [0.45, 0.4, 0.32], 4, 1, 0.1); g.net && g.net.onBuild && g.net.onBuild('del', q); hit = true; }
     if (hit) this.collapse(); }
+  blowDoor(p, side) { const g = this.g, D = p.data; D.blown = side; delete D.lock; p.open = false; p._blowT = performance.now(); for (const c of p.colliders || []) if (c.leaf) c.ghost = true;
+    const n = [Math.sin(p.rot) * -side, Math.cos(p.rot) * -side]; g.fx.burst([p.x + n[0] * 0.6, p.y + 1.1, p.z + n[1] * 0.6], 26, [0.35, 0.3, 0.26], 6, 1.2, 0.1); g.fx.burst([p.x, p.y + 1.2, p.z], 14, [1, 0.6, 0.25], 5, 0.4, 0.05); g.audio.play('treeFall', { at: [p.x, p.y + 1, p.z], vol: 0.8 }); }
   // tiro em construção: aguenta muitos (madeira ~30 tiros de fuzil); pedra e metal quase não sentem
   shot(p, dmg, at) { const g = this.g; if (!STYPES[p.type] || !p.data) return; const D = p.data, tier = STYPES[p.type].fixed ? 1 : (D.tier || 0); D.hp -= dmg * [0.35, 0.28, 0.08, 0.03][tier]; this.showHp(p);
     if (at) g.fx.burst(at, 5, tier >= 2 ? [0.6, 0.6, 0.6] : [0.6, 0.45, 0.3], 2.5, 0.35, 0.04);
@@ -332,6 +338,9 @@ export class StructSystem {
       if (p.type === 'flag') continue; // Territoritek: desenhado pelo sistema de território
       if (!STYPES[p.type]) continue; const d = p.data || {}; const dist = Math.hypot(p.x - eye[0], p.z - eye[2]); if (dist > 400) continue;
       const m = this.modelOf(p); const dmg = d.hp !== undefined ? d.hp / maxHp(p.type, d.tier || 0) : 1; items.push({ mesh: this.mesh(p.type, d.tier || 0), model: m, sphere: [p.x, p.y + 1, p.z, 3], tint: dmg < 0.5 ? [0.75 + dmg * 0.5, 0.7 + dmg * 0.5, 0.65 + dmg * 0.5, 1] : undefined });
+      if (p.type === 's_doorway' && d.blown) { for (const c of p.colliders || []) if (c.leaf && !c.ghost) c.ghost = true; // folha arrancada pela C4: caída e torta no chão
+        const k = p._blowT ? Math.min(1, (performance.now() - p._blowT) / 650) : 1, f = k * k, sd = d.blown; const lm = mat4.mul(mat4.create(), m, mat4.fromTRS(mat4.create(), [0.12 * sd * f, 0.1 * f, -sd * (0.15 + 0.4 * f)], quat.fromEuler(-sd * f * 1.36, 0.35 * f * sd, 0.2 * f), [1, 1, 1]));
+        items.push({ mesh: this.leafM, model: lm, sphere: [p.x, p.y + 1, p.z, 3], tint: [0.45, 0.4, 0.36, 1] }); continue; }
       if (p.type === 's_doorway') { const a = p.openAng || 0; const lm = mat4.mul(mat4.create(), m, mat4.fromTRS(mat4.create(), [-0.6, 0, 0], quat.fromEuler(0, -a, 0), [1, 1, 1])); mat4.mul(lm, lm, mat4.fromTRS(mat4.create(), [0.6, 0, 0], [0, 0, 0, 1], [1, 1, 1])); items.push({ mesh: this.leafM, model: lm, sphere: [p.x, p.y + 1, p.z, 2] }); }
       if (p.type === 's_hatch') { const a = (p.openAng || 0) * 1.05; const lm = mat4.mul(mat4.create(), m, mat4.fromTRS(mat4.create(), [0, 0, -0.6], quat.fromEuler(-a, 0, 0), [1, 1, 1])); items.push({ mesh: this.lidM, model: lm, sphere: [p.x, p.y, p.z, 2] }); }
     }
