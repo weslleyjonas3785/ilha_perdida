@@ -17,7 +17,8 @@ export class Input {
     });
     window.addEventListener('mouseup', (e) => { if (e.button === 0) this.mouse.left = false; if (e.button === 2) this.mouse.right = false; });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-    window.addEventListener('mousemove', (e) => { if (this.locked || this.dragCam || this.free) { this.mouse.dx += e.movementX; this.mouse.dy += e.movementY; } });
+    // soma o movimento de todos os eventos do quadro; ignora só os saltos falsos do navegador (um evento isolado enorme ao travar/destravar)
+    window.addEventListener('mousemove', (e) => { this._cx = e.clientX; this._cy = e.clientY; if (!(this.locked || this.dragCam || this.free)) return; const mx = e.movementX || 0, my = e.movementY || 0; if (Math.abs(mx) > 300 || Math.abs(my) > 300) return; this.mouse.dx += mx; this.mouse.dy += my; });
     canvas.addEventListener('wheel', (e) => { this.mouse.wheel += Math.sign(e.deltaY); e.preventDefault(); }, { passive: false });
     document.addEventListener('pointerlockchange', () => { this.locked = document.pointerLockElement === canvas; if (!this.locked && this.onUnlock) this.onUnlock(); });
     // Sem pointer lock (iframe restrito): arrastar com o botão direito/esquerdo gira a câmera

@@ -343,6 +343,8 @@ export class Game {
     if (act.equipment) { if (ui.open === 'inv' && ui.curTab === 'equip') ui.closePanels(); else ui.openPanel('inv', { tab: 'equip' }); }
     if (act.build) { if (this.build.mode) this.build.cancel(); else if (ui.open === 'build') ui.closePanels(); else ui.openPanel('build'); }
     const driving = !!this.vehicles.driving; const blocked = ui.anyOpen || driving || this.player.fainted > 0;
+    // modo mouse livre (quando o site não deixa travar o mouse): encostando a setinha na borda a câmera continua girando
+    if (inp.free && !ui.anyOpen && inp._cx != null) { const W = innerWidth, H = innerHeight, e = 24, sp = 700 * dt; if (inp._cx < e) inp.mouse.dx -= sp; else if (inp._cx > W - e) inp.mouse.dx += sp; if (inp._cy < e) inp.mouse.dy -= sp * 0.6; else if (inp._cy > H - e) inp.mouse.dy += sp * 0.6; }
     if (!ui.anyOpen && !this.struct.radial && !this._idleUpd) this.cam.input(inp.mouse.dx, inp.mouse.dy, (this.build.mode && inp.locked) || (this.guns.scope && this.guns.aimT > 0.3) ? 0 : inp.mouse.wheel, inp.sens, inp.invertY);
     const pa = blocked ? { mx: 0, mz: 0, analog: 0 } : act; if (driving && !ui.anyOpen) this.vehicles.update(dt, act);
     if (this._xfer) this._updateXfer(dt);

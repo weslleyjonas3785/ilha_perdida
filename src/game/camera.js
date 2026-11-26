@@ -9,7 +9,8 @@ export class ThirdPersonCamera {
   }
   input(dx, dy, wheel, sens = 1, invertY = false) {
     // sensibilidade moderada + limite contra saltos bruscos do mouse
-    dx = clamp(dx, -120, 120); dy = clamp(dy, -120, 120);
+    // sem teto baixo por quadro: com FPS baixo o movimento de um quadro é grande e antes ficava "preso" (a câmera não acompanhava o mouse)
+    dx = clamp(dx, -1500, 1500); dy = clamp(dy, -1500, 1500);
     const z = this.fov / this.baseFov; dx *= z; dy *= z; // com luneta a mira fica mais fina
     this.yaw -= dx * 0.0014 * sens; this.pitch += dy * 0.0012 * sens * (invertY ? -1 : 1);
     this.pitch = clamp(this.pitch, -1.15, 1.2);
