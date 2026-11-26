@@ -204,7 +204,7 @@ export class Helis {
   clear() { for (const h of this.list) { if (h.voice) h.voice.stop(0.2); this._dropCrew(h); } this.list = []; for (const w of this.wrecks) if (w.col) this.g.physics.remove && this.g.physics.remove(w.col); this.wrecks = []; }
   // fontes de fumaça (coluna preta dos destroços pegando fogo)
   smokeSources() { return this.wrecks.filter((w) => w.burn > 0).map((w) => ({ x: w.x, y: w.y + 1.5, z: w.z, cov: false, seed: (w.x * 0.13) % 1, heli: true })); }
-  lights(lights, eye) { for (const w of this.wrecks) if (w.burn > 0 && Math.hypot(w.x - eye[0], w.z - eye[2]) < 140) lights.push({ pos: [w.x, w.y + 2.5, w.z], range: 18, col: [3.4 * (0.85 + 0.15 * Math.sin(this.t * 13)), 1.6, 0.45] }); }
+  lights(lights, eye) { for (const w of this.wrecks) { const d = Math.hypot(w.x - eye[0], w.z - eye[2]); if (w.burn > 0 && d < 140) lights.push({ pos: [w.x, w.y + 2.5, w.z], range: 18, col: [3.4 * (0.85 + 0.15 * Math.sin(this.t * 13)), 1.6, 0.45], d }); } }
   render(items, eye) {
     const g = this.g, r = g.renderer; if (!this.m) this.m = { body: r.createMesh(heliBodyMesh()), broken: r.createMesh(heliBodyMesh({ broken: true })), tail: r.createMesh(heliTailMesh()), door: r.createMesh(heliDoorMesh()), rotor: r.createMesh(heliRotorMesh()), bent: r.createMesh(heliRotorMesh(true)), disc: r.createMesh(heliDiscMesh()), trot: r.createMesh(heliTailRotorMesh()) };
     const m = this.m;

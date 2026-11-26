@@ -15,8 +15,8 @@ export class GameAudio {
     this.amb.water = this._loop(this.noise, 'bandpass', 350);
     this.applyVolumes();
     // sons de tiro gravados (arquivos): pistola, fuzil de assalto, escopeta e fuzil de precisão
-    this.samples = {}; this.sampleGain = { pistol: 1.5, rifle: 1.0, shotgun: 0.95, sniper: 1.0, tinnitus: 0.7, smokegren: 1.0, barulhenta: 1.0, helicoptero: 1.1 };
-    for (const k of ['pistol', 'rifle', 'shotgun', 'sniper', 'skill', 'mechastep', 'spindown', 'tinnitus', 'smokegren', 'barulhenta', 'helicoptero']) fetch(`assets/audio/${k}.mp3`).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)).then((buf) => { this.samples[k] = buf; }).catch(() => {});
+    this.samples = {}; this.sampleGain = { pistol: 1.5, rifle: 1.0, shotgun: 0.95, sniper: 1.0, tinnitus: 0.7, smokegren: 1.0, barulhenta: 1.0, helicoptero: 1.1, armando_bastao: 1.0, disparo: 1.2 };
+    for (const k of ['pistol', 'rifle', 'shotgun', 'sniper', 'skill', 'mechastep', 'spindown', 'tinnitus', 'smokegren', 'barulhenta', 'helicoptero', 'armando_bastao', 'disparo']) fetch(`assets/audio/${k}.mp3`).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)).then((buf) => { this.samples[k] = buf; }).catch(() => {});
   }
   // som longo posicional que segue a distância/direção do jogador e pode ser abaixado aos poucos (sirene da granada barulhenta)
   voice(name, o = {}) {
@@ -183,6 +183,8 @@ export class GameAudio {
       case 'page': this._noise(t, 0.16, 'bandpass', 2600 + R() * 1200, 0.6, 0.09 * v); this._noise(t + 0.07, 0.1, 'highpass', 3500, 0.7, 0.05 * v); break;
       case 'skill': this._tone(t, 'sine', 660, 990, 0.4, 0.08 * v); break;
       case 'nvgOn': this._tone(t, 'sine', 2400, 5200, 0.35, 0.06 * v); break;
+      case 'snap': this._noise(t, 0.08, 'highpass', 2400, 0.6, 0.4 * v); this._tone(t, 'triangle', 900, 300, 0.12, 0.12 * v); break;
+      case 'reelin': this._tone(t, 'square', 2400, 2100, 0.015, 0.03 * v); break;
       case 'click': this._tone(t, 'square', 1800, 1200, 0.02, 0.05 * v); break;
       case 'glass': for (let i = 0; i < 9; i++) { const d = Math.random() * 0.25; this._tone(t + d, 'triangle', 2500 + Math.random() * 3500, 1800 + Math.random() * 2000, 0.06 + Math.random() * 0.12, 0.08 * v); } this._noise(t, 0.25, 'highpass', 3000, 0.8, 0.45 * v); break;
       case 'thunder': { const d = o.delay || 0; this._noise(t + d, 3.5, 'lowpass', 180, 0.5, 0.8 * v, this.ambG, 0.05); this._noise(t + d, 0.4, 'lowpass', 1200, 0.5, 0.4 * v, this.ambG, 0.01); break; }

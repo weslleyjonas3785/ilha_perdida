@@ -6,6 +6,8 @@ import { mat4, quat } from '../engine/math.js';
 import { WATER } from './world.js';
 import * as MX from './machines.js';
 import { structShapes, STYPES, FLAG_GAP } from './struct.js';
+import * as BM from './basemeshes.js';
+import { isContainer, CHESTS } from './territory.js';
 const MACHINE_MESH = { printer: MX.printerMesh, panel: MX.panelMesh, solar: MX.solarMesh, wind: MX.windTowerMesh, waterwheel: MX.wheelFrameMesh, battery: MX.batteryMesh };
 
 const G = 3;
@@ -13,7 +15,9 @@ let PID = 1;
 export class BuildSystem {
   constructor(game) {
     this.game = game; this.pieces = []; this.meshes = {}; this.mode = null; this.rotStep = 0; this.ghost = null;
-    for (const t of ['campfire', 'tent', 'shelter', 'wall', 'floor', 'chest', 'bench', 'door', 'planter', 'collector', 'composter', 'gtrap']) this.meshes[t] = game.renderer.createMesh(pieceMesh(t === 'door' ? 'doorframe' : t));
+    for (const t of ['campfire', 'tent', 'shelter', 'wall', 'floor', 'bench', 'door', 'planter', 'collector', 'composter', 'gtrap']) this.meshes[t] = game.renderer.createMesh(pieceMesh(t === 'door' ? 'doorframe' : t));
+    // baús, armário e Territoritek: o desenho fica no sistema de território (aqui só para a prévia)
+    for (const [t, k] of Object.entries(CHESTS)) this.meshes[t] = game.renderer.createMesh(BM.chestMesh(k.kind)); this.meshes.cabinet = game.renderer.createMesh(BM.cabinetMesh()); this.meshes.flag = game.renderer.createMesh(BM.tkBaseMesh());
     this.doorLeaf = game.renderer.createMesh(pieceMesh('door'));
     for (const [t, fn] of Object.entries(MACHINE_MESH)) this.meshes[t] = game.renderer.createMesh(fn());
   }
@@ -57,7 +61,7 @@ export class BuildSystem {
       for (const [lx, lz] of ext) { const px = x + lx * c + lz * s, pz = z - lx * s + lz * c; const [h] = g.physics.ground(px, pz, 0.1, y + 0.6, 0.8); hmin = Math.min(hmin, h); hmax = Math.max(hmax, h); }
       if (hmax - hmin > 0.95) reason = 'Terreno muito inclinado';
       if (w.height(x, z) < WATER + 0.15 && y < WATER + 0.2) reason = 'Não pode construir na água';
-      if (w.caveAt(x, z) && type !== 'campfire' && type !== 'chest') reason = 'Pouco espaço na caverna';
+      if (w.caveAt(x, z) && type !== 'campfire' && !isContainer(type)) reason = 'Pouco espaço na caverna';
     }
     let water = false; if (type === 'waterwheel' && !reason) { for (let a = 0; a < 16 && !water; a++) for (const d of [1.6, 2.4, 3.4]) { const xx = x + Math.cos(a * 0.39) * d, zz = z + Math.sin(a * 0.39) * d; if (w.height(xx, zz) < WATER - 0.2 && !w.isSalt(xx, zz)) { water = true; break; } } if (!water) reason = 'A roda d’água precisa ficar na beira de um rio ou lago de água doce'; }
     const shapes = this._shapes(type, x, y, z, rot);
@@ -67,7 +71,9 @@ export class BuildSystem {
       if (g.physics.insideXZ(s.type === 'box' ? { ...s, cos: Math.cos(s.rot), sin: Math.sin(s.rot) } : s, P.pos[0], P.pos[2], 0.36) && s.y1 > P.pos[1] + 0.1 && s.y0 < P.pos[1] + 1.8) { reason = 'Você está no caminho'; break; }
     }
     if (!reason && Math.hypot(x - P.pos[0], z - P.pos[2]) > 6) reason = 'Longe demais';
-    if (!reason && type === 'flag' && g.struct && g.struct.foreignFlagNear(x, z, FLAG_GAP)) reason = 'Perto demais da bandeira de outro jogador';
+    if (!reason && type === 'flag' && g.struct && g.struct.foreignFlagNear(x, z, FLAG_GAP)) reason = 'Perto demais do território de outro jogador';
+    if (!reason && (type === 'bench' || isContainer(type)) && g.struct && !g.struct.ownFlagAt(x, z)) reason = g.struct.flags().length ? 'Fora do seu território (Territoritek)' : 'Coloque um Territoritek primeiro (marca o território)';
+    if (!reason && type === 'cabinet' && g.territory) { const f = g.struct.ownFlagAt(x, z); if (f && g.territory.cabinetFor(f)) reason = 'Esse território já tem um armário'; }
     const afford = g.inv.has(def.cost);
     this.ghost = { type, x, y, z, rot, water, valid: !reason && afford, reason: reason || (afford ? null : 'Recursos insuficientes') };
     g.ui.buildStatus(this.ghost);
@@ -78,7 +84,7 @@ export class BuildSystem {
     const gh = this.ghost, g = this.game; if (!gh) return;
     if (!gh.valid) { g.ui.toast(gh.reason, 'warn'); g.audio.play('error'); return; }
     const def = PIECES[gh.type]; if (!g.inv.pay(def.cost)) { g.ui.toast('Recursos insuficientes', 'warn'); return; }
-    const np = this.add({ type: gh.type, x: gh.x, y: gh.y, z: gh.z, rot: gh.rot, data: gh.type === 'flag' ? { owner: g.struct ? g.struct.myId() : 'me' } : gh.type === 'planter' ? { grow: g._clock() + 0.25 } : gh.type === 'collector' ? { water: 0 } : gh.type === 'composter' ? { dirt: 0, food: 0 } : undefined }); { const R = 2.4; for (const t of g.world.trees) if (t.felled && Math.hypot(t.x - gh.x, t.z - gh.z) < R) g.blockedTrees.add(t.id); } // árvore cortada aqui não renasce if (np.data && gh.type === 'waterwheel') np.data.water = gh.water;
+    const np = this.add({ type: gh.type, x: gh.x, y: gh.y, z: gh.z, rot: gh.rot, data: gh.type === 'flag' ? { owner: g.struct ? g.struct.myId() : 'me' } : gh.type === 'planter' ? { grow: g._clock() + 0.25 } : gh.type === 'collector' ? { water: 0 } : gh.type === 'composter' ? { dirt: 0, food: 0 } : undefined }); if (g.territory) g.territory.onPlaced(np); { const R = 2.4; for (const t of g.world.trees) if (t.felled && Math.hypot(t.x - gh.x, t.z - gh.z) < R) g.blockedTrees.add(t.id); } // árvore cortada aqui não renasce if (np.data && gh.type === 'waterwheel') np.data.water = gh.water;
     if (def.power) g.ui.toast(def.power === 'hub' ? 'Ligue aparelhos e fontes ao painel com fio de cobre (E no aparelho → Puxar fio)' : 'Ligue com fio de cobre a um painel elétrico (E no aparelho → Puxar fio)', 'info');
     g.audio.play('build'); g.fx.burst([gh.x, gh.y + 0.3, gh.z], 18, [0.55, 0.42, 0.28], 2.5, 0.7, 0.07);
     g.ui.toast(`${def.icon} ${def.name} construído`, 'ok'); g.stats.built++;
@@ -95,7 +101,8 @@ export class BuildSystem {
       case 'wall': return [box(0, 0, 1.5, 0.25, -0.05, 2.7, { noClimb: true })];
       case 'floor': return [box(0, 0, 1.5, 1.5, -3, 0.2, { platform: true })];
       case 'door': return [box(-1.05, 0, 0.45, 0.22, -0.05, 2.7, { noClimb: true }), box(1.05, 0, 0.45, 0.22, -0.05, 2.7, { noClimb: true }), box(0, 0, 0.65, 0.22, 2.3, 2.7), box(0, 0, 0.6, 0.1, 0, 2.25, { leaf: true, noClimb: true })];
-      case 'chest': return [box(0, 0, 0.52, 0.32, -0.05, 0.74)];
+      case 'chest': case 'chest_wi': case 'chest_iron': return [box(0, 0, 0.45, 0.29, -0.05, 0.66)];
+      case 'cabinet': return [box(0, 0, 0.55, 0.3, -0.05, 1.8)];
       case 'gtrap': return [box(0, 0, 1.2, 0.1, -0.05, 0.3, { ghost: true, noClimb: true })];
       case 'bench': return [box(0, 0, 0.95, 0.48, -0.05, 1.0)];
       case 'planter': return [box(0, 0, 0.95, 0.6, -0.05, 0.45)];
@@ -112,13 +119,13 @@ export class BuildSystem {
   }
   add(p) {
     const g = this.game; const piece = { id: PID++, uid: p.uid, type: p.type, x: p.x, y: p.y, z: p.z, rot: p.rot, lit: p.lit ?? (p.type === 'campfire'), open: !!p.open, items: p.items || null, openAng: p.open ? 1.6 : 0, data: p.data ? JSON.parse(JSON.stringify(p.data)) : null };
-    if (piece.type === 'chest' && !piece.items) piece.items = [];
+    if (isContainer(piece.type) && !piece.items) piece.items = [];
     piece.model = mat4.fromTRS(mat4.create(), [p.x, p.y, p.z], quat.fromEuler(0, p.rot, 0), [1, 1, 1]);
     piece.colliders = this._shapes(piece.type, p.x, p.y, p.z, p.rot).map((s) => { s.piece = piece; if (s.leaf && piece.open) s.ghost = true; return g.physics.add(s); });
     this.pieces.push(piece); if (g.power) g.power.init(piece); if (g.struct) g.struct.onAdded(piece); return piece;
   }
   remove(piece, refund = true) {
-    const g = this.game; if (g.struct) g.struct.onRemoved(piece); if (refund && g.power && piece.data && PIECES[piece.type].power) g.power.onRemove(piece); for (const c of piece.colliders) g.physics.remove(c); this.pieces.splice(this.pieces.indexOf(piece), 1); if (g.power) g.power.dirty = true;
+    const g = this.game; if (!this.pieces.includes(piece)) return; if (g.struct) g.struct.onRemoved(piece); if (refund && g.power && piece.data && PIECES[piece.type].power) g.power.onRemove(piece); for (const c of piece.colliders) g.physics.remove(c); this.pieces.splice(this.pieces.indexOf(piece), 1); if (g.power) g.power.dirty = true;
     if (refund && piece.type === 'campfire' && piece.data && Array.isArray(piece.data.cook)) { const d = piece.data; for (const s of [...d.fuel, ...d.out]) if (s && s.qty > 0) g.dropItem(s.id, s.qty, [piece.x, piece.y, piece.z]); for (const c of d.cook) if (c) g.dropItem(c.id, 1, [piece.x, piece.y, piece.z]); piece.data = null; }
     if (refund) { for (const [id, n] of Object.entries(PIECES[piece.type].cost)) { const k = Math.ceil(n / 2); const added = g.inv.add(id, k); if (added < k) g.dropItem(id, k - added, [piece.x, piece.y, piece.z]); } }
     if (piece.items) for (const s of piece.items) if (s) g.dropItem(s[0], s[1], [piece.x, piece.y + 0.3, piece.z]);
@@ -135,7 +142,7 @@ export class BuildSystem {
     const g = this.game, r = g.renderer;
     for (const p of this.pieces) {
       if (!r.visible(p.x, p.y + 1, p.z, 4) && g.renderer.shadowsEnabled === false) continue;
-      if (!this.meshes[p.type]) continue; items.push({ mesh: this.meshes[p.type], model: p.model, sphere: [p.x, p.y + 1, p.z, 4] });
+      if (!this.meshes[p.type] || isContainer(p.type) || p.type === 'flag') continue; items.push({ mesh: this.meshes[p.type], model: p.model, sphere: [p.x, p.y + 1, p.z, 4] });
       if (p.type === 'door') { const m = mat4.mul(mat4.create(), p.model, mat4.fromTRS(mat4.create(), [-0.52, 0, 0], quat.fromEuler(0, -p.openAng, 0), [1, 1, 1])); mat4.mul(m, m, mat4.fromTRS(mat4.create(), [0.52, 0, 0], [0, 0, 0, 1], [1, 1, 1])); items.push({ mesh: this.doorLeaf, model: m, sphere: [p.x, p.y + 1, p.z, 3] }); }
     }
     if (this.mode && this.ghost) {

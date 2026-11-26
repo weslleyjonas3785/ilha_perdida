@@ -6,6 +6,7 @@ import * as FIRE from './campfire.js';
 import { GUNS, gunMesh, scopeMesh, silencerMesh, SCOPE_MOUNT, silMount, attSlots, fits } from './weapons.js';
 import { mergeMeshes, meshIcon } from './iconrender.js';
 import { mat4 } from '../engine/math.js';
+import { LOCKS, CABINET_OK } from './territory.js';
 
 const $ = (id) => document.getElementById(id);
 export class UI {
@@ -222,6 +223,9 @@ export class UI {
     const opts = [[`👕 Vestir — ${SLOT_LABEL[it.slot] || it.slot}${cur ? ` (troca: ${ITEMS[cur].name})` : ' (vazio)'}`, () => g.equipFromSlot(i), g.equip.suit && it.slot !== 'hat' ? 'Tire a roupa R.A.T primeiro' : null]];
     if (n) opts.push([`✂ Cortar em retalhos (+${n} 🧵 Pano)${b ? ` com ${ITEMS[b].name}` : ''}`, () => g.cutCloth(i), b ? null : 'Precisa de um objeto cortante (faca ou machado)']);
     this.choose(`${it.icon} <b>${it.name}</b> — o que fazer?`, opts); }
+  // clique num peixe: tirar os filés com algo afiado
+  fishMenu(i) { const g = this.game, s = g.inv.slots[i]; if (!s) return; const it = ITEMS[s.id], b = g.blade();
+    this.choose(`${it.icon} <b>${it.name}</b> — o que fazer?`, [[`🔪 Tirar ${it.fish} filé${it.fish > 1 ? 's' : ''} de peixe${b ? ` com ${ITEMS[b].name}` : ''}`, () => g.fillet(i), b ? null : 'Precisa de um objeto cortante (faca ou machado)']]); }
   ask(text, yes, no) { document.querySelector('.askbox')?.remove(); const d = document.createElement('div'); d.className = 'askbox'; d.innerHTML = `<div class="askin"><p>${text}</p><div class="acts"><button class="y">Sim</button><button class="n">Não</button></div></div>`;
     document.body.appendChild(d); const close = () => d.remove(); d.querySelector('.y').onclick = () => { close(); yes && yes(); this.refresh(); }; d.querySelector('.n').onclick = () => { close(); no && no(); }; return d; }
   askAttachCell(i) { const g = this.game; if (g.equip.nvgCell != null) return this.toast('O óculos já tem bateria. Clique direito nele para tirar a atual.', 'warn'); this.ask('🔋 Anexar esta bateria ao óculos de visão noturna?', () => g.attachCell(i)); }
@@ -271,7 +275,7 @@ export class UI {
       for (const [i, e] of inv.items.entries()) { if (e.c !== ci) continue; const [w, h] = inv.dims(e); const el = document.createElement('div'); el.className = 'gitem' + (this.sel === i ? ' sel' : '') + (e.rad ? ' rad' : '') + (g.equip.hand === e.id ? ' eq' : '');
         el.style.left = e.x * C + 'px'; el.style.top = e.y * C + 'px'; el.style.width = w * C - 2 + 'px'; el.style.height = h * C - 2 + 'px'; el.dataset.idx = i;
         el.innerHTML = `<div class="gimg${e.rot ? ' rot' : ''}" style="--w:${w * C}px;--h:${h * C}px">${this._icon(e.id)}</div><span class="q">${e.qty > 1 ? e.qty : ''}</span>${e.rad ? '<span class="radb">☢</span>' : ''}`;
-        el.title = ITEMS[e.id].name + (e.rad ? ' — contaminado por radiação' : ''); if (this.multi.has(i)) el.classList.add('msel'); el.onclick = (ev) => { if (ev.shiftKey) { if (this.multi.has(i)) this.multi.delete(i); else this.multi.add(i); this.renderInv(); return; } if (!this._justDragged) { const I0 = ITEMS[e.id]; if (I0.type === 'backpack' && g.betterPack(e.id)) { g.equipFromSlot(i); this.sel = null; this.refresh(); return; } if (e.id === 'nvcell') this.cellMenu(i); else if (I0.type === 'clothing' && I0.slot) this.clothMenu(i); } this.sel = this.sel === i ? null : i; this.renderInv(); }; if (e.id === 'nvg') el.oncontextmenu = (ev) => { ev.preventDefault(); this.askRemoveCell(); }; if (GUNS[e.id] && ITEMS[e.id].tool === 'gun') el.oncontextmenu = (ev) => { ev.preventDefault(); this.ctxMenu(ev, [['🔧 Verificar', () => this.gunCheck(e.id)], ['Descartar', () => { g.dropFromSlot(i, 1); this.sel = null; }]]); }; if (ITEMS[e.id].type === 'book') el.oncontextmenu = (ev) => { ev.preventDefault(); const known = g.skills.has(ITEMS[e.id].skill); this.ctxMenu(ev, [[known ? '📖 Ler (já sabe)' : '📖 Ler', () => g.readBook(i)], ['Descartar', () => { g.dropFromSlot(i, 1); this.sel = null; }]]); }; this._dragItem(el, i); gr.appendChild(el); }
+        el.title = ITEMS[e.id].name + (e.rad ? ' — contaminado por radiação' : ''); if (this.multi.has(i)) el.classList.add('msel'); el.onclick = (ev) => { if (ev.shiftKey) { if (this.multi.has(i)) this.multi.delete(i); else this.multi.add(i); this.renderInv(); return; } if (!this._justDragged) { const I0 = ITEMS[e.id]; if (I0.type === 'backpack' && g.betterPack(e.id)) { g.equipFromSlot(i); this.sel = null; this.refresh(); return; } if (e.id === 'nvcell') this.cellMenu(i); else if (I0.fish) this.fishMenu(i); else if (I0.type === 'clothing' && I0.slot) this.clothMenu(i); } this.sel = this.sel === i ? null : i; this.renderInv(); }; if (e.id === 'nvg') el.oncontextmenu = (ev) => { ev.preventDefault(); this.askRemoveCell(); }; if (GUNS[e.id] && ITEMS[e.id].tool === 'gun') el.oncontextmenu = (ev) => { ev.preventDefault(); this.ctxMenu(ev, [['🔧 Verificar', () => this.gunCheck(e.id)], ['Descartar', () => { g.dropFromSlot(i, 1); this.sel = null; }]]); }; if (ITEMS[e.id].type === 'book') el.oncontextmenu = (ev) => { ev.preventDefault(); const known = g.skills.has(ITEMS[e.id].skill); this.ctxMenu(ev, [[known ? '📖 Ler (já sabe)' : '📖 Ler', () => g.readBook(i)], ['Descartar', () => { g.dropFromSlot(i, 1); this.sel = null; }]]); }; this._dragItem(el, i); gr.appendChild(el); }
       wrap.appendChild(gr); box.appendChild(wrap); });
     { const kg = g.carryKg ?? inv.kg(); $('invCap').classList.toggle('heavy', kg > 25); }
     $('invCap').textContent = `Peso: ${(g.carryKg ?? inv.kg()).toFixed(1)} kg${(g.carryKg ?? 0) > 25 ? ' (pesado: você fica mais lento)' : ' / 25 kg sem perder velocidade'} · Ocupado: ${inv.used()}/${inv.size} células${inv.contaminated() ? ` · ☢ ${inv.contaminated()} item(ns) contaminado(s): lave num rio com sabonete líquido` : ''} · arraste para mover · ESPAÇO (ou R) gira ao arrastar`;
@@ -286,6 +290,7 @@ export class UI {
     if (it.place && PIECES[it.place]) add(`Posicionar ${PIECES[it.place].name.toLowerCase()}`, () => { if (!g.inv.has(PIECES[it.place].cost)) return this.toast(`Precisa de: ${Object.entries(PIECES[it.place].cost).map(([k, n]) => n + '× ' + ITEMS[k].name).join(', ')}`, 'warn'); this.closePanels(true); g.build.start(it.place); g.onPanelClosed(); });
     if (it.slot || it.type === 'backpack' || it.type === 'suit') add(it.type === 'backpack' ? 'Equipar mochila' : 'Vestir', () => g.equipFromSlot(idx)); if (LARGE.has(s.id)) add('Pôr nas costas', () => g.invToBack(idx, !g.equip.backA ? 'backA' : 'backB')); if (it.type === 'attachment' && g.equip.hand && fits(g.equip.hand, s.id)) add('Encaixar na arma da mão', () => g.attachItem(idx)); if (GUNS[s.id] && it.tool === 'gun') add('🔧 Verificar', () => this.gunCheck(s.id));
     if (s.id === 'nvg') { if (g.equip.nvgCell != null) add('Tirar bateria', () => this.askRemoveCell()); }
+    if (it.fish) add(`🔪 Tirar ${it.fish} filé${it.fish > 1 ? 's' : ''}`, () => g.fillet(idx));
     if (it.type === 'book') add(g.skills.has(it.skill) ? '📖 Ler (já sabe)' : '📖 Ler', () => g.readBook(idx));
     if (s.id === 'nvcell' && (g.equip.hat === 'nvg' || g.countAll('nvg') > 0)) add('Anexar ao óculos', () => this.askAttachCell(idx));
     if (['tool', 'food', 'drink', 'medical'].includes(it.type)) add(g.quick.includes(s.id) ? `Na barra (tecla ${g.quick.indexOf(s.id) + 1})` : 'Pôr na barra rápida', () => g.bindQuick(s.id));
@@ -433,7 +438,7 @@ export class UI {
     const g = this.game, list = $('buildList'); list.innerHTML = '';
     for (const [type, d] of Object.entries(PIECES)) { if (d.hidden || d.legacy) continue;
       const skOk = g.hasSkillFor(type); const can = skOk && g.inv.has(d.cost); const el = document.createElement('div'); el.className = 'recipe' + (skOk ? '' : ' locked noskill');
-      el.innerHTML = `<div class="ic">${d.icon}</div><div><div class="nm">${d.name}</div><div class="muted">${d.desc}</div>${skOk ? '' : `<div class="lk">🔒 Precisa da habilidade ${g.skillName(SKILL_OF[type])}</div>`}<div class="cost">${costText(d.cost, g.inv)}</div></div>`;
+      el.innerHTML = `<div class="ic">${d.img ? `<img class="iimg" draggable="false" src="assets/icons/${d.img}.png" alt="">` : d.icon}</div><div><div class="nm">${d.name}</div><div class="muted">${d.desc}</div>${skOk ? '' : `<div class="lk">🔒 Precisa da habilidade ${g.skillName(SKILL_OF[type])}</div>`}<div class="cost">${costText(d.cost, g.inv)}</div></div>`;
       const b = document.createElement('button'); b.textContent = 'Posicionar'; b.disabled = !can; b.dataset.piece = type; b.onclick = () => { this.closePanels(true); g.build.start(type); g.onPanelClosed(); }; el.appendChild(b); list.appendChild(el);
     }
   }
@@ -450,7 +455,17 @@ export class UI {
     this._fireSig = JSON.stringify([p.lit, d.fuel, d.cook.map((c) => c && c.id), d.out]);
   }
   renderChest() {
-    const g = this.game, p = this.chest; if (!p) return; const box = new Inventory(16); box.load(p.items);
+    const g = this.game, p = this.chest; if (!p) return; const T = g.territory; const box = new Inventory(T ? T.cap(p) : 16); box.load(p.items); const cab = p.type === 'cabinet';
+    { const h = $('chestPanel').querySelector('h2'); if (h) h.textContent = (PIECES[p.type] || PIECES.chest).name; }
+    // armário: só materiais de manutenção; mostra o gasto por dia e quantos dias o estoque aguenta
+    { let info = $('chestInfo'); if (!info) { info = document.createElement('div'); info.id = 'chestInfo'; $('chestGrid').parentNode.insertBefore(info, $('chestGrid')); }
+      const L = T && T.lockOf(p); let html = '';
+      if (cab && T) { const f = T.flagFor(p.x, p.z); const N = { wood: '🪵 madeira', stone: '🪨 pedra', scrap: '⚙ sucata/ferro', iron: 'ferro' }; if (f) { const r = T.daysLeft(f); const need = Object.entries(r.need); html += need.length ? `Gasto por dia: ${need.map(([k, n]) => `${n < 10 ? n.toFixed(1) : Math.round(n)} ${N[k] || k}`).join(' · ')}<br>Mantém a base de pé por <b>${isFinite(r.days) ? r.days.toFixed(1) : '∞'} dia(s)</b>${r.days < 1 ? ' — ⚠ coloque mais material!' : ''}` : 'Nenhuma construção do Projeto neste território ainda.'; info.className = 'chestInfo' + (need.length && r.days < 1 ? ' bad' : ''); } else { html = 'Fora de um território: não mantém nada.'; info.className = 'chestInfo bad'; } html += '<br><span class="muted">Aceita madeira, pedra, sucata e barras de ferro (1 barra = 2 sucatas).</span>'; }
+      else info.className = 'chestInfo';
+      if (L) html += `${html ? '<br>' : ''}🔒 ${LOCKS[L.id].name} (${Math.round(L.hp)}/${LOCKS[L.id].hp})${L.owner === T.me() ? ' <button class="itb" id="unlockBtn">Tirar tranca</button>' : ''}`;
+      else if (!cab) html += `${html ? '<br>' : ''}<span class="muted">Sem tranca: qualquer um pode abrir. Crie uma tranca e, com ela na mão, clique no baú.</span>`;
+      info.innerHTML = html; info.style.display = html ? 'block' : 'none'; const ub = $('unlockBtn'); if (ub) ub.onclick = () => { T.removeLock(p); this.renderChest(); }; }
+    if (cab) { const bad = box.slots.map((q, k) => q && !CABINET_OK.includes(q.id) ? k : -1).filter((k) => k >= 0); for (const k of bad) { const q = box.slots[k]; const n = g.inv.add(q.id, q.qty); if (n < q.qty) g.dropItem(q.id, q.qty - n, [p.x, p.y + 0.5, p.z]); box.takeSlot(k, q.qty); } if (bad.length) { p.items = box.serialize(); this.toast('O armário só guarda madeira, pedra, sucata e ferro', 'warn'); } }
     const cg = $('chestGrid'), ig = $('chestInv'); cg.innerHTML = ''; ig.innerHTML = '';
     this.cmulti = this.cmulti || new Set(); this.imulti = this.imulti || new Set(); this.xferDir = this.xferDir || 'up';
     { let tb = $('chestTools'); if (!tb) { tb = document.createElement('div'); tb.id = 'chestTools'; tb.className = 'invtools'; cg.parentNode.insertBefore(tb, cg); }

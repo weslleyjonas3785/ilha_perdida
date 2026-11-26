@@ -43,6 +43,9 @@ import { GameAudio } from './audio.js';
 import { SmokeSignals } from './smoke.js';
 import { Admin } from './admin.js';
 import { Helis } from './heli.js';
+import { Fishing, rodMesh } from './fishing.js';
+import { Territory, LOCKS, isContainer, CHESTS } from './territory.js';
+const CHESTS_HP = Object.fromEntries(Object.entries(CHESTS).map(([k, v]) => [k, v.hp]));
 import { TouchControls } from './touch.js';
 import { Voice } from './voice.js';
 import { Blasts } from './blasts.js';
@@ -93,7 +96,7 @@ export class Game {
     this.settings = Object.assign(defaults, saved); this.settings.v = 2;
     this.renderer = new Renderer(canvas); this.audio = new GameAudio(); { const A = this.audio, orig = A.play.bind(A); A.play = (name, o = {}) => { const res = orig(name, o); const R = NOISE_R[name]; if (R && !o.at && !o.noNoise && this.player && !this.player.dead && this.state === 'playing') this.noise(this.player.pos, name === 'step' ? R * (o.vol ?? 1) : R, name === 'step' ? 'passo' : name); return res; }; } this.audio.listener = () => this.cam ? { eye: this.cam.eye, yaw: Math.atan2(this.cam.target[0] - this.cam.eye[0], this.cam.target[2] - this.cam.eye[2]) } : null; this.ui = new UI(this); this.input = new Input(canvas, this.ui); this.touchUI = new TouchControls(this); this.voice = new Voice(this);
     this.cam = new ThirdPersonCamera(); this.env = new Environment(this); this.fx = new FX(this);
-    this.guns = new Firearms(this); this.npcs = new NPCManager(this); this.fires = new FIRE.Campfires(this); this.convoys = new Convoys(this); this.helis = new Helis(this); this.grenades = new Grenades(this); this.smoke = new SmokeSignals(this); this.admin = new Admin(this); this.blasts = new Blasts(this); this.struct = new STR.StructSystem(this); this.net = new Net(this); this.inv = new GridInventory(); this._bigPockets = typeof window !== 'undefined' && !!window.__TEST_BIG_POCKETS; this.quick = Array(8).fill(null); this.inv.onChange = () => { this.syncHand && this.equip && this.syncHand(); if (this.ui.open) this.ui.refresh(); }; this.inv.onAdd = (id) => { this._autoQuick(id); this._toBack && this._toBack(id); };
+    this.guns = new Firearms(this); this.npcs = new NPCManager(this); this.fires = new FIRE.Campfires(this); this.convoys = new Convoys(this); this.helis = new Helis(this); this.territory = new Territory(this); this.fishing = new Fishing(this); this.grenades = new Grenades(this); this.smoke = new SmokeSignals(this); this.admin = new Admin(this); this.blasts = new Blasts(this); this.struct = new STR.StructSystem(this); this.net = new Net(this); this.inv = new GridInventory(); this._bigPockets = typeof window !== 'undefined' && !!window.__TEST_BIG_POCKETS; this.quick = Array(8).fill(null); this.inv.onChange = () => { this.syncHand && this.equip && this.syncHand(); if (this.ui.open) this.ui.refresh(); }; this.inv.onAdd = (id) => { this._autoQuick(id); this._toBack && this._toBack(id); };
     this.equip = this.freshEquip(); this._applyBack(); this.attach = {}; this.home = null; this.drops = []; this.logs = []; this.falling = []; this.projectiles = []; this.arrows = []; this.clouds = []; this.stats = { built: 0, kills: 0 };
     this.lastFire = [0, 0]; this.saveT = 60; this.grassCells = new Map(); this.menuT = 0; this.playTime = 0;
     this.input.wantLock = true;
@@ -121,7 +124,7 @@ export class Game {
     await loadModelOverride(this, 'assets/models/models.json').catch(() => null);
     this.creatureAssets = buildCreatureAssets(r);
     this.tools = {}; for (const t of ['axe', 'scrapaxe', 'pickaxe', 'spear', 'scrapspear', 'shockspear', 'torch', 'knife', 'scrapknife']) this.tools[t] = r.createMesh(P.toolMesh(t)); this.tools.jerrycan = r.createMesh(VEH.jerrycanMesh()); this.tools.blueprint = r.createMesh(STR.blueprintRollMesh()); this.tools.hammer = r.createMesh(STR.hammerMesh()); this._sheetMesh = r.createMesh(STR.blueprintSheetMesh()); for (const id of Object.keys(GREN)) this.tools[id] = r.createMesh(grenadeMesh(id));
-    for (const t of Object.keys(GUNS)) this.tools[t] = r.createMesh(gunMesh(t)); this.scopeMeshes = { scope4: r.createMesh(scopeMesh('scope4')), scope8: r.createMesh(scopeMesh('scope8')) }; this.tools.solarlamp = r.createMesh(P.solarLampMesh()); this.tools.geiger = r.createMesh(geigerMesh()); this.tools.c4 = r.createMesh(MXS.c4Mesh()); this.arrowMesh = r.createMesh(arrowMesh());
+    for (const t of Object.keys(GUNS)) this.tools[t] = r.createMesh(gunMesh(t)); this.scopeMeshes = { scope4: r.createMesh(scopeMesh('scope4')), scope8: r.createMesh(scopeMesh('scope8')) }; this.tools.solarlamp = r.createMesh(P.solarLampMesh()); this.tools.fishing_rod = r.createMesh(rodMesh()); this.tools.geiger = r.createMesh(geigerMesh()); this.tools.c4 = r.createMesh(MXS.c4Mesh()); this.arrowMesh = r.createMesh(arrowMesh());
     await step(0.55, 'Construindo cenário…');
     this._buildScenery();
     await step(0.8, 'Preparando sistemas…');
@@ -342,6 +345,7 @@ export class Game {
       else {
         if (gunUsed) P.setBlocking(false);
         else if (this.equip.hand === 'c4') { P.setBlocking(false); if (act.use) this.placeC4(); }
+        else if (LOCKS[this.equip.hand] || this.equip.hand === 'fishing_rod') { P.setBlocking(false); } // tranca na mão: o sistema de território cuida do clique
         else if (this.equip.hand && ITEMS[this.equip.hand] && ITEMS[this.equip.hand].tool === 'grenade') { P.setBlocking(false); this.grenades.input(act, dt); }
         else if (this.equip.hand === 'blueprint' || this.equip.hand === 'hammer') { P.setBlocking(false); this.struct.input(act, dt); }
         else { const cb = this.canBlock(); if (act.block && !cb && !this._blockHint && this.equip.hand !== 'geiger') { this._blockHint = true; this.ui.toast('Para defender com o botão direito, segure uma arma branca (faca, machado, picareta ou lança)', 'info'); } P.setBlocking(!!act.block && !P.dead && cb); if (act.use) this.useAction(); }
@@ -355,7 +359,7 @@ export class Game {
     P.update(dt, pa, this.cam.yaw);
     this.cam.aimT = this.guns.aimT; this.cam.update(dt, P, this.physics);
     { const st = this.world.siteAt(P.pos[0], P.pos[2]); const k = st ? st.kind : null; if (k !== this._siteK) { this._siteK = k; if (st) this.ui.toast(`📍 ${st.name}`, 'info'); } }
-    this.env.update(dt); this.helis.update(dt); this.creatures.update(dt); this.npcs.update(dt); this.grenades.update(dt); this.blasts.update(dt); this.smoke.update(dt); this.admin.tick(dt); this.struct.update(dt); this.fires.update(dt); this.convoys.update(dt); this._trapTick(dt); if (this.ui.open === 'fire' && this.ui.fire) { this._fireUiT = (this._fireUiT || 0) - dt; if (this._fireUiT <= 0) { this._fireUiT = 0.25; this.ui.renderFire(); } } this._updateButcher(dt); this.ui.flash && this.ui.flash(this.grenades.flashT); this._smokeOv(); this.build.update2(dt); this.power.update(dt); this.grapple.update(dt); this.geiger.update(dt);
+    this.env.update(dt); this.helis.update(dt); this.creatures.update(dt); this.npcs.update(dt); this.grenades.update(dt); this.blasts.update(dt); this.smoke.update(dt); this.admin.tick(dt); this.struct.update(dt); this.territory.update(dt, act); this.fishing.update(dt, act); this.fires.update(dt); this.convoys.update(dt); this._trapTick(dt); if (this.ui.open === 'fire' && this.ui.fire) { this._fireUiT = (this._fireUiT || 0) - dt; if (this._fireUiT <= 0) { this._fireUiT = 0.25; this.ui.renderFire(); } } this._updateButcher(dt); this.ui.flash && this.ui.flash(this.grenades.flashT); this._smokeOv(); this.build.update2(dt); this.power.update(dt); this.grapple.update(dt); this.geiger.update(dt);
     if (this._reading) { this._reading.t += dt; this.ui.readProgress(Math.min(1, this._reading.t / this._reading.T)); if (this.player.dead) this._reading = null; }
     this._updateClouds(dt); this._survival(dt); this._updateFalling(dt); this._updateProjectiles(dt); this._updateArrows(dt); this._updateC4(dt); this._updateWebs(dt); this._interactPrompt();
     this.saveT -= dt; if (this.saveT <= 0) { this.saveT = 60; this.saveGame(false); }
@@ -693,6 +697,11 @@ export class Game {
     this.audio.play('cloth'); this.ui.toast(`🎒 ${it.name} vestida: ${it.slots} espaços${cur ? ` (era ${ITEMS[cur].name}, ${ITEMS[cur].slots})` : ''}`, 'ok'); return true; }
   betterPack(id) { const it = ITEMS[id]; if (!it || it.type !== 'backpack' || this.equip.suit) return false; const cur = this.equip.back; return !cur || (ITEMS[cur].slots || 0) < (it.slots || 0); }
   // objeto cortante (faca, machado, lança): na mão, nas costas ou no inventário
+  // colhendo fibras do chão às vezes aparece uma minhoca (isca de pesca)
+  _worm() { if (Math.random() < 0.3 && this.inv.room('bait_worm') > 0) { this.give('bait_worm', 1, true); this.ui.toast('🪱 Achou uma minhoca na terra (isca de pesca)', 'info'); } }
+  // corta o peixe do espaço i em filés com algo afiado
+  fillet(i) { const s = this.inv.slots[i]; if (!s || !ITEMS[s.id].fish) return false; const b = this.blade(); if (!b) { this.ui.toast('Precisa de uma faca (ou machado) para tirar os filés', 'warn'); return false; }
+    const it = ITEMS[s.id], n = it.fish; this.inv.takeSlot(i, 1); const k = this.inv.add('fish_fillet', n); if (k < n) this.dropNear([['fish_fillet', n - k]]); this.audio.play('swing', { vol: 0.5 }); this.audio.play('eat', { vol: 0.3 }); this.ui.toast(`🔪 ${it.name} cortado: +${n} ${ITEMS.fish_fillet.name}${n > 1 ? 's' : ''}`, 'ok'); return true; }
   blade() { for (const id of ['knife', 'scrapknife', 'axe', 'scrapaxe', 'shockspear', 'spear', 'scrapspear']) if (this.countAll(id) > 0) return id; return null; }
   // retalhos que uma roupa rende (menos se estiver gasta)
   ragsOf(id) { const it = ITEMS[id]; if (!it || it.type !== 'clothing' || /armor|helmet|boots|nvg|rat/.test(id) || it.slot === 'shoes' && id !== 'fibershoes') return 0; const base = { shirt: 3, pants: 3, vest: 2, hat: 1, gloves: 1, shoes: 1 }[it.slot] || 2; return base + (/^mil|parka/.test(id) ? 1 : 0); }
@@ -744,7 +753,7 @@ export class Game {
     for (const l of this.logs) { consider(l, 'log', l.x, l.z, 2.4, l.y); const s = score(l.x, l.z, 2.4, l.y); if (s !== null && s < toolS) { toolS = s; tool = { o: l, kind: 'log' }; } }
     for (const a of this.arrows) if (a.stuck && a.arrow) consider(a, 'arrow', a.p[0], a.p[2], 2.2, a.p[1]);
     for (const c of this.creatures.list) if (c.dead && !c.looted) consider(c, 'corpse', c.pos[0], c.pos[2], 2.4, c.pos[1]);
-    for (const q of this.build.pieces) if ((['campfire', 'tent', 'shelter', 'door', 'chest', 'bench', 'collector', 'composter', 'planter', 's_doorway', 's_hatch', 'flag'].includes(q.type) || q.data) && !(STR.STYPES[q.type] && q.type !== 's_doorway' && q.type !== 's_hatch')) consider(q, 'piece', q.x, q.z, q.type === 'shelter' || q.type === 'waterwheel' ? 3 : 2.4, q.y);
+    for (const q of this.build.pieces) if ((['campfire', 'tent', 'shelter', 'door', 'chest', 'chest_wi', 'chest_iron', 'cabinet', 'bench', 'collector', 'composter', 'planter', 's_doorway', 's_hatch', 'flag'].includes(q.type) || q.data) && !(STR.STYPES[q.type] && q.type !== 's_doorway' && q.type !== 's_hatch')) consider(q, 'piece', q.x, q.z, q.type === 'shelter' || q.type === 'waterwheel' ? 3 : 2.4, q.y);
     if (!P.ladder) { const L = w.ladderNear(p[0], p[2], p[1], 1.5); if (L && Math.abs(p[1] - L.y0) < 1.2) { if (0.2 < bestS) { bestS = 0.2; best = { o: L, kind: 'ladder' }; } }
       else for (const L2 of w.ladders) if (Math.hypot(L2.ex - p[0], L2.ez - p[2]) < 1.6 && Math.abs(p[1] - L2.y1) < 0.8) { if (0.2 < bestS) { bestS = 0.2; best = { o: L2, kind: 'ladder', top: true }; } break; } }
     // água à frente
@@ -780,7 +789,8 @@ export class Game {
           else { t = `Montar ${nm}`; parts.push(`<span class="sub">faltam: ${VS.missing(o).join(', ')}</span>`); } break; }
         case 'pump': t = this.equip.hand === 'jerrycan' ? `Encher o galão na bomba` : 'Bomba de combustível'; parts.push(`<span class="sub">${this.equip.hand === 'jerrycan' ? `⛽ bomba ${Math.round(o.fuel)} L · galão ${this.jerryFuel.toFixed(1)}/${this.vehicles.jerryCap()} L` : 'segure um galão na mão para encher'}</span>`); break;
         case 'carfuel': t = 'Retirar combustível do carro abandonado'; break;
-        case 'piece': t = o.type === 'planter' ? this._planterText(o, parts, k) : o.type === 'collector' ? this._collectorText(o, parts) : o.type === 'composter' ? this._composterText(o, parts) : { campfire: o.lit ? 'Apagar fogueira' : 'Acender fogueira', tent: 'Dormir / definir base', shelter: 'Dormir / definir base', door: o.open ? 'Fechar porta' : 'Abrir porta', s_doorway: o.open ? 'Fechar porta' : 'Abrir porta', s_hatch: o.open ? 'Fechar alçapão' : 'Abrir alçapão', flag: (o.data && o.data.owner === this.struct.myId()) ? 'Sua bandeira de território (raio 32 m)' : 'Bandeira de outro jogador', chest: 'Abrir baú', bench: 'Usar bancada' }[o.type] || (this.power.wiring && o.data ? (this.power.wiring.from === o ? 'Cancelar fio' : `Conectar fio aqui (${this.power.wiresFor(this.power.wiring.from, o)} fio(s) de cobre)`) : o.type === 'printer' ? 'Usar impressora 3D' : `Ver ${PIECES[o.type].name.toLowerCase()}`);
+        case 'piece': t = o.type === 'planter' ? this._planterText(o, parts, k) : o.type === 'collector' ? this._collectorText(o, parts) : o.type === 'composter' ? this._composterText(o, parts) : { campfire: o.lit ? 'Apagar fogueira' : 'Acender fogueira', tent: 'Dormir / definir base', shelter: 'Dormir / definir base', door: o.open ? 'Fechar porta' : 'Abrir porta', s_doorway: o.open ? 'Fechar porta' : 'Abrir porta', s_hatch: o.open ? 'Fechar alçapão' : 'Abrir alçapão', flag: (o.data && o.data.owner === this.struct.myId()) ? 'Seu Territoritek (raio 32 m)' : 'Territoritek de outro jogador', chest: 'Abrir baú', chest_wi: 'Abrir baú', chest_iron: 'Abrir baú', cabinet: 'Abrir armário de manutenção', bench: 'Usar bancada' }[o.type] || (this.power.wiring && o.data ? (this.power.wiring.from === o ? 'Cancelar fio' : `Conectar fio aqui (${this.power.wiresFor(this.power.wiring.from, o)} fio(s) de cobre)`) : o.type === 'printer' ? 'Usar impressora 3D' : `Ver ${PIECES[o.type].name.toLowerCase()}`);
+          { const L = this.territory.lockOf(o); if (L) { t = `🔒 ${t}`; parts.push(`<span class="sub">${LOCKS[L.id].name}${this.territory.canOpen(o) ? '' : ' — trancado'}</span>`); } if (isContainer(o.type) && o.data && o.data.hp !== undefined && CHESTS_HP[o.type] && o.data.hp < CHESTS_HP[o.type]) parts.push(`<span class="sub">Vida ${Math.round(o.data.hp)}/${CHESTS_HP[o.type]}</span>`); }
           if (o.type === 'campfire') { const d = FIRE.fireData(o); const nf = d.fuel.reduce((a, q) => a + (q ? q.qty : 0), 0), nc = d.cook.filter(Boolean).length; t = 'Abrir fogueira'; parts.push(`<span class="sub">${o.lit ? '🔥 acesa' : 'apagada'} · combustível: ${nf} · na grelha: ${nc}</span>`); } break;
         case 'firefood': { const c = o.data.cook[best.k]; if (!c) break; const it = ITEMS[c.id]; const raw = !!FIRE.COOK[c.id], cooked = !!FIRE.BURN[c.id]; t = `Pegar ${it.name}`;
           parts.push(`<span class="sub">${raw ? (o.lit ? `assando ${Math.floor(c.t / FIRE.COOK_T * 100)}%` : 'crua (fogueira apagada)') : cooked ? (o.lit ? '✔ pronta — tire antes que queime!' : '✔ pronta') : it.burnt ? '⚠ queimada' : 'pronto'}</span>`); break; }
@@ -793,6 +803,7 @@ export class Game {
       if (tool.kind === 'tree') parts.push(h && h.tool === 'axe' ? k('F', 'Cortar árvore') : k('F', 'Cortar árvore', '(precisa de machado)'));
       if (tool.kind === 'rock') parts.push(h && (h.tool === 'pickaxe' || h.mine) ? k('F', 'Minerar rocha') : k('F', 'Minerar', '(precisa de picareta)'));
     }
+    else if (this.equip.hand && ITEMS[this.equip.hand].tool === 'knife' && this.wormSpot()) { const ws = this.wormSpot(); parts.push(ws.ok ? k('F', 'Tirar minhocas', '(cavar a terra com a faca)') : `<span class="sub">🪱 ${ws.why}</span>`); }
     else if (this.equip.hand && ITEMS[this.equip.hand].tool === 'pickaxe' && this.player.onGround && !this.player.swimming) { const v = this.digTarget(); parts.push(k('F', 'Cavar o chão', v.d > 0 ? `(buraco ${v.d.toFixed(1)} m · máx. 6 m)` : '(areia · buraco para base subterrânea)')); }
     this.ui.prompt(parts.join('&nbsp;&nbsp;&nbsp;'));
   }
@@ -804,7 +815,7 @@ export class Game {
     const day = this.env.day;
     switch (t.kind) {
       case 'pickup': pick(() => { if (o.taken) return; const map = { stick: ['stick', 1 + (Math.random() < 0.4)], stone: ['stone', 1], fiber: ['fiber', 3], mushroom: ['mushroom', 1], crystal: ['crystal', 1] }; const [id, n] = map[o.kind];
-        if (this.inv.room(id) < 1) return this.ui.toast('Inventário cheio', 'warn'); this.give(id, n); if (o.kind === 'fiber' && Math.random() < 0.4) this.give('leaf', 1);
+        if (this.inv.room(id) < 1) return this.ui.toast('Inventário cheio', 'warn'); this.give(id, n); if (o.kind === 'fiber' && Math.random() < 0.4) this.give('leaf', 1); if (o.kind === 'fiber') this._worm();
         o.taken = true; o.regrowAt = day + (o.kind === 'crystal' ? 4 : 1); o._grp.dirty(o); this.audio.play('pickup'); }, o.x, o.z); break;
       case 'bush': if (!o.berries && o.leafT > this.env.elapsed) return; pick(() => {
         if (o.berries) { this.give('berry', 2 + Math.floor(Math.random() * 3)); this.give('leaf', 2); o.berries = false; o.regrowAt = day + 1; o.leafT = this.env.elapsed + 90; this.groups.bushB.dirty(o); this.groups.bushE.dirty(o); }
@@ -896,12 +907,12 @@ export class Game {
     if (p.data && PIECES[p.type].power) { const W = this.power.wiring; if (W) { if (W.from === p) this.power.cancelWire('Ligação de fio cancelada'); else if (this.power.connect(W.from, p)) this.power.wiring = null; return; } this.ui.openPanel('power', { piece: p }); this.audio.play('door', { vol: 0.4 }); return; }
     switch (p.type) {
       case 'campfire': FIRE.fireData(p); this.ui.openPanel('fire', { piece: p }); this.audio.play('cloth', { vol: 0.5 }); break;
-      case 'door': case 's_doorway': case 's_hatch': this.build.toggleDoor(p); break;
-      case 'flag': this.ui.toast('🚩 Área de construção: 32 m em volta da bandeira. Use o Projeto e o Martelo dentro dela.', 'info'); break;
+      case 'door': case 's_doorway': case 's_hatch': if (p.open) this.build.toggleDoor(p); else this.territory.access(p, () => this.build.toggleDoor(p)); break;
+      case 'flag': { const r = this.territory.daysLeft(p); this.ui.toast(`📡 Territoritek: área de construção de 32 m. ${r.cab ? (Object.keys(r.need).length ? `Manutenção: ${isFinite(r.days) ? r.days.toFixed(1) + ' dia(s)' : 'ok'}` : 'Sem construções para manter') : 'Sem Armário de manutenção: as construções vão perder vida'}`, 'info'); break; }
       case 'planter': this._usePlanter(p); break;
       case 'collector': this._useCollector(p); break;
       case 'composter': this._useComposter(p); break;
-      case 'chest': this.ui.openPanel('chest', { piece: p }); this.audio.play('door'); break;
+      case 'chest': case 'chest_wi': case 'chest_iron': case 'cabinet': this.territory.access(p, () => { this.ui.openPanel('chest', { piece: p }); this.audio.play('door'); }); break;
       case 'bench': this.ui.openPanel('inv', { tab: 'craft' }); break;
       case 'tent': case 'shelter': this.sleep(p); break;
     }
@@ -1021,6 +1032,7 @@ export class Game {
       const rk = tool.o; const face = Math.atan2(rk.x - P.pos[0], rk.z - P.pos[2]);
       P.doAction('mine', (n) => { if (n === 'hit') this._mine(rk, hand); }, { faceYaw: face, faceCam: false, cost: 7 }); return;
     }
+    if (hand && hand.tool === 'knife' && !tool) { const ws = this.wormSpot(); if (ws && ws.ok) { P.doAction('chop', (n) => { if (n === 'hit') this.digWorms(ws); }, { faceYaw: Math.atan2(ws.x - P.pos[0], ws.z - P.pos[2]), faceCam: false, cost: 4, speed: 1.1 }); this.audio.play('swing'); return; } }
     const type = !hand ? 'punch' : hand.tool === 'spear' ? 'thrust' : hand.tool === 'axe' || hand.tool === 'knife' ? 'chop' : hand.tool === 'pickaxe' ? 'mine' : 'punch';
     const dmg = hand ? hand.dmg : 6, reach = hand ? hand.reach : 1.5;
     const digHere = hand && hand.tool === 'pickaxe' && !tool && P.onGround ? this.digTarget() : null;
@@ -1052,6 +1064,7 @@ export class Game {
     const pr = o.pr || 4, R = o.r || 3.5; const cover = (q) => { const e = [p[0], p[1] + 0.3, p[2]]; const L = Math.hypot(q[0] - e[0], q[1] - e[1], q[2] - e[2]); return this.physics.rayFree(q, e, 0.02, null) * L < L - 0.8; }; if (!P.dead && d < pr && !cover([P.pos[0], P.pos[1] + 1.0, P.pos[2]])) { if (src) this.playerHit((o.playerDmg || 34) * (1 - d / pr) + 6, src, { ranged: true }); else this.damage((o.playerDmg || 34) * (1 - d / pr) + 6, o.cause || 'explosão de C4'); this.knockback(Math.atan2(P.pos[0] - p[0], P.pos[2] - p[2]), 12 * (1 - d / pr)); }
     for (const c of this.creatures.list) { if (c === src || c.dead) continue; const dc = Math.hypot(c.pos[0] - p[0], c.pos[2] - p[2]); if (dc < R && (o.vis === 'c4' || !cover([c.pos[0], c.pos[1] + 0.6, c.pos[2]]))) this.creatures.damage(c, (o.dmg || 40) * (1 - dc / R * 0.7), Math.atan2(c.pos[0] - p[0], c.pos[2] - p[2]), o.kind); }
     if (this.struct) this.struct.blast(p, R, o.dmg || 40, o.kind);
+    if (this.territory) this.territory.blast(p, R, o.kind);
     if (this.helis) this.helis.blast(p, R);
     if (o.wreck) this.wreck(p, o.wreck);
   }
@@ -1083,7 +1096,7 @@ export class Game {
   takeNear(e, quiet) { const it = ITEMS[e.id]; if (!it) return 0;
     if (e.src === 'drop') { const d = e.d, i = d.items.indexOf(e.ref); if (i < 0 || !this.drops.includes(d)) return 0; if (this._autoWear(e.id)) { if (e.n <= 1) { d.items.splice(i, 1); if (!d.items.length) { this.drops.splice(this.drops.indexOf(d), 1); if (d.death) this.deathPos = null; } return 1; } e.ref[1] = e.n -= 1; } const kb = this._backFirst(e.id, e.n); if (kb) { if (kb >= e.n) { d.items.splice(i, 1); if (!d.items.length) { this.drops.splice(this.drops.indexOf(d), 1); if (d.death) this.deathPos = null; } return kb; } e.ref[1] = e.n -= kb; } const k = this.inv.add(e.id, e.n, { rad: e.rad || this.world.toxicAt(d.x, d.z) > 0.2 }); if (!k) { if (!quiet) this.ui.toast('Inventário cheio', 'warn'); return 0; }
       if (k < e.n) e.ref[1] = e.n - k; else d.items.splice(i, 1); if (!d.items.length) { this.drops.splice(this.drops.indexOf(d), 1); if (d.death) this.deathPos = null; } if (!quiet) { this.ui.toast(`+${k} ${it.icon} ${it.name}${e.rad ? ' ☢' : ''}`, 'ok'); this.audio.play('pickup'); } this._autoQuick && this._autoQuick(e.id); return k; }
-    if (e.src === 'pick') { const o = e.o; if (o.taken) return 0; if (this.inv.room(e.id) < 1) { if (!quiet) this.ui.toast('Inventário cheio', 'warn'); return 0; } const n = e.id === 'stick' ? 1 + (Math.random() < 0.4) : e.n; this.give(e.id, n, quiet); if (o.kind === 'fiber' && Math.random() < 0.4) this.give('leaf', 1, true);
+    if (e.src === 'pick') { const o = e.o; if (o.taken) return 0; if (this.inv.room(e.id) < 1) { if (!quiet) this.ui.toast('Inventário cheio', 'warn'); return 0; } const n = e.id === 'stick' ? 1 + (Math.random() < 0.4) : e.n; this.give(e.id, n, quiet); if (o.kind === 'fiber' && Math.random() < 0.4) this.give('leaf', 1, true); if (o.kind === 'fiber') this._worm();
       o.taken = true; o.regrowAt = this.env.day + (o.kind === 'crystal' ? 4 : 1); if (o._grp) o._grp.dirty(o); if (!quiet) this.audio.play('pickup'); return n; }
     if (e.src === 'arrow') { const i = this.arrows.indexOf(e.a); if (i < 0 || this.inv.room('arrow') < 1) return 0; this.arrows.splice(i, 1); this.give('arrow', 1, quiet); return 1; }
     return 0; }
@@ -1154,6 +1167,19 @@ export class Game {
   }
   knockback(yaw, force) { const P = this.player; if (P.dead) return; P.vel[0] += Math.sin(yaw) * force; P.vel[2] += Math.cos(yaw) * force; if (!P.swimming) { P.vel[1] = 4; P.onGround = false; P.airTime = 0.3; } }
   // ---------- cavar com a picareta: abre um buraco (até 6 m), dá areia; as paredes ficam com no máximo ~45° (alargue para ir mais fundo) ----------
+  // faca na mão + olhando para o chão: cavar a terra para tirar minhocas (não tem na areia da praia, no deserto nem na neve)
+  wormSpot() { const P = this.player, w = this.world; if (!P.onGround || P.swimming || P.climb || this.vehicles.driving || (this.cam.pitch || 0) < 0.5) return null;
+    const x = P.pos[0] + Math.sin(P.yaw) * 1.1, z = P.pos[2] + Math.cos(P.yaw) * 1.1, h = w.height(x, z); if (h < WATER + 0.05) return null;
+    const bio = w.biome(x, z); if (h < 2.8 || bio === 'desert' || bio === 'snow') return null; if (this.inCaveAt && this.inCaveAt(P.pos)) return null;
+    const key = Math.floor(x / 4) + ',' + Math.floor(z / 4); this._wormDug = this._wormDug || {}; const day = this.env.elapsed / this.env.dayLength;
+    if (this._wormDug[key] && day - this._wormDug[key] < 1) return { ok: false, x, z, key, why: 'já cavou aqui — tente outro lugar' };
+    if (this.inv.room('bait_worm') < 1) return { ok: false, x, z, key, why: 'sem espaço para minhocas' };
+    return { ok: true, x, z, y: h, key, bio }; }
+  digWorms(ws) { const day = this.env.elapsed / this.env.dayLength; this._wormDug = this._wormDug || {}; this._wormDug[ws.key] = day;
+    this.fx && this.fx.burst && this.fx.burst([ws.x, ws.y + 0.05, ws.z], 10, [0.32, 0.24, 0.16], 2.2, 0.5, 0.05, 6);
+    const rain = this.env.cur.rain > 0.3, n = Math.random() < (ws.bio === 'swamp' || rain ? 0.95 : 0.75) ? 1 + (Math.random() < (rain ? 0.6 : 0.3) ? 1 : 0) + (Math.random() < 0.12 ? 1 : 0) : 0;
+    if (!n) { this.ui.toast('Cavou, mas não achou minhoca aqui', 'info'); return 0; }
+    const got = this.give('bait_worm', n, true); this.ui.toast(`🪱 Tirou ${n} minhoca${n > 1 ? 's' : ''} da terra (isca de pesca)`, 'info'); return n; }
   digTarget() { const P = this.player, w = this.world; const fx = P.pos[0] + Math.sin(P.yaw) * 1.4, fz = P.pos[2] + Math.cos(P.yaw) * 1.4; const v = w.digVertex(fx, fz); v.h = w.height(v.x, v.z); return v; }
   digBlocked(v) { const w = this.world, R = 3.4; const near = (o) => Math.abs(o.x - v.x) < R && Math.abs(o.z - v.z) < R;
     if (w.trees.some((t) => near(t))) return 'Raízes de árvore aqui — cave mais longe das árvores';
@@ -1237,7 +1263,7 @@ export class Game {
           if (a.arrow && Math.random() < 0.5) { const gy = this.world.height(a.p[0], a.p[2]); keep.push({ p: [a.p[0], gy + 0.05, a.p[2]], v: [d[0], -0.3, d[2]], stuck: true, arrow: true, life: 120 }); }
           break;
         }
-        if (hit.col && hit.col.piece && this.struct) this.struct.shot(hit.col.piece, a.dmg * (a.arrow ? 0.4 : 1), hit.p);
+        if (hit.col && hit.col.piece && this.territory && this.territory.shot(hit.col.piece, a.dmg * (a.arrow ? 0.3 : 1), hit.p)) { /* tiro na tranca */ } else if (hit.col && hit.col.piece && this.struct) this.struct.shot(hit.col.piece, a.dmg * (a.arrow ? 0.4 : 1), hit.p);
         this.guns._impact(hit);
         if (a.arrow) { this.audio.play('arrowHit', { vol: 0.7 }); if (Math.random() < 0.85) { a.stuck = true; a.life = 120; a.v = d; keep.push(a); } }
       }
@@ -1319,7 +1345,7 @@ export class Game {
     this.stream.siteItems(items);
     if (!this.menuMode) { this._renderExtras(items, eye); this._renderBlood(items); }
     for (const c of this.caveMeshes) items.push({ mesh: c.mesh, sphere: [c.c.x, c.c.y + 3, c.c.z, c.c.R + 8], doubleSided: true });
-    this.build.renderItems(items); this.power.render(items); this.grapple.render(items); this.geiger.render(items); this.grenades.render(items); this.fires.render(items); this.smoke.render(items, eye); this.blasts.render(items); this.helis.render(items, eye); this.struct.render(items, eye); this._renderSheet(items); if (!this._porterMesh) this._porterMesh = this.renderer.createMesh(porterLoadMesh()); this.convoys.render(items, this._porterMesh); this.npcs.render(items, eye, (wid) => { const id = { club: 'scrapaxe', knife: 'scrapknife' }[wid] || wid; return this.tools[id]; });
+    this.build.renderItems(items); this.power.render(items); this.grapple.render(items); this.geiger.render(items); this.grenades.render(items); this.fires.render(items); this.smoke.render(items, eye); this.blasts.render(items); this.helis.render(items, eye); this.territory.render(items, eye); this.fishing.render(items); this.struct.render(items, eye); this._renderSheet(items); if (!this._porterMesh) this._porterMesh = this.renderer.createMesh(porterLoadMesh()); this.convoys.render(items, this._porterMesh); this.npcs.render(items, eye, (wid) => { const id = { club: 'scrapaxe', knife: 'scrapknife' }[wid] || wid; return this.tools[id]; });
     if (P.rig) { if (!this.rigMeshes) this.rigMeshes = { mag: r.createMesh(magMesh()), shell: r.createMesh(MXS.shellMesh()), bolt: this.grapple.boltMesh }; P.rig.render(items, this.rigMeshes); }
     const I = mat4.create();
     for (const f of this.falling) { const t = f.t; const ax = [Math.cos(f.dir), 0, -Math.sin(f.dir)]; const s = Math.sin(f.a / 2); const q = [ax[0] * s, 0, ax[2] * s, Math.cos(f.a / 2)];
@@ -1392,7 +1418,7 @@ export class Game {
         const sm = sl && silMount(gid); if (sm) { this.silMeshes = this.silMeshes || {}; const m = this.silMeshes[sl] || (this.silMeshes[sl] = this.renderer.createMesh(silencerMesh(sl))); items.push({ smooth: true, mesh: m, model: mat4.mul(mat4.create(), P.toolModel, mat4.compose(sm, 0, (G.look && G.look.scale) || 1)), alpha: al, sphere: sph }); } }
     }
     // luzes pontuais: fogueiras, tocha, cristais
-    const lights = []; const t = this.env.elapsed; if (!this.menuMode) { this.smoke.lights(lights, eye, t); this.helis.lights(lights, eye); }
+    const lights = []; const t = this.env.elapsed; if (!this.menuMode) { this.smoke.lights(lights, eye, t); this.helis.lights(lights, eye); this.territory.lights(lights, eye); }
     for (const p of this.build.pieces) if (p.type === 'campfire' && p.lit) { const d = Math.hypot(p.x - eye[0], p.z - eye[2]); if (d < 120) { lights.push({ pos: [p.x, p.y + 0.8, p.z], range: 14, col: [3.2 * (0.85 + 0.15 * Math.sin(t * 13 + p.x)), 1.5, 0.45], d }); if (d < 70) this.fx.fire([p.x, p.y, p.z], 1); } }
     if (!this.menuMode && this.equip.hand === 'solarlamp' && !P.sleeping) { const hp = P.handWorldPos(); lights.push({ pos: hp, range: 14, col: [2.2, 2.5, 2.9], d: 0 }); }
     if (this._mechaLights) { for (const l of this._mechaLights) lights.push(l); this._mechaLights = null; }

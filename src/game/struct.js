@@ -72,7 +72,7 @@ export function structShapes(type, x, y, z, rot) {
     case 's_stairs': { const out = []; for (let k = 0; k < 12; k++) out.push(box(0, -1.5 + 0.125 + k * 0.25, 0.7, 0.125, 0, (k + 1) * 0.25)); return out; }
     case 's_ramp': { const out = []; for (let k = 0; k < 20; k++) out.push(box(0, -1.5 + 0.075 + k * 0.15, 1.5, 0.075, 0, (k + 1) * 0.15)); return out; }
     case 's_ladder': return [];
-    case 'flag': return [{ type: 'cyl', x, z, r: 0.16, y0: y - 0.1, y1: y + 4.2 }];
+    case 'flag': return [{ type: 'cyl', x, z, r: 0.22, y0: y - 0.1, y1: y + 2.0 }];
   }
   return [];
 }
@@ -146,7 +146,7 @@ export class StructSystem {
   myId() { const g = this.g; return g.net ? g.net.pid() : 'me'; }
   flags() { return this.g.build.pieces.filter((p) => p.type === 'flag'); }
   // área de construção: bandeira do próprio dono
-  ownFlagAt(x, z) { const me = this.myId(); return this.flags().find((f) => (f.data && f.data.owner) === me && Math.hypot(f.x - x, f.z - z) <= FLAG_R); }
+  ownFlagAt(x, z) { const me = this.myId(); return this.flags().find((f) => (f.data && f.data.owner) === me && Math.hypot(f.x - x, f.z - z) <= FLAG_R && (!f.data.dep || f.data.dep === 'done')); }
   foreignFlagNear(x, z, r) { const me = this.myId(); return this.flags().find((f) => (f.data && f.data.owner) !== me && Math.hypot(f.x - x, f.z - z) <= r); }
   structs() { return this.g.build.pieces.filter((p) => STYPES[p.type]); }
 
@@ -304,7 +304,7 @@ export class StructSystem {
       D.hp -= dd; hit = true; this.showHp(p);
       if (D.hp <= 0) this._break(p); else g.net && g.net.onBuild && g.net.onBuild('data', p); }
     // C4 leva junto tudo o que foi construído no raio (bancadas, baús, fogueiras, máquinas…)
-    if (kind === 'c4') for (const q of [...g.build.pieces]) { if (STYPES[q.type] || Math.hypot(q.x - p0[0], q.z - p0[2]) > R || Math.abs(q.y - p0[1]) > 8) continue; g.build.remove(q, false); g.fx.burst([q.x, q.y + 0.6, q.z], 20, [0.45, 0.4, 0.32], 4, 1, 0.1); g.net && g.net.onBuild && g.net.onBuild('del', q); hit = true; }
+    if (kind === 'c4') for (const q of [...g.build.pieces]) { if (STYPES[q.type] || ['flag', 'chest', 'chest_wi', 'chest_iron', 'cabinet'].includes(q.type) || Math.hypot(q.x - p0[0], q.z - p0[2]) > R || Math.abs(q.y - p0[1]) > 8) continue; g.build.remove(q, false); g.fx.burst([q.x, q.y + 0.6, q.z], 20, [0.45, 0.4, 0.32], 4, 1, 0.1); g.net && g.net.onBuild && g.net.onBuild('del', q); hit = true; }
     if (hit) this.collapse(); }
   // tiro em construção: aguenta muitos (madeira ~30 tiros de fuzil); pedra e metal quase não sentem
   shot(p, dmg, at) { const g = this.g; if (!STYPES[p.type] || !p.data) return; const D = p.data, tier = STYPES[p.type].fixed ? 1 : (D.tier || 0); D.hp -= dmg * [0.35, 0.28, 0.08, 0.03][tier]; this.showHp(p);
@@ -329,7 +329,7 @@ export class StructSystem {
     const g = this.g, B = g.build; if (!this.flagM) { this.flagM = g.renderer.createMesh(flagMesh()); this.flagF = g.renderer.createMesh(flagMesh(0x2a6ac0)); this.leafM = g.renderer.createMesh((() => { const mb = new MeshBuilder(); const c = hex(0x6a4a2c); mb.setColor(c, 0.8); mb.box(M(0, 1.1, 0), 1.18, 2.18, 0.08, c); mb.setColor(hex(0x2a2a2a), 0.5); mb.box(M(0.45, 1.1, 0.06), 0.06, 0.06, 0.05, hex(0x2a2a2a)); return mb.build(); })()); this.lidM = g.renderer.createMesh((() => { const mb = new MeshBuilder(); const c = hex(0x6a4a2c); mb.setColor(c, 0.8); mb.box(M(0, -0.06, 0.6), 1.18, 0.1, 1.18, c); mb.setColor(hex(0x3a3a3a), 0.5); mb.box(M(0, 0.0, 1.05), 0.3, 0.04, 0.06, hex(0x3a3a3a)); return mb.build(); })()); }
     const me = this.myId();
     for (const p of B.pieces) {
-      if (p.type === 'flag') { items.push({ mesh: (p.data && p.data.owner === me) ? this.flagM : this.flagF, model: p.model, sphere: [p.x, p.y + 2, p.z, 3] }); continue; }
+      if (p.type === 'flag') continue; // Territoritek: desenhado pelo sistema de território
       if (!STYPES[p.type]) continue; const d = p.data || {}; const dist = Math.hypot(p.x - eye[0], p.z - eye[2]); if (dist > 400) continue;
       const m = this.modelOf(p); const dmg = d.hp !== undefined ? d.hp / maxHp(p.type, d.tier || 0) : 1; items.push({ mesh: this.mesh(p.type, d.tier || 0), model: m, sphere: [p.x, p.y + 1, p.z, 3], tint: dmg < 0.5 ? [0.75 + dmg * 0.5, 0.7 + dmg * 0.5, 0.65 + dmg * 0.5, 1] : undefined });
       if (p.type === 's_doorway') { const a = p.openAng || 0; const lm = mat4.mul(mat4.create(), m, mat4.fromTRS(mat4.create(), [-0.6, 0, 0], quat.fromEuler(0, -a, 0), [1, 1, 1])); mat4.mul(lm, lm, mat4.fromTRS(mat4.create(), [0.6, 0, 0], [0, 0, 0, 1], [1, 1, 1])); items.push({ mesh: this.leafM, model: lm, sphere: [p.x, p.y + 1, p.z, 2] }); }

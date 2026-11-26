@@ -121,7 +121,7 @@ vec3 bump(vec3 N, float h, float k){
 }
 float D_GGX(float NoH, float a){ float a2 = a*a; float d = NoH*NoH*(a2-1.0)+1.0; return a2/(PI*d*d); }
 float V_Smith(float NoV, float NoL, float a){ float k = a*0.5; return 0.25/((NoV*(1.0-k)+k)*(NoL*(1.0-k)+k)); }
-vec3 F_Schlick(vec3 f0, float VoH){ return f0 + (1.0-f0)*pow(1.0-VoH, 5.0); }
+vec3 F_Schlick(vec3 f0, float VoH){ return f0 + (1.0-f0)*pow(clamp(1.0-VoH, 0.0, 1.0), 5.0); }
 void main(){
   vec3 base = pow(v_col.rgb, vec3(2.2));
   float alphaTex = 1.0;
@@ -220,10 +220,10 @@ void main(){
   col += u_rim * pow(1.0 - NoV, 3.0) * (u_ambSky*0.6 + u_sunCol*0.1) * (0.3 + 0.7*base);
   // luzes pontuais (fogueiras, tochas, explosões)
   for(int i=0;i<${MAX_PL};i++){ if(i>=u_plCount) break;
-    vec3 Lp = u_plPos[i].xyz - v_wpos; float d = length(Lp); Lp/=d;
+    vec3 Lp = u_plPos[i].xyz - v_wpos; float d = max(length(Lp), 1e-3); Lp/=d;
     float att = clamp(1.0 - d/u_plPos[i].w, 0.0, 1.0); att*=att;
-    float nl = max(dot(N,Lp),0.0); vec3 Hp = normalize(Lp + V);
-    vec3 sp = D_GGX(max(dot(N,Hp),0.0), max(ar, 0.04)) * V_Smith(NoV, nl, ar) * F_Schlick(f0, max(dot(V,Hp),0.0));
+    float nl = max(dot(N,Lp),0.0); vec3 hv = Lp + V; vec3 Hp = hv / max(length(hv), 1e-4);
+    vec3 sp = D_GGX(clamp(dot(N,Hp),0.0,1.0), max(ar, 0.04)) * V_Smith(NoV, nl, ar) * F_Schlick(f0, max(dot(V,Hp),0.0));
     col += (kd*base*(nl*0.9+0.1) + sp*nl) * u_plCol[i].rgb * att;
   }
   col += base * glow * 6.0 + base * u_emissive * 4.0;

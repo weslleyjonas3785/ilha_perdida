@@ -559,3 +559,16 @@ body.tedit #mobile .tctl { z-index: 2; }
 body.mobile [data-id=slide] i { color: #7fe3ff; }
 .askbox.choose .acts.col { flex-direction: column; align-items: stretch; } .askbox.choose .acts.col button { text-align: left; } .askbox.choose button:disabled { opacity: 0.45; }
 .askbox.choose .acts.col button.n { text-align: center; }
+/* território: dica da tranca, vida da tranca, campo de senha */
+#tkHint { position: fixed; left: 50%; top: 62%; transform: translateX(-50%); background: rgba(14, 18, 24, 0.78); color: #e8ecf0; padding: 6px 12px; border-radius: 8px; font-size: 13px; pointer-events: none; z-index: 30; display: none; }
+#lockHp { position: fixed; left: 50%; top: 18%; transform: translateX(-50%); width: 240px; background: rgba(14, 18, 24, 0.8); border: 1px solid #4a5260; border-radius: 8px; padding: 6px 10px; color: #e8ecf0; font-size: 12px; pointer-events: none; z-index: 30; display: none; }
+#lockHp .bar { height: 7px; background: #2a2f36; border-radius: 4px; margin-top: 4px; overflow: hidden; } #lockHp .bar i { display: block; height: 100%; }
+.askbox .codeIn { width: 100%; box-sizing: border-box; font-size: 22px; letter-spacing: 0.4em; text-align: center; padding: 8px; margin: 0 0 12px; background: #11151a; color: #fff; border: 1px solid #4a5260; border-radius: 8px; }
+.chestInfo { margin: 4px 0 8px; padding: 6px 10px; border-radius: 8px; background: rgba(40, 60, 40, 0.45); border: 1px solid #4a6a40; font-size: 13px; color: #dfe8d8; }
+.chestInfo.bad { background: rgba(80, 30, 30, 0.5); border-color: #8a4a40; }
+#fishUi { position: fixed; left: 50%; top: 64%; transform: translateX(-50%); background: rgba(14, 18, 24, 0.78); color: #e8ecf0; padding: 7px 14px; border-radius: 8px; font-size: 13px; pointer-events: none; z-index: 30; display: none; min-width: 240px; text-align: center; }
+#fishUi .bt { opacity: 0.8; margin-left: 6px; font-size: 12px; }
+#fishUi .now { color: #ffd24a; font-size: 16px; animation: fishBlink 0.3s infinite alternate; }
+@keyframes fishBlink { from { opacity: 1; } to { opacity: 0.55; } }
+#fishUi .fb { display: flex; align-items: center; gap: 8px; margin-top: 5px; font-size: 11px; } #fishUi .fb span { width: 46px; text-align: left; opacity: 0.85; }
+#fishUi .bar { flex: 1; height: 8px; background: #2a2f36; border-radius: 4px; overflow: hidden; } #fishUi .bar i { display: block; height: 100%; }

@@ -282,6 +282,18 @@ Todos entram na mesma VPN (Radmin VPN, Hamachi, ZeroTier…) ou na mesma rede de
 - Placa solar (construção): poste de madeira remendado com asas de borboleta solar formando os painéis, cabos até a caixa de munição do controlador, bateria e inversor com tomada.
 - Coletor de chuva: lona furada esticada em 4 varas escorrendo para 2 barris enferrujados, calha, torneira, balde, pedras e capim; o visor de nível fica no barril alto.
 
+## Território (Territoritek), baús, trancas e armário
+- **Territoritek** (sucata 6, madeira 4, fibra 4): o jogador finca o bastão no chão, se afasta e ele **abre** (som *armando-bastao*), **dispara a luz para o alto** (som *disparo*) e depois a luz apaga. No chão fica a **marcação da área** (anel de 32 m que acompanha o relevo). Só dentro dessa área dá para colocar base, bancadas, baús e o armário.
+- **Baús**: madeira (16 espaços), madeira com ferro (24) e ferro (32), cada um mais resistente. Baú sem tranca qualquer um abre.
+- **Trancas** (madeira, ferro, ouro): na mão, mire numa porta, baú ou armário e clique — ela encaixa e aparece no objeto; pode ter **senha** (quem souber abre). Tiro de pistola ou fuzil na tranca vai gastando (barra de vida); a tranca de ouro é a mais forte. O baú é mais forte que a tranca; **C4 destrói o baú de madeira e o conteúdo cai no chão**.
+- **Armário de manutenção**: guarda madeira, pedra, sucata ou ferro que **mantém a base de pé** (ex.: 100 de madeira duram uns dias, conforme o tamanho da base). Sem material as paredes vão enfraquecendo até cair.
+
+## Pescaria
+- **Vara de pesca** (galhos 3, corda 2, sucata 1): na mão aparece com a **isca pendurada na ponta** (minhoca ou isca artificial).
+- **Iscas**: minhoca (com a **faca na mão olhando para o chão** aparece **F — Tirar minhocas**: cava a terra e sai 1–3 minhocas; não tem na areia perto da praia, no deserto nem na neve; o mesmo lugar só dá de novo no dia seguinte; também aparece às vezes ao colher fibras; gasta 1 por peixe) e isca artificial (sucata 2, fibra 1; reaproveitável, atrai peixes maiores, só se perde se a linha arrebentar). **R** troca a isca.
+- Mire na água funda (até 22 m) e clique para **lançar**: a boia cai na água. Quando ela **afundar**, clique rápido para fisgar. Depois **segure o botão para puxar** e solte quando a **tensão** ficar alta — se esticar demais, a linha arrebenta. Botão direito recolhe a linha.
+- Peixes: **Robalo** (rende 3 filés), **Carpa** (2 filés, lagos e rios) e **Acará-bandeira** (1 filé). Clique no peixe com uma faca (ou machado) para tirar os filés. O **filé cru** assa na fogueira (**filé assado**) e queima se passar do ponto.
+
 ## Voz por proximidade
 - **CAPS LOCK** liga o microfone e ele fica aberto até apertar de novo. Quem estiver perto (até ~45 m) ouve, com volume pela distância e lado pelo estéreo.
 - No PC aparece o desenho do microfone no alto da tela, embaixo da bússola; ele acende e apaga enquanto você fala e some ao desligar.
@@ -479,6 +491,8 @@ python3 tests/play29.py  # 5 verificações: área Próximo no inventário (pega
 python3 tests/play30.py  # 7 verificações: arma grande direto para as costas, Verificar (pente/mira/silenciador), sem pente não atira, silenciador
 python3 tests/play31.py  # 10 verificações: helicóptero (som, voo, circula e atira, fumaça esconde, tripulação NPC, tiro no piloto, atirador cai, queda, caixas, fumaça)
 python3 tests/play34.py  # 6 verificações: tênis no começo, mochila maior veste sozinha, bateria e roupa perguntam onde equipar, cortar em retalhos
+python3 tests/play35.py  # 11 verificações: Territoritek (finca, arma, dispara a luz, marca a área no chão), baús, trancas com senha, tiro/C4, armário de manutenção
+python3 tests/play36.py  # 10 verificações: minhocas com a faca (não na areia da praia), vara com isca na ponta, fisgar e puxar o peixe, filés por peixe, luz do Territoritek apaga e a marcação fica
 python3 tests/play33.py  # 9 verificações: voz (CAPS LOCK, ícone pisca, NPC/robô vêm, voz de outro jogador), botões VOZ e bala no celular
 python3 tests/play32.py  # 12 verificações: Modificar controles (Cancelar/Salvar), PAUSA + trava de corrida no joystick + celular (só no celular, joystick, câmera, botões, mochila, engrenagem arrasta/tamanho salvo, aviso de girar)
 python3 tests/play28.py  # 9 verificações: quantidade no slot, fragmentação (fogo, clarão, cratera), luz (4 s + embaçado), fumaça densa 15 s, barulhenta, C4 (20 m) e dano nas construções

@@ -10,7 +10,7 @@ export const FUEL = { wood: { t: 60, out: 'charcoal' }, charcoal: { t: 100, out:
 export const COOK_T = 25, BURN_T = 50, FUEL_SLOTS = 3, COOK_SLOTS = 4, OUT_SLOTS = 3, FUEL_STACK = 20;
 // o que assa (receitas de fogueira com 1 ingrediente) e o que queima depois de pronto
 export const COOK = {}; for (const r of RECIPES) { if (r.station !== 'fire') continue; const k = Object.keys(r.cost); if (k.length === 1 && r.cost[k[0]] === 1 && r.n === 1) COOK[k[0]] = r.out; }
-export const BURN = { cooked_cow: 'burnt_cow', cooked_boar: 'burnt_boar', cooked_chicken: 'burnt_chicken', cooked_deer: 'burnt_deer', cooked_human: 'burnt_human', cookedmeat: 'burnt_meat' };
+export const BURN = { cooked_cow: 'burnt_cow', cooked_boar: 'burnt_boar', cooked_chicken: 'burnt_chicken', cooked_deer: 'burnt_deer', cooked_human: 'burnt_human', cookedmeat: 'burnt_meat', cooked_fillet: 'burnt_fillet' };
 export const isCookRecipe = (r) => r.station === 'fire' && COOK[Object.keys(r.cost)[0]] === r.out && Object.keys(r.cost).length === 1;
 export const canGrill = (id) => !!(COOK[id] || BURN[id] || ITEMS[id] && ITEMS[id].burnt);
 
@@ -21,8 +21,8 @@ export function fireData(p) {
 }
 const fuelLeft = (d) => d.fuel.some((s) => s && s.qty > 0);
 // cor da comida na grelha
-function foodTint(id) { const it = ITEMS[id] || {}; if (it.burnt) return [0.22, 0.12, 0.08, 1]; if (BURN[id] || id === 'water') return id === 'cooked_chicken' ? [0.95, 0.6, 0.32, 1] : [0.62, 0.3, 0.14, 1];
-  return { meat_chicken: [1.0, 0.62, 0.55, 1], dirtywater: [0.45, 0.5, 0.4, 1] }[id] || [0.85, 0.16, 0.16, 1]; }
+function foodTint(id) { const it = ITEMS[id] || {}; if (it.burnt) return [0.22, 0.12, 0.08, 1]; if (BURN[id] || id === 'water') return id === 'cooked_chicken' ? [0.95, 0.6, 0.32, 1] : id === 'cooked_fillet' ? [0.95, 0.5, 0.22, 1] : [0.62, 0.3, 0.14, 1];
+  return { meat_chicken: [1.0, 0.62, 0.55, 1], fish_fillet: [1.0, 0.62, 0.5, 1], dirtywater: [0.45, 0.5, 0.4, 1] }[id] || [0.85, 0.16, 0.16, 1]; }
 export const foodPos = (p, k) => { const o = [[-0.17, -0.1], [0.17, -0.1], [-0.17, 0.12], [0.17, 0.12]][k]; const c = Math.cos(p.rot), s = Math.sin(p.rot); return [p.x + o[0] * c + o[1] * s, p.y + 0.56, p.z - o[0] * s + o[1] * c]; };
 
 export class Campfires {
