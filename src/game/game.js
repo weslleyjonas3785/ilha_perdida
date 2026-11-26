@@ -503,10 +503,10 @@ export class Game {
     if (h && Math.hypot(h.p[0] - piv[0], h.p[1] - piv[1], h.p[2] - piv[2]) <= 3.5) return { ok: true, p: h.p, c: h.c || null, piece: h.col && h.col.piece, yaw: Math.atan2(d[0], d[2]) };
     const p = h ? h.p : [o[0] + d[0] * 3, o[1] + d[1] * 3, o[2] + d[2] * 3]; return { ok: false, p, yaw: Math.atan2(d[0], d[2]) }; }
   placeC4() { if (this.player.anim.busy || this.inv.count('c4') < 1) return; const a = this.c4Aim(); if (!a.ok) { this.ui.toast('Longe demais para colocar o C4 (máx 3,5 m)', 'warn'); this.audio.play('error'); return; }
-    this.player.doAction('pickup', null); this.inv.remove('c4', 1); const b = { p: a.p.slice(), yaw: a.yaw, t: 10, beep: 0 }; if (a.c) { b.c = a.c; b.off = [a.p[0] - a.c.pos[0], a.p[1] - a.c.pos[1], a.p[2] - a.c.pos[2]]; }
-    this.c4s.push(b); this.audio.play('c4arm'); this.ui.toast(a.c ? `🧨 C4 grudado em ${a.c.def.name}! 10 s — afaste-se` : '🧨 C4 armado: 10 s — afaste-se!', 'warn'); }
+    this.player.doAction('pickup', null); this.inv.remove('c4', 1); const b = { p: a.p.slice(), yaw: a.yaw, t: 4, beep: 0 }; if (a.c) { b.c = a.c; b.off = [a.p[0] - a.c.pos[0], a.p[1] - a.c.pos[1], a.p[2] - a.c.pos[2]]; }
+    this.c4s.push(b); this.audio.play('c4arm'); this.ui.toast(a.c ? `🧨 C4 grudado em ${a.c.def.name}! 4 s — afaste-se` : '🧨 C4 armado: 4 s — afaste-se!', 'warn'); }
   _updateC4(dt) { for (const b of this.c4s) { if (b.c) { if (b.c.dead && b.c.deadTime > 0.1) { b.c = null; } else if (b.c) { b.p = [b.c.pos[0] + b.off[0], b.c.pos[1] + b.off[1], b.c.pos[2] + b.off[2]]; } }
-      b.t -= dt; b.beep -= dt; if (b.beep <= 0) { b.beep = Math.max(0.12, b.t / 10); this.audio.play('beep', { at: b.p, max: 40 }); } if (b.t <= 0) { b.done = true; this.bigExplosion(b.p); } } this.c4s = this.c4s.filter((b) => !b.done); }
+      b.t -= dt; b.beep -= dt; if (b.beep <= 0) { b.beep = Math.max(0.1, b.t / 5); this.audio.play('beep', { at: b.p, max: 40 }); } if (b.t <= 0) { b.done = true; this.bigExplosion(b.p); } } this.c4s = this.c4s.filter((b) => !b.done); }
   // C4: a mais forte — 20 m: mata bichos e robôs (menos os muito resistentes), derruba árvores, quebra rochas, cava cratera e destrói construções de madeira
   bigExplosion(p) { const P = this.player; this.explode(p, null, { r: 20, dmg: 1500, playerDmg: 280, pr: 16, kind: 'c4', cause: 'explosão de C4', vis: 'c4', crater: [7.5, 2.4], wreck: 20 });
     for (const b of this.stream.buckets.values()) if (b.glass) for (const gp of b.glass) if (!gp.broken && Math.hypot(gp.x - p[0], gp.y - p[1], gp.z - p[2]) < 30) this.breakGlass(gp);

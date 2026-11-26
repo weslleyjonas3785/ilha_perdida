@@ -9,7 +9,7 @@ import { MeshBuilder, M, hex, shade } from '../engine/mesh.js';
 import { mat4 } from '../engine/math.js';
 
 export const GREN = {
-  hg_frag: { name: 'Granada de fragmentação', fuse: 5, color: 0x4a5236 }, hg_flash: { name: 'Granada de luz (flash)', fuse: 3, color: 0xb8bcc0 },
+  hg_frag: { name: 'Granada de fragmentação', fuse: 3, color: 0x4a5236 }, hg_flash: { name: 'Granada de luz (flash)', fuse: 3, color: 0xb8bcc0 },
   hg_smoke: { name: 'Granada de fumaça', fuse: 3, color: 0x6a9ac0 }, hg_horn: { name: 'Granada barulhenta', fuse: 3, color: 0x6a7040 },
 };
 export const HAND_FUSE = 5;
