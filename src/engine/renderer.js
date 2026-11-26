@@ -18,7 +18,7 @@ export class Renderer {
     this.gl = gl; this.canvas = canvas; this.programs = new Map();
     this.view = mat4.create(); this.proj = mat4.create(); this.viewProj = mat4.create(); this.invVP = mat4.create();
     this.lightVP = mat4.create(); this.camPos = [0, 0, 0]; this.planes = [];
-    this.shadowSize = 2048; this.shadowsEnabled = true; this.flatShading = false; this.post = { ssao: true, bloom: true, fxaa: true }; this.exposure = 1.0; this.detail = 1.0; this.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    this.shadowSize = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ? 1024 : 2048; this.shadowsEnabled = true; this.flatShading = false; this.post = { ssao: true, bloom: true, fxaa: true }; this.exposure = 1.0; this.detail = 1.0; this.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
     this.env = { sunDir: [0, 1, 0], sunCol: [1, 1, 1], ambSky: [0.3, 0.35, 0.4], ambGround: [0.15, 0.13, 0.1], fogCol: [0.6, 0.7, 0.8], fogDensity: 0.004,
       zenith: [0.2, 0.4, 0.8], horizon: [0.7, 0.8, 0.9], moonDir: [0, -1, 0], night: 0, cloud: 0, time: 0, wind: 1, wet: 0, flash: 0, fogAmt: 0, rain: 0, scatterCol: [0.6, 0.45, 0.3], fogHeight: 10 };
     this.pointLights = [];

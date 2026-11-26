@@ -234,8 +234,8 @@ export class CreatureManager {
       if (c.mount) { g.helis.crewStep(c, dt); c.anim.update(dt); this._matrices(c); g.helis.crewModel(c); if (c.npc) g.npcs.rigStep(c, dt); continue; } // tripulação do helicóptero
       const d = multi ? N.minDist(c.pos) : Math.hypot(c.pos[0] - g.player.pos[0], c.pos[2] - g.player.pos[2]);
       if (d > (c.convoy ? 260 : 130) && !c.dead) { this._matrices(c); continue; } // LOD de IA: congela longe (o comboio continua andando)
-      if (multi && !c.dead) { const T = N.nearestTarget(c); g.player = T; try { this._think(c, dt, Math.hypot(c.pos[0] - T.pos[0], c.pos[2] - T.pos[2])); c.anim.update(dt); } finally { g.player = P0; } } // eventos da animação (golpe) também acertam o alvo certo
-      else { this._think(c, dt, d); c.anim.update(dt); } this._matrices(c); if (c.npc) g.npcs.rigStep(c, dt);
+      if (multi && !c.dead) { const T = N.nearestTarget(c); g.player = T; try { this._think(c, dt, Math.hypot(c.pos[0] - T.pos[0], c.pos[2] - T.pos[2])); c.anim.update(dt); } finally { g.player = P0; } this._matrices(c); if (c.kind === 'hunter' || c.kind === 'soldier') g.npcs.robotRig(c, dt); continue; } // eventos da animação (golpe) também acertam o alvo certo
+      else { this._think(c, dt, d); c.anim.update(dt); } this._matrices(c); if (c.npc) g.npcs.rigStep(c, dt); else if (c.kind === 'hunter' || c.kind === 'soldier') g.npcs.robotRig(c, dt);
     }
   }
   // tiros fazem barulho: androides hostis no raio vão investigar/atacar; fauna foge

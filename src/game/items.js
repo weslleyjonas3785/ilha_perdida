@@ -46,6 +46,7 @@ export const ITEMS = {
   engine: { img: 'engine', name: 'Motor de carro', icon: '⚙️', stack: 1, type: 'part', kg: 32, desc: 'Motor para carros. Pesado! Leve até o carro e instale pelo menu do veículo (E).' },
   motoengine: { img: 'motoengine', name: 'Motor de moto', icon: '⚙️', stack: 1, type: 'part', kg: 14, desc: 'Motor para a moto. Instale pelo menu do veículo (E).' },
   gearbox: { img: 'gearbox', name: 'Câmbio (engrenagens)', icon: '🔩', stack: 1, type: 'part', kg: 8, desc: 'Caixa de engrenagens: a moto precisa de uma (os carros já vêm com câmbio).' },
+  jack: { img: 'jack', name: 'Macaco', icon: '🔧', stack: 1, type: 'tool', tool: 'jack', kg: 3.2, desc: 'Macaco sanfona com manivela. Na mão, perto de um carro para montar (o que solta fumacinha): E coloca o macaco e levanta o carro — só assim dá para trocar as peças. Quando terminar: TAB → Próximo → botão direito no macaco → Finalizar serviço.' },
   jerrycan: { img: 'jerrycan', name: 'Galão de combustível', icon: '⛽', stack: 1, type: 'tool', tool: 'jerry', kg: 1.5, desc: 'Leva até 20 L. Na mão, perto de um veículo: E abastece, F retira combustível. Nas bombas dos postos: E enche o galão.' },
   soro: { img: 'soro', name: 'Soro de reidratação', icon: '🧃', stack: 5, type: 'drink', water: 60, heal: 10, desc: 'Água com mel e cinzas: +60 sede e +10 de vida. Bom contra a desidratação do deserto.' },
   water: { img: 'water', name: 'Água potável', icon: '💧', stack: 10, type: 'drink', water: 35, desc: 'Garrafa de água potável (fervida, da chuva ou lacrada). +35 sede.' },
@@ -104,7 +105,7 @@ export const ITEMS = {
   filament: { name: 'Filamento', img: 'filament', icon: '🧵', stack: 10, type: 'resource', desc: 'Carretel de filamento plástico para a impressora 3D. Achado em casas, indústrias e laboratórios.' },
   gunparts: { img: 'gunparts', name: 'Peças de armas', icon: '⚙️', stack: 10, type: 'resource', desc: 'Molas, gatilhos e mecanismos impressos na impressora 3D. Usadas no arpão e em lunetas.' },
   copperwire: { img: 'copperwire', name: 'Fio de cobre', icon: '〰️', stack: 40, type: 'resource', desc: 'Liga aparelhos elétricos. Cada rolo cobre 5 m de distância. Use na impressora/painel/fontes: "Puxar fio".' },
-  harpoon: { name: 'Arpão-gancho', img: 'harpoon', icon: '🔱', stack: 1, type: 'tool', tool: 'gun', dmg: 6, reach: 1.5, desc: 'Só pode ser fabricado na impressora 3D. Dispara um arpão com corda que gruda e puxa você até o ponto. Mira verde = alcança, vermelha = longe demais (40 m). Botão direito: mirar.' },
+  harpoon: { name: 'Gancho', img: 'harpoon', icon: '🪝', stack: 1, type: 'tool', tool: 'gun', dmg: 6, reach: 1.5, desc: 'Pistola de corda (só fabricada na impressora 3D). Dispara um gancho de garras: ele crava e puxa você deitado pelo ar. Em beirada de prédio, casa, muro ou montanha você se agarra e fica pendurado — E sobe, Espaço solta. Mira verde = alcança, vermelha = longe demais (40 m). Fica sempre no atalho 3.' },
   nvg: { name: 'Óculos de visão noturna', icon: '🥽', img: 'nvg', stack: 1, type: 'clothing', slot: 'hat', dur: 99999, nvg: true, kg: 0.6, desc: 'Vista no lugar do chapéu. Arraste uma bateria de célula sobre ele para anexar; liga/desliga com N. Clique direito nele para tirar a bateria. Encontrado só em áreas militares.' },
   nvcell: { name: 'Bateria de célula', icon: '🔋', img: 'nvcell', stack: 4, type: 'misc', kg: 0.05, desc: 'Pequena célula de energia. Arraste sobre o óculos de visão noturna para anexar (dura cerca de uma noite ligada). Achada em casas nas cidades.' },
   nvcell_dead: { name: 'Bateria descarregada', icon: '🪫', img: 'nvcell_dead', stack: 8, type: 'misc', kg: 0.05, desc: 'Célula sem carga. Não serve mais para o óculos.' },
@@ -126,7 +127,7 @@ export const ITEMS = {
   cooked_fillet: { name: 'Filé de peixe assado', icon: '🍣', img: 'cooked_fillet', stack: 10, type: 'food', food: 30, heal: 5, desc: 'Filé assado na fogueira: leve e nutritivo. +30 fome.' },
   burnt_fillet: { name: 'Filé de peixe queimado', icon: '🍣', img: 'burnt_fillet', stack: 10, type: 'food', food: 8, burnt: true, desc: 'Passou do ponto na fogueira. Comer pode fazer mal depois de uns minutos.' },
   geiger: { name: 'Contador Geiger', img: 'geiger', icon: '📟', stack: 1, type: 'tool', tool: 'geiger', dmg: 2, reach: 1.2, desc: 'Na mão, aponte para as coisas: a barra mostra quanta radiação vem daquela direção (zona tóxica, itens e caixas contaminados). Botão direito: apontar com precisão. Achado em laboratórios e bases militares, ou impresso na impressora 3D.' },
-  harpoonammo: { name: 'Munição de arpão', img: 'harpoonammo', icon: '🪝', stack: 6, type: 'ammo', desc: 'Arpão de ferro com corda. Cada uma dá 3 disparos.' },
+  harpoonammo: { name: 'Munição do gancho', img: 'harpoonammo', icon: '🪝', stack: 6, type: 'ammo', desc: 'Gancho de garras de ferro com corda. Cada uma dá 3 disparos.' },
   printer3d: { name: 'Impressora 3D', img: 'printer3d', icon: '🖨️', stack: 1, type: 'machine', place: 'printer', desc: 'Imprime peças de armas, o arpão e lunetas usando filamento e energia. Posicione no chão e ligue a um painel com fio de cobre.' },
   epanel: { img: 'epanel', name: 'Painel elétrico', icon: '🎛️', stack: 2, type: 'machine', place: 'panel', desc: 'Centro da rede elétrica: ligue aparelhos, fontes de energia e baterias nele.' },
   windkit: { img: 'windkit', name: 'Turbina eólica (kit)', icon: '🌬️', stack: 1, type: 'machine', place: 'wind', desc: 'Gera energia com o vento (mais no alto e com tempestade).' },
@@ -227,6 +228,7 @@ export const RECIPES = [
   { id: 'parka', out: 'parka', n: 1, cost: { cloth: 5, fiber: 4, leaf: 6 }, station: 'bench' },
   { id: 'iron', out: 'iron', n: 1, cost: { scrap: 3 }, station: 'fire' },
   { id: 'copperwire', out: 'copperwire', n: 4, cost: { circuit: 1, scrap: 1 }, station: 'bench' },
+  { id: 'jack', out: 'jack', n: 1, cost: { iron: 3, scrap: 4 }, station: 'bench' },
   { id: 'harpoonammo', out: 'harpoonammo', n: 1, cost: { cord: 2, iron: 1, scrap: 1 }, station: 'bench' },
   { id: 'printer3d', out: 'printer3d', n: 1, cost: { scrap: 8, iron: 4, circuit: 4, wood: 2 }, station: 'bench' },
   { id: 'epanel', out: 'epanel', n: 1, cost: { scrap: 4, circuit: 3, copperwire: 2 }, station: 'bench' },
@@ -255,7 +257,7 @@ export const SKILLS = [
 ];
 // o que cada habilidade libera (receitas por id e construções por tipo); o que não está aqui é livre (sobrevivência básica)
 export const SKILL_OF = {
-  wall: 'carpintaria', floor: 'carpintaria', door: 'carpintaria', chest: 'carpintaria', bench: 'carpintaria', shelter: 'carpintaria',
+  wall: 'carpintaria', floor: 'carpintaria', door: 'carpintaria', chest: 'carpintaria', bench: 'carpintaria', shelter: 'carpintaria', bed: 'carpintaria',
   bandage: 'medicina', medkit: 'medicina', antidote: 'medicina', soro: 'medicina',
   windkit: 'engenharia', waterwheel: 'engenharia', wind: 'engenharia', c4: 'engenharia',
   wheelkit: 'mecanica', pistol: 'mecanica', jerrycan: 'metalurgia', gl: 'mecanica',
@@ -270,6 +272,7 @@ export const PIECES = {
   flag: { name: 'Territoritek', icon: '📡', img: 'tk_territoritek', cost: { scrap: 6, wood: 4, fiber: 4 }, desc: 'Estaca de território: você finca no chão, se afasta e ela abre, arma e dispara uma luz bem alta para o céu. Marca sua área (raio de 32 m): só dentro dela dá para construir a base (Projeto), bancadas, baús e o armário. Não pode ficar perto do território de outro jogador.', shape: { type: 'cyl', r: 0.6, h: 2.2 }, snap: false },
   campfire: { name: 'Fogueira', icon: '🔥', cost: { stone: 5, stick: 4 }, desc: 'Luz, calor e cozinhar.', shape: { type: 'cyl', r: 0.75, h: 0.4 }, snap: false },
   tent: { name: 'Barraca', icon: '⛺', cost: { stick: 6, leaf: 8, fiber: 4 }, desc: 'Dormir e definir ponto de renascimento.', shape: { type: 'box', hx: 0.95, hz: 1.3, h: 1.4 }, snap: false },
+  bed: { name: 'Cama', icon: '🛏', img: 'bed', cost: { wood: 16, cloth: 6, fiber: 6 }, desc: 'Cama de casal de madeira. Deite (E) para marcar seu ponto de surgimento; depois das 20:00 dá para dormir até amanhecer. Ao morrer você escolhe no mapa: renascer na cama ou num lugar aleatório.', shape: { type: 'box', hx: 0.9, hz: 1.15, h: 1.3 }, snap: false },
   shelter: { name: 'Abrigo', icon: '🛖', cost: { wood: 8, leaf: 10, fiber: 4 }, desc: 'Abrigo de troncos. Dormir e renascer.', shape: { type: 'box', hx: 1.55, hz: 1.55, h: 2.6 }, snap: false },
   wall: { legacy: true, name: 'Parede', icon: '🧱', cost: { wood: 4 }, desc: 'Parede de troncos (encaixa na grade).', shape: { type: 'box', hx: 1.5, hz: 0.25, h: 2.7 }, snap: 'edge' },
   floor: { legacy: true, name: 'Piso de madeira', icon: '🟫', cost: { wood: 4 }, desc: 'Plataforma nivelada (encaixa na grade).', shape: { type: 'box', hx: 1.5, hz: 1.5, h: 0.25 }, snap: 'cell' },
@@ -307,7 +310,7 @@ const SIZE_BY_ID = {
   pistol35: [2, 1], pistol: [2, 2], pistol65: [2, 2], shotgun: [4, 2], rifle540: [4, 2], rifle: [4, 2], rifle577: [4, 2], sniper745: [5, 2], sniper: [5, 2], sniper790: [5, 2],
   scope4: [2, 1], scope8: [2, 1], mag_pistol: [1, 1], mag_fa1: [1, 2], mag_fa2: [1, 2], mag_fa3: [1, 2], mag_fp1: [1, 1], mag_fp2: [1, 1], mag_fp3: [1, 2], sil_pistol: [2, 1], sil_rifle: [2, 1], sil_rifle_long: [3, 1], sil_sniper: [3, 1], sil_sniper_max: [4, 1], ratsuit: [2, 2], scraparmor: [2, 2], barkarmor: [2, 2], vest: [2, 2], parka: [2, 2],
   rags_shirt: [2, 2], rags_pants: [2, 2], rags_shoes: [2, 1], tenis: [2, 1], shirt: [2, 2], pants: [2, 2], clothvest: [2, 2], parka: [2, 2], milshirt: [2, 2], milpants: [2, 2], barkarmor: [2, 2], scraparmor: [2, 2], vest: [2, 2], hat: [2, 1], milhelmet: [2, 2], fibergloves: [1, 1], leathergloves: [1, 1], milgloves: [1, 1], fibershoes: [2, 1], leatherboots: [2, 1], milboots: [2, 1],
-  harpoon: [3, 2], geiger: [2, 2], c4: [2, 1], lock_wood: [1, 1], fishing_rod: [1, 3], fish_bass: [2, 1], fish_koi: [2, 1], fish_angel: [1, 1], lock_iron: [1, 1], lock_gold: [1, 1], nvg: [2, 1], tire: [2, 2], tire_suv: [2, 2], tire_sedan: [2, 2], tire_hatch: [2, 2], tire_pickup: [2, 2], mototire: [2, 2], engine: [3, 2], motoengine: [2, 2], gearbox: [2, 2], jerrycan: [2, 2], gl: [4, 2], rpg: [5, 1], rocket: [3, 1], gren_he: [1, 1], gren_gas: [1, 1], gren_smoke: [1, 1], soro: [1, 2], book_carpintaria: [2, 2], book_medicina: [2, 2], book_engenharia: [2, 2], book_mecanica: [2, 2], book_eletrica: [2, 2], book_agricultura: [2, 2], book_metalurgia: [2, 2], book_costura: [2, 2], book_eletronica: [2, 2], nvcell: [1, 1], nvcell_dead: [1, 1], harpoonammo: [3, 1], printer3d: [3, 3], epanel: [2, 2], windkit: [2, 4], wheelkit: [3, 3], battery: [2, 2], copperwire: [1, 1], filament: [1, 1], iron: [1, 1], gunparts: [1, 1],
+  harpoon: [2, 2], jack: [2, 1], geiger: [2, 2], c4: [2, 1], lock_wood: [1, 1], fishing_rod: [1, 3], fish_bass: [2, 1], fish_koi: [2, 1], fish_angel: [1, 1], lock_iron: [1, 1], lock_gold: [1, 1], nvg: [2, 1], tire: [2, 2], tire_suv: [2, 2], tire_sedan: [2, 2], tire_hatch: [2, 2], tire_pickup: [2, 2], mototire: [2, 2], engine: [3, 2], motoengine: [2, 2], gearbox: [2, 2], jerrycan: [2, 2], gl: [4, 2], rpg: [5, 1], rocket: [3, 1], gren_he: [1, 1], gren_gas: [1, 1], gren_smoke: [1, 1], soro: [1, 2], book_carpintaria: [2, 2], book_medicina: [2, 2], book_engenharia: [2, 2], book_mecanica: [2, 2], book_eletrica: [2, 2], book_agricultura: [2, 2], book_metalurgia: [2, 2], book_costura: [2, 2], book_eletronica: [2, 2], nvcell: [1, 1], nvcell_dead: [1, 1], harpoonammo: [3, 1], printer3d: [3, 3], epanel: [2, 2], windkit: [2, 4], wheelkit: [3, 3], battery: [2, 2], copperwire: [1, 1], filament: [1, 1], iron: [1, 1], gunparts: [1, 1],
   pack_impro: [2, 2], pack_small: [2, 2], pack_medium: [2, 3], pack_large: [3, 3], pack_climb: [3, 4], solarpanel: [2, 1], core: [1, 1], cookedmeat: [1, 1], honey: [1, 1],
 };
 export function itemSize(id) { return SIZE_BY_ID[id] || [1, 1]; }
@@ -316,7 +319,7 @@ export const PACKS = { pack_impro: [5, 4], pack_small: [7, 5], pack_medium: [5, 
 // peso (kg) por item: valor próprio (it.kg) ou pelo tipo
 const KG_TYPE = { part: 8, clothing: 0.6, resource: 0.3, food: 0.35, drink: 0.6, medical: 0.12, ammo: 0.02, tool: 1.2, armor: 3, backpack: 0.9, suit: 2.5, attachment: 0.4, machine: 6, misc: 0.3 };
 const KG_ID = { wood: 0.8, stone: 1.0, scrap: 0.6, iron: 1.5, log: 6, stick: 0.2, fiber: 0.05, leaf: 0.02, cloth: 0.1, cord: 0.1, water: 0.6, shells: 0.04, arrow: 0.05, harpoonammo: 0.5,
-  pistol: 1.0, pistol35: 0.8, pistol65: 1.3, shotgun: 3.4, rifle: 3.5, rifle540: 3.3, rifle577: 3.8, sniper: 5.5, sniper745: 5.0, sniper790: 6.2, bow: 1.0, harpoon: 2.2, spear: 1.5, scrapspear: 1.8, shockspear: 2.0, axe: 1.6, scrapaxe: 1.8, pickaxe: 2.0, knife: 0.3, scrapknife: 0.35 };
+  pistol: 1.0, pistol35: 0.8, pistol65: 1.3, shotgun: 3.4, rifle: 3.5, rifle540: 3.3, rifle577: 3.8, sniper: 5.5, sniper745: 5.0, sniper790: 6.2, bow: 1.0, harpoon: 1.3, spear: 1.5, scrapspear: 1.8, shockspear: 2.0, axe: 1.6, scrapaxe: 1.8, pickaxe: 2.0, knife: 0.3, scrapknife: 0.35 };
 export function itemKg(id) { const it = ITEMS[id]; if (!it) return 0; return it.kg ?? KG_ID[id] ?? KG_TYPE[it.type] ?? 0.3; }
 export const CARRY_KG = 25, MAX_KG = 60;
 export const CLOTH_SLOTS = ['hat', 'shirt', 'vest', 'gloves', 'pants', 'shoes'];
@@ -325,7 +328,7 @@ export const SLOT_NAMES = { hat: 'Chapéu', shirt: 'Camisa', vest: 'Colete', glo
 export const LARGE = new Set(['gl', 'rpg', 'bow', 'shotgun', 'rifle', 'rifle540', 'rifle577', 'sniper', 'sniper745', 'sniper790', 'axe', 'scrapaxe', 'pickaxe', 'spear', 'scrapspear', 'shockspear']);
 export const POCKETS = [5, 3];
 export const SIDEARMS = new Set(['pistol35', 'pistol', 'pistol65', 'knife', 'scrapknife']);
-export function quickClass(id) { return LARGE.has(id) || id === 'harpoon' ? 'big' : SIDEARMS.has(id) ? 'side' : 'misc'; }
+export function quickClass(id) { return LARGE.has(id) ? 'big' : SIDEARMS.has(id) || id === 'harpoon' ? 'side' : 'misc'; }
 export function slotClass(k) { return k < 2 ? 'big' : k === 2 ? 'side' : 'misc'; }
 
 // Inventório em grade: cada item ocupa células conforme o tamanho; pilhas de munição/recursos somam no mesmo espaço.

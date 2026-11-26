@@ -13,7 +13,7 @@ export class Input {
     window.addEventListener('blur', () => { this.keys.clear(); this.mouse.left = this.mouse.right = false; });
     canvas.addEventListener('mousedown', (e) => {
       if (!this.locked && !this.touchActive && !this.mobile && this.wantLock) { if (this.noLock) this._freeOn(); else this.requestLock(); }
-      if (e.button === 0) { this.mouse.left = true; this.mouse.leftPressed = true; } if (e.button === 2) { this.mouse.right = true; this.mouse.rightPressed = true; }
+      if (e.button === 0) { this.mouse.left = true; this.mouse.leftPressed = true; } if (e.button === 2) { this.mouse.right = true; this.mouse.rightPressed = true; } if (e.button === 1) { this.mouse.midPressed = true; e.preventDefault(); }
     });
     window.addEventListener('mouseup', (e) => { if (e.button === 0) this.mouse.left = false; if (e.button === 2) this.mouse.right = false; });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -107,8 +107,9 @@ export class Input {
       inventory: h('Tab') || this.btnHit('inventory'), map: h('KeyM') || this.btnHit('map'), equipment: h('KeyI'), nvg: h('KeyN'), build: h('KeyB') || this.btnHit('build'),
       pause: h('Escape') || h('KeyP') || this.btnHit('pause'), rotate: h('KeyR') || this.btnHit('rotate'), reload: h('KeyR') || this.btnHit('reload'), demolish: h('KeyX'), ammoNext: h('KeyT'),
       slot: [1, 2, 3, 4, 5, 6, 7, 8].find((n) => h('Digit' + n)) || 0, unequip: h('Digit0') || h('KeyH') || this.btnHit('unequip'),
+      ping: (this.enabled && this.mouse.midPressed) || this.btnHit('ping'),
       cancel: h('Escape') || (this.enabled && this.mouse.rightPressed) || this.btnHit('cancel'),
     };
   }
-  endFrame() { this.pressed.clear(); this.mouse.dx = 0; this.mouse.dy = 0; this.mouse.wheel = 0; this.mouse.leftPressed = false; this.mouse.rightPressed = false; this.touch.btnPressed.clear(); }
+  endFrame() { this.pressed.clear(); this.mouse.dx = 0; this.mouse.dy = 0; this.mouse.wheel = 0; this.mouse.leftPressed = false; this.mouse.rightPressed = false; this.mouse.midPressed = false; this.touch.btnPressed.clear(); }
 }

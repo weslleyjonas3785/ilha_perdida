@@ -17,7 +17,7 @@ export class BuildSystem {
     this.game = game; this.pieces = []; this.meshes = {}; this.mode = null; this.rotStep = 0; this.ghost = null;
     for (const t of ['campfire', 'tent', 'shelter', 'wall', 'floor', 'bench', 'door', 'planter', 'collector', 'composter', 'gtrap']) this.meshes[t] = game.renderer.createMesh(pieceMesh(t === 'door' ? 'doorframe' : t));
     // baús, armário e Territoritek: o desenho fica no sistema de território (aqui só para a prévia)
-    for (const [t, k] of Object.entries(CHESTS)) this.meshes[t] = game.renderer.createMesh(BM.chestMesh(k.kind)); this.meshes.cabinet = game.renderer.createMesh(BM.cabinetMesh()); this.meshes.flag = game.renderer.createMesh(BM.tkBaseMesh());
+    for (const [t, k] of Object.entries(CHESTS)) this.meshes[t] = game.renderer.createMesh(BM.chestMesh(k.kind)); this.meshes.cabinet = game.renderer.createMesh(BM.cabinetMesh()); this.meshes.flag = game.renderer.createMesh(BM.tkBaseMesh()); this.meshes.bed = game.renderer.createMesh(BM.bedMesh());
     this.doorLeaf = game.renderer.createMesh(pieceMesh('door'));
     for (const [t, fn] of Object.entries(MACHINE_MESH)) this.meshes[t] = game.renderer.createMesh(fn());
   }
@@ -97,6 +97,7 @@ export class BuildSystem {
     switch (type) {
       case 'campfire': return [{ type: 'cyl', x, z, r: 0.72, y0: y - 0.1, y1: y + 0.32 }];
       case 'tent': return [box(0, 0, 0.95, 1.3, -0.1, 1.42, { noClimb: true })];
+      case 'bed': return [box(0, 0.05, 0.86, 1.1, -0.1, 0.5), box(0, -1.08, 0.88, 0.07, 0.5, 1.28, { noClimb: true }), box(0, 1.08, 0.88, 0.07, 0.5, 0.76), box(1.24, -0.9, 0.25, 0.21, -0.1, 0.55)];
       case 'shelter': return [box(0, -1.45, 1.55, 0.18, -0.1, 2.6, { noClimb: true }), box(0, 0, 1.6, 1.65, 1.75, 2.9, { camOnly: true }), ...[[-1.4, 1.4], [1.4, 1.4]].map(([lx, lz]) => { const [px, pz] = L(lx, lz); return { type: 'cyl', x: px, z: pz, r: 0.13, y0: y, y1: y + 1.4 }; })];
       case 'wall': return [box(0, 0, 1.5, 0.25, -0.05, 2.7, { noClimb: true })];
       case 'floor': return [box(0, 0, 1.5, 1.5, -3, 0.2, { platform: true })];

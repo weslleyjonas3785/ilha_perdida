@@ -170,7 +170,7 @@ export class StructSystem {
   }
   closeRadial(apply) {
     const g = this.g, R = this.radial; this.radial = null; g.ui.radial && g.ui.radial(null); if (!apply || !R || R.sel < 0) return; const o = R.opts[R.sel];
-    if (R.kind === 'build') { this.mode = o.id; this.rot = 0; g.ui.toast(`${STYPES[o.id].icon} ${STYPES[o.id].name}: mire e clique para construir (R gira)`, 'info'); }
+    if (R.kind === 'build') { this.mode = o.id; this.rot = 0; g.ui.toast(`${STYPES[o.id].icon} ${STYPES[o.id].name}: mire e clique para construir (Espaço ou R gira)`, 'info'); }
     else { const t = this.target; if (!t || !g.build.pieces.includes(t)) return; if (o.id === 'up') this.upgrade(t); else if (o.id === 'rot') this.rotate(t); else this.demolish(t); }
   }
   _costTxt(c) { const N = { wood: 'madeira', stone: 'pedra', scrap: 'sucata', fiber: 'fibra' }; return Object.entries(c).map(([k, n]) => `${n} ${N[k] || k}`).join(' + '); }

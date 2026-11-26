@@ -311,7 +311,22 @@ Todos entram na mesma VPN (Radmin VPN, Hamachi, ZeroTier…) ou na mesma rede de
 - **Androide soldado**: capacete com visor vermelho e submetralhadora.
 - **Borboleta solar**: do tamanho do jogador. Abatida, cai no chão e dá **placas solares** no formato das asas. Na bancada, placa solar + circuito + sucata viram uma **lanterna solar**.
 
-## Arpão-gancho, impressora 3D e energia
+## Gancho, janelas, carros com macaco, cama e choque
+- **Gancho** (antigo arpão-gancho): pistola de corda do tamanho de uma pistola, com gancho de garras em cima do cano. Vai sempre para o **atalho 3**. Ao disparar, o personagem é puxado **deitado**, com o corpo acompanhando a corda. Se o gancho cravar numa beirada (casa, prédio, muro, contêiner, paredão de montanha), ele se **agarra e fica pendurado**: **E** sobe (ou escala o paredão aos poucos), **Espaço** solta. Se cravar em cima de uma laje, já sobe de uma vez.
+- **Janelas**: perto de uma janela e de frente para ela aparece **Espaço — Pular a janela**: ele passa por cima do peitoril para o outro lado (vidro inteiro quebra).
+- **Loot**: móveis e caixas só podem ser revistados **de frente** e **sem parede no meio** (não dá mais para lootear de fora da casa).
+- **Carros**: alguns carros da cidade são revistáveis e têm peças (pneus, motor, câmbio, macaco). Os carros montáveis aparecem sem algumas peças, às vezes com peças danificadas, e **soltando fumacinha** no capô. Com o **Macaco** na mão (bancada: ferro 3 + sucata 4; também em oficinas, postos, indústrias e carros), **E** coloca o macaco: o carro levanta e fica com uma **luz azulada** em volta. Só assim dá para colocar ou tirar peças. **Consertar peça danificada** precisa da habilidade **Mecânica** (motor/câmbio: sucata 3 + ferro 1; pneu furado: pano 2 + sucata 1). Ao terminar: **TAB → Próximo → botão direito no macaco → Finalizar serviço**. O carro desce e o macaco fica no chão ao lado. Enquanto estiver no macaco o carro não anda.
+- **Menu do item**: clique (ou botão direito) em qualquer item do inventário abre o menu **ao lado do item** com **Usar/Consumir**, **Examinar**, **Descartar**, **Descartar qtd…** (escolhe a quantidade) e as outras ações. Funciona no PC e no celular.
+- **Cama** (carpintaria: madeira 16, pano 6, fibra 6): deitar mostra **"Ponto de surgimento estabelecido"**. Depois das **20:00** dá para dormir em qualquer cama (a sua ou das casas) e amanhece. No **multiplayer** aparece o contador **"2/3"**, e o dia só nasce quando todos os jogadores online estiverem deitados (Espaço/E levanta).
+- **Renascer**: ao morrer, o mapa abre para escolher **Na minha cama** ou **Lugar aleatório**.
+- **Choque** (barra escondida): tiros acumulam choque, mais forte no **peito** e com **calibre alto**. Ao encher, você apaga mesmo com bastante vida: tela preta, e 10 s depois os olhos abrem devagar e você está **agachado**. Se te atingirem desmaiado, aparece **"Você foi finalizado"** e você escolhe onde renascer.
+- **Pings**: **botão do meio (scroll)** marca onde você está olhando (até 3; a mais antiga sai). Clicar de novo em cima de uma marca tira ela. As marcas aparecem na tela, na bússola e no mapa.
+- **Base**: o Territoritek armado ganha um marcador azul **BASE** em cima, na bússola e no mapa.
+- **Girar peças**: **Espaço** (ou R/roda) gira qualquer construção, bancada, baú, armário ou cama enquanto posiciona.
+- **Robôs**: o androide caçador (fuzil) e o soldado (submetralhadora) seguram a arma com as duas mãos, igual aos NPCs.
+- **Celular**: a resolução usa o pixel da tela (antes multiplicava pela densidade 3× e travava). Em Configurações: **Resolução Baixa / Média / Alta** e **Ajustar resolução sozinho quando travar** (ligado no celular), que também desliga sombras, grama e brilho se continuar lento. O inventário e a mochila ficam no topo da tela.
+
+## Gancho, impressora 3D e energia
 
 - **Arpão-gancho**: só sai da **impressora 3D** (nunca é encontrado). Custa filamento 4, peças de armas 2, sucata 4, circuitos 2 e ferro 2. A **munição de arpão** é feita na bancada (corda 2, ferro 1, sucata 1); cada uma dá **3 disparos** (R recarrega quando acabar). Mirando (botão direito), a mira fica **verde** quando o ponto está ao alcance (até 40 m, com a distância ao lado) e **vermelha** quando não dá. O arpão crava, a corda recolhe e puxa você até o ponto; clique de novo ou pule para soltar. Acertar um bicho causa dano.
 - **Impressora 3D**: fabricada na bancada e posicionada no chão (inventário → Posicionar). Coloque filamento (achado em casas, indústrias e laboratórios), escolha a peça (peças de armas, arpão, lunetas 4x/8x) e ela imprime usando 60 W; o cabeçote se move e a peça cresce na mesa. Retire na bandeja.
@@ -492,6 +507,7 @@ python3 tests/play30.py  # 7 verificações: arma grande direto para as costas, 
 python3 tests/play31.py  # 10 verificações: helicóptero (som, voo, circula e atira, fumaça esconde, tripulação NPC, tiro no piloto, atirador cai, queda, caixas, fumaça)
 python3 tests/play34.py  # 6 verificações: tênis no começo, mochila maior veste sozinha, bateria e roupa perguntam onde equipar, cortar em retalhos
 python3 tests/play35.py  # 11 verificações: Territoritek (finca, arma, dispara a luz, marca a área no chão), baús, trancas com senha, tiro/C4, armário de manutenção
+python3 tests/play37.py  # 39 verificações: gancho (atalho 3, deitado, pendura e sobe), janela, loot de frente, carro no macaco/consertar/finalizar, menu do item, resolução, pings, BASE, Espaço gira, cama/dormir/multiplayer 2/3, choque, renascer no mapa, robô com duas mãos
 python3 tests/play36.py  # 10 verificações: minhocas com a faca (não na areia da praia), vara com isca na ponta, fisgar e puxar o peixe, filés por peixe, luz do Territoritek apaga e a marcação fica
 python3 tests/play33.py  # 9 verificações: voz (CAPS LOCK, ícone pisca, NPC/robô vêm, voz de outro jogador), botões VOZ e bala no celular
 python3 tests/play32.py  # 12 verificações: Modificar controles (Cancelar/Salvar), PAUSA + trava de corrida no joystick + celular (só no celular, joystick, câmera, botões, mochila, engrenagem arrasta/tamanho salvo, aviso de girar)

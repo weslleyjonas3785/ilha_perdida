@@ -8,6 +8,8 @@ import { WorldStream } from './stream.js';
 import { rollLoot, FURN_NAMES } from './loot.js';
 import { PowerSystem, PRINTS } from './power.js';
 import { Grapple } from './grapple.js';
+import { Markers } from './markers.js';
+import { Rest } from './rest.js';
 import { Geiger } from './geiger.js';
 import { geigerMesh } from './machines.js';
 import * as MXS from './machines.js';
@@ -91,12 +93,14 @@ export class Game {
   constructor(canvas) {
     this.canvas = canvas; this.state = 'loading'; this.storageOk = true;
     const mobile = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-    const defaults = { master: 0.8, sfx: 0.9, ambient: 0.7, music: 0.35, sens: 1, invertY: false, shadows: true, grass: mobile ? 0.5 : 1, viewDist: mobile ? 'curta' : 'normal', res: mobile ? 0.75 : 1, enemyMul: 1, autoRes: false, v: 2, quality: mobile ? 'baixa' : 'alta', ssao: !mobile, bloom: true, fxaa: true, detail: mobile ? 0.6 : 1 };
+    const defaults = { master: 0.8, sfx: 0.9, ambient: 0.7, music: 0.35, sens: 1, invertY: false, shadows: true, grass: mobile ? 0.5 : 1, viewDist: mobile ? 'curta' : 'normal', res: mobile ? 0.75 : 1, enemyMul: 1, autoRes: mobile, v: 3, quality: mobile ? 'baixa' : 'alta', ssao: !mobile, bloom: true, fxaa: true, detail: mobile ? 0.6 : 1 };
     const saved = this._loadJSON(SET_KEY) || {}; if (!(saved.v >= 2)) { delete saved.res; delete saved.autoRes; } // migração: resolução cheia, nítida
-    this.settings = Object.assign(defaults, saved); this.settings.v = 2;
+    if (mobile && !(saved.v >= 3)) { delete saved.res; delete saved.autoRes; delete saved.quality; delete saved.shadows; delete saved.ssao; delete saved.grass; delete saved.viewDist; } // celular: nova escala de resolução (pixel da tela, sem multiplicar pela densidade)
+    this.mobile = mobile;
+    this.settings = Object.assign(defaults, saved); this.settings.v = 3;
     this.renderer = new Renderer(canvas); this.audio = new GameAudio(); { const A = this.audio, orig = A.play.bind(A); A.play = (name, o = {}) => { const res = orig(name, o); const R = NOISE_R[name]; if (R && !o.at && !o.noNoise && this.player && !this.player.dead && this.state === 'playing') this.noise(this.player.pos, name === 'step' ? R * (o.vol ?? 1) : R, name === 'step' ? 'passo' : name); return res; }; } this.audio.listener = () => this.cam ? { eye: this.cam.eye, yaw: Math.atan2(this.cam.target[0] - this.cam.eye[0], this.cam.target[2] - this.cam.eye[2]) } : null; this.ui = new UI(this); this.input = new Input(canvas, this.ui); this.touchUI = new TouchControls(this); this.voice = new Voice(this);
     this.cam = new ThirdPersonCamera(); this.env = new Environment(this); this.fx = new FX(this);
-    this.guns = new Firearms(this); this.npcs = new NPCManager(this); this.fires = new FIRE.Campfires(this); this.convoys = new Convoys(this); this.helis = new Helis(this); this.territory = new Territory(this); this.fishing = new Fishing(this); this.grenades = new Grenades(this); this.smoke = new SmokeSignals(this); this.admin = new Admin(this); this.blasts = new Blasts(this); this.struct = new STR.StructSystem(this); this.net = new Net(this); this.inv = new GridInventory(); this._bigPockets = typeof window !== 'undefined' && !!window.__TEST_BIG_POCKETS; this.quick = Array(8).fill(null); this.inv.onChange = () => { this.syncHand && this.equip && this.syncHand(); if (this.ui.open) this.ui.refresh(); }; this.inv.onAdd = (id) => { this._autoQuick(id); this._toBack && this._toBack(id); };
+    this.guns = new Firearms(this); this.npcs = new NPCManager(this); this.fires = new FIRE.Campfires(this); this.convoys = new Convoys(this); this.helis = new Helis(this); this.territory = new Territory(this); this.markers = new Markers(this); this.rest = new Rest(this); this.fishing = new Fishing(this); this.grenades = new Grenades(this); this.smoke = new SmokeSignals(this); this.admin = new Admin(this); this.blasts = new Blasts(this); this.struct = new STR.StructSystem(this); this.net = new Net(this); this.inv = new GridInventory(); this._bigPockets = typeof window !== 'undefined' && !!window.__TEST_BIG_POCKETS; this.quick = Array(8).fill(null); this.inv.onChange = () => { this.syncHand && this.equip && this.syncHand(); if (this.ui.open) this.ui.refresh(); }; this.inv.onAdd = (id) => { this._autoQuick(id); this._toBack && this._toBack(id); };
     this.equip = this.freshEquip(); this._applyBack(); this.attach = {}; this.home = null; this.drops = []; this.logs = []; this.falling = []; this.projectiles = []; this.arrows = []; this.clouds = []; this.stats = { built: 0, kills: 0 };
     this.lastFire = [0, 0]; this.saveT = 60; this.grassCells = new Map(); this.menuT = 0; this.playTime = 0;
     this.input.wantLock = true;
@@ -123,7 +127,7 @@ export class Game {
     this.playerAssets = { skel, clips, mesh: r.createMesh(buildPlayerMesh(skel, this.look)) };
     await loadModelOverride(this, 'assets/models/models.json').catch(() => null);
     this.creatureAssets = buildCreatureAssets(r);
-    this.tools = {}; for (const t of ['axe', 'scrapaxe', 'pickaxe', 'spear', 'scrapspear', 'shockspear', 'torch', 'knife', 'scrapknife']) this.tools[t] = r.createMesh(P.toolMesh(t)); this.tools.jerrycan = r.createMesh(VEH.jerrycanMesh()); this.tools.blueprint = r.createMesh(STR.blueprintRollMesh()); this.tools.hammer = r.createMesh(STR.hammerMesh()); this._sheetMesh = r.createMesh(STR.blueprintSheetMesh()); for (const id of Object.keys(GREN)) this.tools[id] = r.createMesh(grenadeMesh(id));
+    this.tools = {}; for (const t of ['axe', 'scrapaxe', 'pickaxe', 'spear', 'scrapspear', 'shockspear', 'torch', 'knife', 'scrapknife']) this.tools[t] = r.createMesh(P.toolMesh(t)); this.tools.jerrycan = r.createMesh(VEH.jerrycanMesh()); this.tools.jack = r.createMesh(VEH.jackMesh(0.12)); this.tools.blueprint = r.createMesh(STR.blueprintRollMesh()); this.tools.hammer = r.createMesh(STR.hammerMesh()); this._sheetMesh = r.createMesh(STR.blueprintSheetMesh()); for (const id of Object.keys(GREN)) this.tools[id] = r.createMesh(grenadeMesh(id));
     for (const t of Object.keys(GUNS)) this.tools[t] = r.createMesh(gunMesh(t)); this.scopeMeshes = { scope4: r.createMesh(scopeMesh('scope4')), scope8: r.createMesh(scopeMesh('scope8')) }; this.tools.solarlamp = r.createMesh(P.solarLampMesh()); this.tools.fishing_rod = r.createMesh(rodMesh()); this.tools.geiger = r.createMesh(geigerMesh()); this.tools.c4 = r.createMesh(MXS.c4Mesh()); this.arrowMesh = r.createMesh(arrowMesh());
     await step(0.55, 'Construindo cenário…');
     this._buildScenery();
@@ -168,7 +172,7 @@ export class Game {
 
   // predefinições de qualidade gráfica
   applyQuality(q) {
-    const P = { baixa: { shadows: false, ssao: false, bloom: false, fxaa: true, detail: 0, grass: 0.5, res: 0.75, viewDist: 'curta' }, media: { shadows: true, ssao: false, bloom: true, fxaa: true, detail: 0.6, grass: 1, res: 1, viewDist: 'normal' },
+    const P = { baixa: { shadows: false, ssao: false, bloom: false, fxaa: !this.mobile, detail: 0, grass: this.mobile ? 0 : 0.5, res: this.mobile ? 0.6 : 0.75, viewDist: 'curta' }, media: { shadows: true, ssao: false, bloom: true, fxaa: true, detail: 0.6, grass: 1, res: 1, viewDist: 'normal' },
       alta: { shadows: true, ssao: true, bloom: true, fxaa: true, detail: 1, grass: 1, res: 1, viewDist: 'normal' }, ultra: { shadows: true, ssao: true, bloom: true, fxaa: true, detail: 1, grass: 1.6, res: 1.5, viewDist: 'normal' } }[q];
     if (!P) return; Object.assign(this.settings, P, { quality: q }); this.applySettings();
   }
@@ -177,7 +181,7 @@ export class Game {
     Object.assign(this.audio.vol, { master: s.master, sfx: s.sfx, ambient: s.ambient, music: s.music }); this.audio.musicOn = s.music > 0.01; this.audio.applyVolumes();
     this.input.sens = s.sens; this.input.invertY = s.invertY; this.renderer.shadowsEnabled = s.shadows;
     this.renderer.post = { ssao: !!s.ssao, bloom: !!s.bloom, fxaa: !!s.fxaa }; this.renderer.detail = s.detail ?? 1; if (s.camSide === -1 || s.camSide === 1) this.cam.side = this.cam.sideCur = s.camSide;
-    this.renderer.pixelRatio = Math.min(window.devicePixelRatio || 1, 2) * s.res; this.renderer.resize();
+    this.renderer.pixelRatio = (this.mobile ? 1 : Math.min(window.devicePixelRatio || 1, 2)) * s.res; this.renderer.resize(); // no celular a escala é sobre o pixel da tela (densidade 3× travava)
     if (this._grassDensity !== s.grass) { for (const c of this.grassCells.values()) c.dead = true; this.grassCells.clear(); this._grassDensity = s.grass; }
   }
 
@@ -200,7 +204,7 @@ export class Game {
   }
   _dirtyAll() { for (const g of Object.values(this.groups)) for (const gg of (Array.isArray(g) ? g : [g])) for (const c of gg.cells.values()) c.dirty = true; }
   newGame() {
-    this.audio.init(); this.resetWorld(); this.equip = this.freshEquip(); this._applyBack(); this.inv.load([]); this.quick = Array(8).fill(null); this.map.load([]); this.attach = {}; this.home = null; this.stats = { built: 0, kills: 0 };
+    this.audio.init(); this.resetWorld(); this.equip = this.freshEquip(); this._applyBack(); this.inv.load([]); this.quick = Array(8).fill(null); this.map.load([]); this.markers.reset(); this.attach = {}; this.home = null; this.homeBed = null; this.stats = { built: 0, kills: 0 };
     const sp = typeof window !== 'undefined' && window.__TEST_FIXED_SPAWN ? { ...this.world.spawn, biome: 'forest' } : this.world.randomSpawn(); this.spawnAt = sp; this._clearSpawnArea(sp); this.player.setPosition(sp.x, this.world.height(sp.x, sp.z), sp.z); this.freshBody(); Object.assign(this.player.stats, { hunger: 85, thirst: 80, energy: 90 });
     this.player.revive(); this.player.yaw = Math.PI * 0.9; this.cam.yaw = this.player.yaw; this.cam.pivot = null; this.cam.pitch = 0.22;
     this.env.time = 0.3; this.env.day = 1; this.env.setWeather('limpo'); this.env.cur.rain = 0; this.env.cur.fog = 0; this.env.cur.cloud = 0.05; this.env.weatherT = 300; this.playTime = 0;
@@ -233,7 +237,7 @@ export class Game {
     const s = { v: 2, at: Date.now(), seed: w.seed, size: 10368,
       player: { pos: P.pos.map((v) => +v.toFixed(3)), yaw: +P.yaw.toFixed(3), stats: { ...P.stats }, crouch: P.crouch },
       veh: this.vehicles.serialize(), jerryFuel: this.jerryFuel, skills: [...this.skills], books: (this.books || []).map((b) => [b.skill, b.spot, b.taken ? 1 : 0, b.regrowAt]),
-      inv: this.inv.serialize(), quick: this.quick, equip: { ...this.equip, debugHand: undefined }, attach: this.attach, look: this.look, home: this.home, marks: this.map.save(), env: this.env.serialize(), stats: this.stats, mags: this.guns.save(), cam: [this.cam.yaw, this.cam.pitch, this.cam.targetDist],
+      inv: this.inv.serialize(), quick: this.quick, equip: { ...this.equip, debugHand: undefined }, attach: this.attach, look: this.look, home: this.home, homeBed: this.homeBed ?? null, marks: this.map.save(), pings: this.markers.save(), env: this.env.serialize(), stats: this.stats, mags: this.guns.save(), cam: [this.cam.yaw, this.cam.pitch, this.cam.targetDist],
       world: this._worldState(),
       pieces: this.build.serialize(), drops: this.drops.map((d) => ({ items: d.items, x: d.x, y: d.y, z: d.z })), logs: this.logs.map((l) => [l.x, l.y, l.z, l.rot]), playTime: this.playTime };
     const ok = this._saveJSON(SAVE_KEY, s);
@@ -272,7 +276,7 @@ export class Game {
     if (s.look) { this.look = { ...LOOK_DEFAULT, ...s.look }; this.applyLook(); }
     this.attach = {}; for (const [k, v] of Object.entries(s.attach || {})) { if (!GUNS[k]) continue; if (typeof v === 'string') { if (ITEMS[v]) this.attach[k] = { scope: v }; } else if (v && typeof v === 'object') { const o = {}; for (const sl of ['scope', 'mag', 'sil']) if (v[sl] === null) o[sl] = null; else if (v[sl] && ITEMS[v[sl]]) o[sl] = v[sl]; this.attach[k] = o; } }
     this.skills = new Set(s.skills || (s.v >= 2 ? [] : [])); if (!s.skills) this.skills.add('carpintaria'); this._initBooks(s.books);
-    this.map.load(s.marks); this.home = s.home || null; this.stats = s.stats || { built: 0, kills: 0 }; this.guns.load(s.mags); this.env.load(s.env); this.playTime = s.playTime || 0;
+    this.map.load(s.marks); this.markers.load(s.pings); this.home = s.home || null; this.homeBed = s.homeBed ?? null; this.stats = s.stats || { built: 0, kills: 0 }; this.guns.load(s.mags); this.env.load(s.env); this.playTime = s.playTime || 0;
     const P = this.player; P.revive(); this.stream.flush(s.player.pos); P.setPosition(...s.player.pos); P.yaw = s.player.yaw; this.freshBody(); Object.assign(P.stats, s.player.stats); P.crouch = !!s.player.crouch; P.stats.hp = Math.max(P.stats.hp, 1);
     if (s.cam) { this.cam.yaw = s.cam[0]; this.cam.pitch = s.cam[1]; this.cam.targetDist = s.cam[2]; } this.cam.pivot = null;
     // segurança: se o salvamento colocou o jogador dentro de algo, reposiciona
@@ -326,8 +330,10 @@ export class Game {
     if (this.bloodPools) for (const b of this.bloodPools) b.t += dt;
     const inp = this.input, ui = this.ui, P = this.player; this.menuMode = false; this.playTime += dt; this.stream.update(P.pos, 2);
     const act = this._idleUpd ? { mx: 0, mz: 0, analog: 0, slot: 0 } : inp.actions();
+    if (act.jump && (this.build.mode || (this.struct && this.struct.mode && this.equip.hand === 'blueprint'))) { act.jump = false; act.rotate = true; } // Espaço gira a peça enquanto posiciona (construções, bancadas, baús, armário, cama…)
     if (act.pause) { if (this.build.mode) this.build.cancel(); else if (ui.anyOpen) ui.closePanels(); else { this.pause(); return; } }
-    if (act.mic) this.voice.toggle(); this.voice.update(dt);
+    if (act.mic) this.voice.toggle(); this.voice.update(dt); this.rest.decay(dt);
+    if (this.player.sleeping && this.player.bed && this.input.enabled && (act.jump || act.interact)) this.rest.getUp();
     if (act.map) { if (ui.open === 'map') ui.closePanels(); else ui.openPanel('map'); }
     if (act.nvg) this.toggleNvg();
     if (act.inventory) { if (ui.open === 'inv') ui.closePanels(); else if (!P.dead) ui.openPanel('inv', { tab: 'inv' }); }
@@ -349,7 +355,7 @@ export class Game {
         else if (this.equip.hand && ITEMS[this.equip.hand] && ITEMS[this.equip.hand].tool === 'grenade') { P.setBlocking(false); this.grenades.input(act, dt); }
         else if (this.equip.hand === 'blueprint' || this.equip.hand === 'hammer') { P.setBlocking(false); this.struct.input(act, dt); }
         else { const cb = this.canBlock(); if (act.block && !cb && !this._blockHint && this.equip.hand !== 'geiger') { this._blockHint = true; this.ui.toast('Para defender com o botão direito, segure uma arma branca (faca, machado, picareta ou lança)', 'info'); } P.setBlocking(!!act.block && !P.dead && cb); if (act.use) this.useAction(); }
-        if (act.interact) this.interact();
+        if (act.interact && !this.player.hang && !this.player.grapple) this.interact();
         if (act.demolish && this.power.wiring) this.power.cancelWire('Ligação de fio cancelada');
       }
     } else P.setBlocking(false);
@@ -363,7 +369,7 @@ export class Game {
     if (this._reading) { this._reading.t += dt; this.ui.readProgress(Math.min(1, this._reading.t / this._reading.T)); if (this.player.dead) this._reading = null; }
     this._updateClouds(dt); this._survival(dt); this._updateFalling(dt); this._updateProjectiles(dt); this._updateArrows(dt); this._updateC4(dt); this._updateWebs(dt); this._interactPrompt();
     this.saveT -= dt; if (this.saveT <= 0) { this.saveT = 60; this.saveGame(false); }
-    ui.update(dt); this.map.updateHUD(); if (ui.open === 'map' && (this._mapT = (this._mapT || 0) - dt) < 0) { this._mapT = 0.25; this.map.draw(); }
+    ui.update(dt); this.map.updateHUD(); this.markers.update(act); if (ui.open === 'map' && (this._mapT = (this._mapT || 0) - dt) < 0) { this._mapT = 0.25; this.map.draw(); }
   }
   // ---------- Sobrevivência ----------
   // doenças e condições: febre (orange), fadiga (yellow), hipotermia / falta de ar (blue), radiação (frasco branco), névoa tóxica
@@ -455,7 +461,8 @@ export class Game {
     // desmaiado e atingido de novo: é finalizado (mexe os braços no chão e fica uma poça de sangue)
     if (P.fainted > 0 && !silent) { P.stats.hp = 0; this._lastCause = cause; this.playerDie(cause, true); return; }
     // um tiro que tira 70% da vida total (sem matar) derruba: desmaia de peito no chão
-    if (o && o.shot && n >= 70 && P.stats.hp - n > 0 && !(P.fainted > 0)) { P.stats.hp -= n; this._lastCause = cause; this.audio.play('groan', { big: true, f0: this.look && this.look.voice ? this.look.voice : 150 }); this.faintPlayer(22, '💫 O tiro te derrubou — você desmaiou!'); return; }
+    if (o && o.shot && n >= 70 && P.stats.hp - n > 0 && !(P.fainted > 0)) { P.stats.hp -= n; this._lastCause = cause; this.audio.play('groan', { big: true, f0: this.look && this.look.voice ? this.look.voice : 150 }); this.rest.knockOut(); return; }
+    if (this.rest.shockHit(n, o)) return; // choque acumulado (barra escondida): tiro forte ou no peito apaga
     P.stats.hp -= n; this._lastCause = cause;
     if (!silent) { P.hitReact(); this.audio.play('hurt'); this.cam.shake = Math.min(1, n / 15); }
     // gemido de dor a cada dano (pequenos danos contínuos — sangramento, fome, frio — gemem com menos frequência)
@@ -474,7 +481,7 @@ export class Game {
     // golpe que passou pela defesa: ferimentos fortes podem sangrar
     if (d >= 12 && Math.random() < 0.3 + d / 80) this.addStatus('bleed', 6 + d * 0.4);
     this.fx.burst([P.pos[0], P.pos[1] + 1.2, P.pos[2]], 10, [0.6, 0.05, 0.05], 2.5, 0.5);
-    this.damage(d, src.def ? `atacado por ${src.def.name.toLowerCase()}` : 'ataque', false, { shot: !!(opt && opt.ranged) });
+    this.damage(d, src.def ? `atacado por ${src.def.name.toLowerCase()}` : 'ataque', false, { shot: !!(opt && opt.ranged), chest: !!(opt && opt.chest), cal: opt && opt.cal });
     return true;
   }
   // óculos de visão noturna (N): imagem verde e clara no escuro
@@ -523,16 +530,16 @@ export class Game {
       if (items.length) { this.drops.push({ items, x: P.pos[0], y: gy, z: P.pos[2], death: true, pack: deadPack || 'pack_impro', rot: rot + 0.6 }); this.inv.load([]); } }
     if (/aranha|teia/i.test(String(cause)) || P.webbed > 0) this.cocoons.push({ x: P.pos[0], y: P.pos[1], z: P.pos[2], rot: P.yaw, player: true });
     this.deathPos = P.pos.slice(); { const nm = (this.look && this.look.name) || 'Sobrevivente'; const c = String(cause || 'causa desconhecida').replace(/^atacado por /, ''); this.ui.feed && this.ui.feed(`<b>${nm}</b> foi morto por <b>${c}</b>`); }
-    setTimeout(() => { if (this.state === 'dead') this.ui.showDeath(`Causa: ${cause}. ${items.length ? 'Sua mochila ficou no local da morte.' : ''}`); }, 2200);
+    this._deathCause = `Causa: ${cause}. ${items.length ? 'Sua mochila ficou no local da morte.' : ''}`; this.rest.deathChoice(!!finished, this._deathCause);
   }
   // corpo zerado: vida e necessidades cheias, sem sangramento, veneno, frio, molhado ou qualquer efeito
   freshBody() { const P = this.player; P.stats = { hp: 100, hunger: 100, thirst: 100, energy: 100, stamina: 100, temp: 37, wet: 0 }; P.staminaLock = false; P.staminaDelay = 0; P.hurtFlash = 0;
     P.slide = null; P.crouch = false; P.climb = null; P.dust = []; P.vel = [0, 0, 0]; P.grapple = null; if (this.grapple) this.grapple.hook = null; this._coldWarn = false; }
-  respawn() {
-    const P = this.player; let sp = this.home; if (!sp) { const q = this.world.randomSpawn(); this._clearSpawnArea(q); sp = [q.x, this.world.height(q.x, q.z), q.z]; }
-    P.revive(); P.setPosition(sp[0], this.world.height(sp[0], sp[2]) + 0.05, sp[2] + (this.home ? 1.8 : 0)); this.unstuckIfNeeded();
+  respawn(where) {
+    const P = this.player; let sp = where === 'rand' ? null : (this.rest.bedAlive() ? this.home : null); if (!sp) { const q = this.world.randomSpawn(); this._clearSpawnArea(q); sp = [q.x, this.world.height(q.x, q.z), q.z]; }
+    const atBed = !!sp && where !== 'rand'; P.revive(); P.setPosition(sp[0], atBed ? Math.max(this.world.height(sp[0], sp[2]), sp[1]) + 0.05 : this.world.height(sp[0], sp[2]) + 0.05, sp[2] + (atBed ? 1.8 : 0)); this.unstuckIfNeeded(); this.rest.closeSpawnMap && document.getElementById('spawnBar') && this.rest.closeSpawnMap();
     this.freshBody(); this.cam.pivot = null;
-    this.start(); this.ui.toast(this.home ? 'Você renasceu na sua base, novo em folha' : 'Você renasceu em outro lugar, novo em folha', 'info');
+    this.start(); this.ui.toast(atBed ? '🛏 Você renasceu na sua cama, novo em folha' : 'Você renasceu em outro lugar, novo em folha', 'info');
     if (this.deathPos) this.ui.toast('Recupere sua mochila no local da morte (marcada no chão)', 'info');
     this.saveGame(false);
   }
@@ -564,7 +571,7 @@ export class Game {
   // barra rápida (8): 1 e 2 armas grandes (fuzis, escopetas, machados, picaretas, lanças, arco); 3 pistola ou faca; 4–8 o resto
   bindQuick(id, k) { if (!ITEMS[id]) return false; const q = this.quick, c = quickClass(id); if (k !== undefined && slotClass(k) !== c) { this.ui.toast(c === 'big' ? 'Armas grandes vão nos espaços 1 e 2' : c === 'side' ? 'Pistola ou faca vai no espaço 3' : 'Esse item vai nos espaços 4 a 8', 'warn'); return false; }
     const old = q.indexOf(id); if (k === undefined) { if (old >= 0) return true; k = q.findIndex((x, i) => !x && slotClass(i) === c); if (k < 0) { if (c === 'misc') return false; k = q.findIndex((x, i) => slotClass(i) === c); } } if (old >= 0) q[old] = null; q[k] = id; return true; }
-  _autoQuick(id) { const t = ITEMS[id].type; if (!['tool', 'food', 'drink', 'medical'].includes(t) || this.quick.includes(id)) return; const c = quickClass(id); if (!this.quick.some((x, i) => !x && slotClass(i) === c)) return; if (c === 'misc' && t !== 'tool' && this.quick.slice(3).filter(Boolean).length >= 3) return; this.bindQuick(id); }
+  _autoQuick(id) { if (id === 'harpoon') { if (this.quick[2] !== 'harpoon') this.bindQuick('harpoon', 2); return; } const t = ITEMS[id].type; if (!['tool', 'food', 'drink', 'medical'].includes(t) || this.quick.includes(id)) return; const c = quickClass(id); if (!this.quick.some((x, i) => !x && slotClass(i) === c)) return; if (c === 'misc' && t !== 'tool' && this.quick.slice(3).filter(Boolean).length >= 3) return; this.bindQuick(id); }
   hotbar(k) {
     const id = this.quick[k];
     if (!id || this.countAll(id) <= 0) { if (this.equip.hand) { this.equip.hand = null; this.audio.play('pickup'); } return; }
@@ -729,6 +736,12 @@ export class Game {
   }
 
   // ---------- Interação ----------
+  // móvel/caixa: só revista de frente para ele e sem parede no meio (nada de lootear de fora da casa)
+  _facingLoot(c, f, fy) { const P = this.player, p = P.pos; const dx = c.x - p[0], dz = c.z - p[2], d = Math.hypot(dx, dz); if (d > 0.5) { const dot = Math.max((dx * f[0] + dz * f[1]) / d, (dx * fy[0] + dz * fy[1]) / d); if (dot < 0.55) return false; }
+    const ty = (c.crate.y ?? c.y0) + 0.5, e = [p[0], p[1] + 1.25, p[2]]; const n = Math.max(2, Math.ceil(d / 0.12));
+    for (let i = 1; i < n; i++) { const k = i / n, x = e[0] + dx * k, z = e[2] + dz * k, y = e[1] + (ty - e[1]) * k; if (Math.hypot(c.x - x, c.z - z) < 0.45) break;
+      for (const q of this.physics.query(x, z, 0.1)) { if (q === c || q.ghost || q.crate || q.player || q.creature || q.dyn || q.glass || q.camOnly) continue; if (y < q.y0 || y > q.y1) continue; if (this.physics.insideXZ(q, x, z, 0)) return false; } }
+    return true; }
   _targets() {
     const P = this.player, p = P.pos, w = this.world; const f = [Math.sin(this.cam.yaw), Math.cos(this.cam.yaw)]; const fy = [Math.sin(P.yaw), Math.cos(P.yaw)];
     let best = null, bestS = 1e9, tool = null, toolS = 1e9;
@@ -738,7 +751,7 @@ export class Game {
     for (const c of this.physics.query(p[0], p[2], 3.5)) {
       if (c.tree && !c.tree.felled) { const s = score(c.x, c.z, 1.6 + c.r); if (s !== null && s < toolS) { toolS = s; tool = { o: c.tree, kind: 'tree' }; } }
       if (c.rock && !c.rock.mined) { const s = score(c.x, c.z, 1.5 + c.r, c.rock.y); if (s !== null && s < toolS) { toolS = s; tool = { o: c.rock, kind: 'rock' }; } }
-      if (c.crate && !c.crate.looted) consider(c.crate, 'crate', c.x, c.z, 2.0, c.crate.y);
+      if (c.crate && !c.crate.looted && this._facingLoot(c, f, fy)) consider(c.crate, 'crate', c.x, c.z, 2.0, c.crate.y);
       if (c.car && c.car.loot && !c.car.looted) consider(c.car, 'car', c.x, c.z, Math.max(c.hx, c.hz) + 1.4, c.car.y);
       if (c.car && this.equip.hand === 'jerrycan' && !c.car.fuelTaken) consider(c.car, 'carfuel', c.x, c.z, Math.max(c.hx, c.hz) + 1.4, c.car.y);
       if (c.hdoor && !c.ghost) consider(c.hdoor, 'hdoor', c.x, c.z, 1.9, c.hdoor.y);
@@ -749,11 +762,12 @@ export class Game {
     for (const o of this.world.specials) if (!o.taken && Math.abs(o.x - p[0]) < 3 && Math.abs(o.z - p[2]) < 3) consider(o, 'special', o.x, o.z, 2.0, o.y);
     { const v = this.vehicles.near(p, 2.6); if (v) { const s = this.vehicles.near(p, 2.6) ? 0.5 : 9; if (s < bestS) { bestS = s; best = { o: v, kind: 'vehicle' }; } } const q = this.vehicles.nearPump(p); if (q) consider(q, 'pump', q.x, q.z, 2.2, q.y); }
     for (const b of this.books || []) if (!b.taken && Math.abs(b.x - p[0]) < 3 && Math.abs(b.z - p[2]) < 3) { const sc = score(b.x, b.z, 2.0, b.y); if (sc !== null && sc - 1.5 < bestS) { bestS = sc - 1.5; best = { o: b, kind: 'book' }; } }
+    for (const q of this.rest.houseBeds(p, 3)) consider(q, 'housebed', q.x, q.z, 2.2, q.y);
     for (const hv of this.world.hives) if (hv.honey && Math.abs(hv.x - p[0]) < 4 && Math.abs(hv.z - p[2]) < 4 && hv.y - p[1] < 5) consider(hv, 'hive', hv.x, hv.z, 2.6);
     for (const l of this.logs) { consider(l, 'log', l.x, l.z, 2.4, l.y); const s = score(l.x, l.z, 2.4, l.y); if (s !== null && s < toolS) { toolS = s; tool = { o: l, kind: 'log' }; } }
     for (const a of this.arrows) if (a.stuck && a.arrow) consider(a, 'arrow', a.p[0], a.p[2], 2.2, a.p[1]);
     for (const c of this.creatures.list) if (c.dead && !c.looted) consider(c, 'corpse', c.pos[0], c.pos[2], 2.4, c.pos[1]);
-    for (const q of this.build.pieces) if ((['campfire', 'tent', 'shelter', 'door', 'chest', 'chest_wi', 'chest_iron', 'cabinet', 'bench', 'collector', 'composter', 'planter', 's_doorway', 's_hatch', 'flag'].includes(q.type) || q.data) && !(STR.STYPES[q.type] && q.type !== 's_doorway' && q.type !== 's_hatch')) consider(q, 'piece', q.x, q.z, q.type === 'shelter' || q.type === 'waterwheel' ? 3 : 2.4, q.y);
+    for (const q of this.build.pieces) if ((['campfire', 'tent', 'shelter', 'bed', 'door', 'chest', 'chest_wi', 'chest_iron', 'cabinet', 'bench', 'collector', 'composter', 'planter', 's_doorway', 's_hatch', 'flag'].includes(q.type) || q.data) && !(STR.STYPES[q.type] && q.type !== 's_doorway' && q.type !== 's_hatch')) consider(q, 'piece', q.x, q.z, q.type === 'shelter' || q.type === 'waterwheel' ? 3 : 2.4, q.y);
     if (!P.ladder) { const L = w.ladderNear(p[0], p[2], p[1], 1.5); if (L && Math.abs(p[1] - L.y0) < 1.2) { if (0.2 < bestS) { bestS = 0.2; best = { o: L, kind: 'ladder' }; } }
       else for (const L2 of w.ladders) if (Math.hypot(L2.ex - p[0], L2.ez - p[2]) < 1.6 && Math.abs(p[1] - L2.y1) < 0.8) { if (0.2 < bestS) { bestS = 0.2; best = { o: L2, kind: 'ladder', top: true }; } break; } }
     // água à frente
@@ -781,15 +795,19 @@ export class Game {
         case 'corpse': if (o.npc) { const blade = this.equip.hand && ['knife', 'axe'].includes(ITEMS[this.equip.hand].tool); t = blade ? 'Picotar o corpo' : 'Revistar o corpo'; parts.push(`<span class="sub">${blade ? 'segure E: sobra a mochila, roupas, armas, carne e ossos' : 'pega a arma e a munição · com faca ou machado na mão dá para picotar'}</span>`); } else t = o.def.robot ? 'Desmontar androide' : 'Coletar carne'; break;
         case 'water': t = best.salt ? 'Beber água do mar (salgada!)' : 'Beber água contaminada'; if (!best.salt) parts.push(`<span class="sub">⚠ toda água natural é contaminada: pode dar infecção — ferva na fogueira</span>`, k('F', 'Encher garrafa', '(água suja)')); if (!best.salt && this.inv.contaminated()) t = this.inv.count('soap') > 0 ? `Lavar ${this.inv.contaminated()} item(ns) contaminado(s) (gasta 1 sabonete)` : t + ' · ☢ precisa de sabonete líquido para lavar a radiação'; break;
         case 'hdoor': t = o.open ? 'Fechar porta' : 'Abrir porta'; break;
+        case 'housebed': t = 'Deitar na cama'; parts.push(`<span class="sub">${this.rest.canSleepNow() ? '😴 dormir até amanhecer' : 'dormir só depois das 20:00'}</span>`); break;
         case 'ladder': t = best.top ? 'Descer a escada' : 'Subir a escada'; parts.push('<span class="sub">W/S sobe e desce · Shift rápido (escorrega na descida) · Espaço solta</span>'); break;
         case 'vehicle': { const VS = this.vehicles, T = VEH.VTYPES[o.type], nm = VEH.vName(o), pct = Math.round(o.fuel / T.tank * 100);
           if (this.equip.hand === 'jerrycan') { const cap = VS.jerryCap(); if (this.jerryFuel > 0.2 && o.fuel < T.tank - 0.3) t = `Abastecer ${nm}`; else if (o.fuel > 0.2 && this.jerryFuel < cap - 0.2) t = `Retirar combustível de ${nm}`; else t = o.fuel >= T.tank - 0.3 ? 'Tanque cheio' : 'Galão vazio';
             parts.push(`<span class="sub">⛽ galão ${this.jerryFuel.toFixed(1)}/${cap} L · tanque ${pct}%</span>`); if (o.fuel > 0.2 && this.jerryFuel < cap - 0.2 && t.startsWith('Abastecer')) parts.push(k('F', 'Retirar combustível')); }
-          else if (VS.complete(o)) { t = `Dirigir ${nm}`; parts.push(`<span class="sub">⛽ ${pct}%</span>`); }
-          else { t = `Montar ${nm}`; parts.push(`<span class="sub">faltam: ${VS.missing(o).join(', ')}</span>`); } break; }
+          else if (o.jack) { t = `Trabalhar no ${nm}`; const pend = [...VS.missing(o), ...VS.damaged(o)]; parts.push(`<span class="sub">🔧 no macaco${pend.length ? ' · ' + pend.join(', ') : ' · pronto'} — TAB → botão direito no macaco → Finalizar serviço</span>`); }
+          else if (VS.usable(o)) { t = `Dirigir ${nm}`; parts.push(`<span class="sub">⛽ ${pct}%</span>`); }
+          else if (this.equip.hand === 'jack') { t = `Colocar macaco no ${nm}`; parts.push(`<span class="sub">${[...VS.missing(o), ...VS.damaged(o)].join(', ')}</span>`); }
+          else { t = `${nm} (precisa de conserto)`; parts.push(`<span class="sub">💨 ${[...VS.missing(o), ...VS.damaged(o)].join(', ')} — segure o macaco na mão para levantar o carro</span>`); } break; }
         case 'pump': t = this.equip.hand === 'jerrycan' ? `Encher o galão na bomba` : 'Bomba de combustível'; parts.push(`<span class="sub">${this.equip.hand === 'jerrycan' ? `⛽ bomba ${Math.round(o.fuel)} L · galão ${this.jerryFuel.toFixed(1)}/${this.vehicles.jerryCap()} L` : 'segure um galão na mão para encher'}</span>`); break;
         case 'carfuel': t = 'Retirar combustível do carro abandonado'; break;
-        case 'piece': t = o.type === 'planter' ? this._planterText(o, parts, k) : o.type === 'collector' ? this._collectorText(o, parts) : o.type === 'composter' ? this._composterText(o, parts) : { campfire: o.lit ? 'Apagar fogueira' : 'Acender fogueira', tent: 'Dormir / definir base', shelter: 'Dormir / definir base', door: o.open ? 'Fechar porta' : 'Abrir porta', s_doorway: o.open ? 'Fechar porta' : 'Abrir porta', s_hatch: o.open ? 'Fechar alçapão' : 'Abrir alçapão', flag: (o.data && o.data.owner === this.struct.myId()) ? 'Seu Territoritek (raio 32 m)' : 'Territoritek de outro jogador', chest: 'Abrir baú', chest_wi: 'Abrir baú', chest_iron: 'Abrir baú', cabinet: 'Abrir armário de manutenção', bench: 'Usar bancada' }[o.type] || (this.power.wiring && o.data ? (this.power.wiring.from === o ? 'Cancelar fio' : `Conectar fio aqui (${this.power.wiresFor(this.power.wiring.from, o)} fio(s) de cobre)`) : o.type === 'printer' ? 'Usar impressora 3D' : `Ver ${PIECES[o.type].name.toLowerCase()}`);
+        case 'piece': t = o.type === 'planter' ? this._planterText(o, parts, k) : o.type === 'collector' ? this._collectorText(o, parts) : o.type === 'composter' ? this._composterText(o, parts) : { campfire: o.lit ? 'Apagar fogueira' : 'Acender fogueira', tent: 'Deitar / definir base', shelter: 'Deitar / definir base', bed: 'Deitar na cama', door: o.open ? 'Fechar porta' : 'Abrir porta', s_doorway: o.open ? 'Fechar porta' : 'Abrir porta', s_hatch: o.open ? 'Fechar alçapão' : 'Abrir alçapão', flag: (o.data && o.data.owner === this.struct.myId()) ? 'Seu Territoritek (raio 32 m)' : 'Territoritek de outro jogador', chest: 'Abrir baú', chest_wi: 'Abrir baú', chest_iron: 'Abrir baú', cabinet: 'Abrir armário de manutenção', bench: 'Usar bancada' }[o.type] || (this.power.wiring && o.data ? (this.power.wiring.from === o ? 'Cancelar fio' : `Conectar fio aqui (${this.power.wiresFor(this.power.wiring.from, o)} fio(s) de cobre)`) : o.type === 'printer' ? 'Usar impressora 3D' : `Ver ${PIECES[o.type].name.toLowerCase()}`);
+          if (o.type === 'bed' || o.type === 'tent' || o.type === 'shelter') parts.push(`<span class="sub">${this.home && this.rest.isHome(o) ? '✔ seu ponto de surgimento · ' : 'define seu ponto de surgimento · '}${this.rest.canSleepNow() ? '😴 dormir até amanhecer' : 'dormir só depois das 20:00'}</span>`);
           { const L = this.territory.lockOf(o); if (L) { t = `🔒 ${t}`; parts.push(`<span class="sub">${LOCKS[L.id].name}${this.territory.canOpen(o) ? '' : ' — trancado'}</span>`); } if (isContainer(o.type) && o.data && o.data.hp !== undefined && CHESTS_HP[o.type] && o.data.hp < CHESTS_HP[o.type]) parts.push(`<span class="sub">Vida ${Math.round(o.data.hp)}/${CHESTS_HP[o.type]}</span>`); }
           if (o.type === 'campfire') { const d = FIRE.fireData(o); const nf = d.fuel.reduce((a, q) => a + (q ? q.qty : 0), 0), nc = d.cook.filter(Boolean).length; t = 'Abrir fogueira'; parts.push(`<span class="sub">${o.lit ? '🔥 acesa' : 'apagada'} · combustível: ${nf} · na grelha: ${nc}</span>`); } break;
         case 'firefood': { const c = o.data.cook[best.k]; if (!c) break; const it = ITEMS[c.id]; const raw = !!FIRE.COOK[c.id], cooked = !!FIRE.BURN[c.id]; t = `Pegar ${it.name}`;
@@ -803,6 +821,8 @@ export class Game {
       if (tool.kind === 'tree') parts.push(h && h.tool === 'axe' ? k('F', 'Cortar árvore') : k('F', 'Cortar árvore', '(precisa de machado)'));
       if (tool.kind === 'rock') parts.push(h && (h.tool === 'pickaxe' || h.mine) ? k('F', 'Minerar rocha') : k('F', 'Minerar', '(precisa de picareta)'));
     }
+    else if (this.player.hang) parts.push(k('E', this.player.hang.face ? 'Escalar' : 'Subir'), '<kbd>Espaço</kbd>Soltar');
+    if (!this.player.hang && this.player.onGround && this.player.windowNear()) parts.unshift(`<kbd>${this.input.touchActive ? '⤒' : 'Espaço'}</kbd>Pular a janela`);
     else if (this.equip.hand && ITEMS[this.equip.hand].tool === 'knife' && this.wormSpot()) { const ws = this.wormSpot(); parts.push(ws.ok ? k('F', 'Tirar minhocas', '(cavar a terra com a faca)') : `<span class="sub">🪱 ${ws.why}</span>`); }
     else if (this.equip.hand && ITEMS[this.equip.hand].tool === 'pickaxe' && this.player.onGround && !this.player.swimming) { const v = this.digTarget(); parts.push(k('F', 'Cavar o chão', v.d > 0 ? `(buraco ${v.d.toFixed(1)} m · máx. 6 m)` : '(areia · buraco para base subterrânea)')); }
     this.ui.prompt(parts.join('&nbsp;&nbsp;&nbsp;'));
@@ -842,13 +862,23 @@ export class Game {
         pick(() => { st.thirst = Math.min(100, st.thirst + 25); this.audio.play('drink'); if (Math.random() < 0.45) { this.addStatus('poison', 18); this.ui.toast('🤢 A água estava contaminada — infecção intestinal! Ferva a água na fogueira ou junte água da chuva.', 'warn'); } else this.ui.toast('💧 Você bebeu água contaminada (+25 sede) — dessa vez não fez mal', 'info'); }); break; }
       case 'piece': this._usePiece(o); break;
       case 'hdoor': this.toggleHouseDoor(o); break;
+      case 'housebed': this.rest.lie(o); break;
       case 'ladder': if (P.anim.busy) return; if (t.top) P.setPosition(o.x, o.y1 - 1.3, o.z); P.grabLadder(o); break;
       case 'vehicle': { const VS = this.vehicles, T = VEH.VTYPES[o.type]; if (this.equip.hand === 'jerrycan') { if (this.jerryFuel > 0.2 && o.fuel < T.tank - 0.3) this._startXfer('fill', o); else if (o.fuel > 0.2 && this.jerryFuel < VS.jerryCap() - 0.2) this._startXfer('siphon', o); else this.ui.toast(o.fuel >= T.tank - 0.3 ? 'O tanque já está cheio' : 'O galão está vazio', 'info'); break; }
-        if (VS.complete(o)) VS.enter(o); else this.ui.openPanel('vehicle', { v: o }); break; }
+        if (o.jack) this.ui.openPanel('vehicle', { v: o }); else if (VS.usable(o)) VS.enter(o); else if (this.equip.hand === 'jack') this.placeJack(o); else this.ui.toast('🔧 Segure o macaco na mão e aperte E perto do carro para levantá-lo e trabalhar nas peças', 'info'); break; }
       case 'pump': if (this.equip.hand !== 'jerrycan') { this.ui.toast(this.countAll('jerrycan') ? 'Pegue o galão na mão (barra rápida) para encher' : 'Você precisa de um galão de combustível', 'warn'); break; } this._startXfer('pump', o); break;
       case 'carfuel': this._startXfer('car', o); break;
     }
   }
+  // ---------- macaco: levanta o carro para trocar/consertar peças; "Finalizar serviço" (TAB → Próximo) baixa e deixa o macaco ao lado ----------
+  placeJack(v) { if (this.countAll('jack') < 1) return; if (this.inv.count('jack') > 0) this.inv.remove('jack', 1); else if (this.equip.hand === 'jack') this.equip.hand = null; if (this.equip.hand === 'jack' && this.countAll('jack') < 1) this.equip.hand = null;
+    v.jack = true; this.audio.play('craft'); this.ui.toast(`🔧 Macaco colocado: ${VEH.vName(v)} levantado — aperte E para trocar as peças`, 'ok'); }
+  repairPart(v, sl) { if (!v || !sl || !sl.bad) return; if (!v.jack) return this.ui.toast('🔧 Coloque o macaco no carro antes de consertar', 'warn'); if (!this.skills.has('mecanica')) return this.ui.toast('🔒 Consertar peça danificada precisa da habilidade Mecânica (leia o livro de mecânica)', 'warn');
+    const cost = sl.key === 'wheels' ? { cloth: 2, scrap: 1 } : { scrap: 3, iron: 1 }; if (!this.inv.has(cost)) return this.ui.toast(`Para consertar precisa de: ${Object.entries(cost).map(([k, n]) => n + '× ' + ITEMS[k].name).join(', ')}`, 'warn');
+    this.inv.take ? this.inv.take(cost) : Object.entries(cost).forEach(([k, n]) => this.inv.remove(k, n)); const b = v.bad; if (sl.key === 'engine') b.engine = false; else if (sl.key === 'gear') b.gear = false; else b.flat = Math.max(0, b.flat - 1);
+    this.audio.play('craft'); this.ui.toast(`🔧 ${sl.label} consertado`, 'ok'); }
+  finishJack(v) { if (!v || !v.jack) return; v.jack = false; const T = VEH.VTYPES[v.type]; const sd = (T.moto ? 0.9 : T.W / 2 + 0.6); const x = v.x + Math.cos(v.yaw) * sd, z = v.z - Math.sin(v.yaw) * sd; const [gy] = this.physics.ground(x, z, 0.2, v.y + 1, 2);
+    this.drops.push({ items: [['jack', 1]], x, y: gy, z, bag: false }); this.audio.play('cloth'); this.ui.toast(`✔ Serviço finalizado — ${VEH.vName(v)} voltou ao chão. O macaco ficou ao lado do carro.`, 'ok'); this.ui.refresh(); }
   // ---------- habilidades e livros ----------
   hasSkillFor(key) { const s = SKILL_OF[key]; return !s || (this.skills && this.skills.has(s)); }
   skillName(id) { const s = SKILLS.find((q) => q.id === id); return s ? s.name : id; }
@@ -914,7 +944,7 @@ export class Game {
       case 'composter': this._useComposter(p); break;
       case 'chest': case 'chest_wi': case 'chest_iron': case 'cabinet': this.territory.access(p, () => { this.ui.openPanel('chest', { piece: p }); this.audio.play('door'); }); break;
       case 'bench': this.ui.openPanel('inv', { tab: 'craft' }); break;
-      case 'tent': case 'shelter': this.sleep(p); break;
+      case 'tent': case 'shelter': case 'bed': this.sleep(p); break;
     }
   }
   // ---------- barulho: robôs e NPCs no raio ouvem e vão ver (src = quem fez o barulho, se não foi o jogador) ----------
@@ -945,7 +975,7 @@ export class Game {
   _renderBlood(items) { const L = this.bloodPools; if (!L || !L.length) return; const r = this.renderer;
     if (!this._bloodMesh) { const mb = new MeshBuilder(); const c = HX(0x420505); mb.setColor(c, 0.2); const n = [0, 1, 0]; const ctr = mb.vert([0, 0, 0], n, c); const K = 24, ring = []; for (let k = 0; k < K; k++) { const a = k / K * 6.2832, rr = 0.85 + 0.12 * Math.sin(a * 3 + 0.7) + 0.07 * Math.cos(a * 5 + 1.9); ring.push(mb.vert([Math.cos(a) * rr, 0, Math.sin(a) * rr * 1.3], n, c)); } for (let k = 0; k < K; k++) mb.tri(ctr, ring[(k + 1) % K], ring[k]); this._bloodMesh = r.createMesh(mb.build()); }
     for (const b of L) { const g = Math.min(1, Math.max(0, b.t - 0.8) / 16); const sc = 0.06 + 1.24 * Math.sqrt(g); items.push({ mesh: this._bloodMesh, model: mat4.compose([b.x, b.y + 0.035, b.z], b.yaw, [sc, 1, sc]), shadow: false, sphere: [b.x, b.y, b.z, 2] }); } }
-  onWake() { document.getElementById('fade').classList.remove('on'); this.ui.toast('😵 Você acordou', 'info'); }
+  onWake() { document.getElementById('fade').classList.remove('on'); this.rest.wakeEyes(); this.ui.toast('😵 Você acordou — ainda zonzo, agachado', 'info'); }
   // vomita: perde metade da fome e da sede
   vomit(reason, then) { const P = this.player, st = P.stats; if (P.dead) return; st.hunger = Math.floor(st.hunger * 0.5); st.thirst = Math.floor(st.thirst * 0.5); this.audio.play('vomit'); this.noise(P.pos, 14, 'vomito');
     if (reason) this.ui.toast(reason, 'warn'); P.anim.action = null; P.prop = null;
@@ -983,21 +1013,8 @@ export class Game {
     if (!put) { this.ui.toast(`Precisa de terra (cave com a picareta) e comida: terra ${d.dirt}/10 · comida ${d.food}/10`, 'warn'); return; }
     this.audio.play('pickup'); if (d.dirt >= 10 && d.food >= 10) { d.start = this._clock(); this.ui.toast('♻️ Composteira cheia — a compostagem começou!', 'ok'); } else this.ui.toast(`♻️ Terra ${d.dirt}/10 · comida ${d.food}/10`, 'info'); }
   _updateFarm(dt) { const rain = this.env.cur.rain || 0; if (rain < 0.2) return; for (const p of this.build.pieces) if (p.type === 'collector') { const d = p.data || (p.data = { water: 0 }); if (this.world.bldAt(p.x, p.z) || this.world.caveAt(p.x, p.z)) continue; d.water = Math.min(10, d.water + rain * 0.055 * dt); } }
-  sleep(p) {
-    const P = this.player;
-    this.home = [p.x, p.y, p.z];
-    if (this.creatures.list.some((c) => !c.dead && (c.def.hostile || c.angry > 0) && Math.hypot(c.pos[0] - P.pos[0], c.pos[2] - P.pos[2]) < 25)) { this.ui.toast('Ponto de renascimento definido. Não dá para dormir com inimigos por perto!', 'warn'); return; }
-    const h = this.env.hours; if (!(this.env.isNight || h > 18) && P.stats.energy > 60) { this.ui.toast('🏕️ Base definida (renascimento). Só dá para dormir à noite ou cansado.', 'info'); this.saveGame(false); return; }
-    P.sleeping = true; P.anim.play(P.clips.sleep, 0.5); this.input.enabled = false; document.getElementById('fade').classList.add('on'); this.audio.play('sleep');
-    setTimeout(() => {
-      const hoursToMorning = ((30 - h) % 24) || 8; const frac = hoursToMorning / 24; const st = P.stats;
-      st.hunger = Math.max(5, st.hunger - 35 * frac * 2); st.thirst = Math.max(5, st.thirst - 45 * frac * 2); st.energy = 100; st.hp = Math.min(100, st.hp + 30); st.stamina = 100;
-      this.env.time = 6 / 24 + 0.002; if (h > 6) this.env.day++; this.onNewDay();
-      for (const c of [...this.creatures.list]) if (['tiger', 'rhino', 'eagle'].includes(c.kind) || (c.def.hostile && !this.world.inRuins(c.pos[0], c.pos[2]) && Math.hypot(c.pos[0] - P.pos[0], c.pos[2] - P.pos[2]) < 60)) this.creatures.remove(c);
-      this.wake(); this.saveGame(false); this.ui.toast(`☀ Dia ${this.env.day} — você acordou descansado`, 'ok');
-    }, 1600);
-  }
-  wake() { const P = this.player; P.sleeping = false; P.anim.play(P.clips.idle, 0.4); this.input.enabled = true; document.getElementById('fade').classList.remove('on'); }
+  sleep(p) { this.rest.lie({ x: p.x, y: p.y, z: p.z, rot: p.rot || 0, piece: p }); }
+  wake() { const P = this.player; if (P.bed) { P.bed = null; if (this.net && this.net.active) { this.net.send({ to: 'all', t: 'sleep', on: 0 }); if (this.net.host) { this.rest.sleepers.delete('host'); this.rest._check(); } } this.rest._hideHud(); } P.sleeping = false; P.anim.play(P.clips.idle, 0.4); this.input.enabled = true; document.getElementById('fade').classList.remove('on'); }
   onNewDay() {
     const d = this.env.day, w = this.world, P = this.player.pos;
     const away = (o) => Math.hypot(o.x - P[0], o.z - P[2]) > 25;
@@ -1092,8 +1109,9 @@ export class Game {
     for (const d of this.drops) { if (Math.hypot(d.x - P[0], d.z - P[2]) > R || Math.abs((d.y ?? P[1]) - P[1]) > 2.5) continue; d.items.forEach((it, i) => { if (ITEMS[it[0]]) out.push({ src: 'drop', d, id: it[0], n: it[1], rad: !!it[2], ref: it }); }); }
     for (const o of this.world.pickups) { if (o.taken || Math.abs(o.x - P[0]) > R || Math.abs(o.z - P[2]) > R || Math.hypot(o.x - P[0], o.z - P[2]) > R) continue; const id = PICK[o.kind]; if (id) out.push({ src: 'pick', o, id, n: PN[o.kind] || 1, rad: false }); }
     for (const a of this.arrows) if (a.stuck && Math.hypot(a.p[0] - P[0], a.p[2] - P[2]) < R) out.push({ src: 'arrow', a, id: 'arrow', n: 1, rad: false });
+    for (const v of this.vehicles.list) if (v.jack && Math.hypot(v.x - P[0], v.z - P[2]) < R + 2.4) out.push({ src: 'jack', v, id: 'jack', n: 1, rad: false });
     return out; }
-  takeNear(e, quiet) { const it = ITEMS[e.id]; if (!it) return 0;
+  takeNear(e, quiet) { const it = ITEMS[e.id]; if (!it) return 0; if (e.src === 'jack') return 0;
     if (e.src === 'drop') { const d = e.d, i = d.items.indexOf(e.ref); if (i < 0 || !this.drops.includes(d)) return 0; if (this._autoWear(e.id)) { if (e.n <= 1) { d.items.splice(i, 1); if (!d.items.length) { this.drops.splice(this.drops.indexOf(d), 1); if (d.death) this.deathPos = null; } return 1; } e.ref[1] = e.n -= 1; } const kb = this._backFirst(e.id, e.n); if (kb) { if (kb >= e.n) { d.items.splice(i, 1); if (!d.items.length) { this.drops.splice(this.drops.indexOf(d), 1); if (d.death) this.deathPos = null; } return kb; } e.ref[1] = e.n -= kb; } const k = this.inv.add(e.id, e.n, { rad: e.rad || this.world.toxicAt(d.x, d.z) > 0.2 }); if (!k) { if (!quiet) this.ui.toast('Inventário cheio', 'warn'); return 0; }
       if (k < e.n) e.ref[1] = e.n - k; else d.items.splice(i, 1); if (!d.items.length) { this.drops.splice(this.drops.indexOf(d), 1); if (d.death) this.deathPos = null; } if (!quiet) { this.ui.toast(`+${k} ${it.icon} ${it.name}${e.rad ? ' ☢' : ''}`, 'ok'); this.audio.play('pickup'); } this._autoQuick && this._autoQuick(e.id); return k; }
     if (e.src === 'pick') { const o = e.o; if (o.taken) return 0; if (this.inv.room(e.id) < 1) { if (!quiet) this.ui.toast('Inventário cheio', 'warn'); return 0; } const n = e.id === 'stick' ? 1 + (Math.random() < 0.4) : e.n; this.give(e.id, n, quiet); if (o.kind === 'fiber' && Math.random() < 0.4) this.give('leaf', 1, true); if (o.kind === 'fiber') this._worm();
@@ -1155,7 +1173,7 @@ export class Game {
         b.p[0] += b.v[0] * dt / steps; b.p[1] += b.v[1] * dt / steps; b.p[2] += b.v[2] * dt / steps;
         if (this.net.host && this.net.peers.size) { let hitAv = null; for (const pr of this.net.peers.values()) { const c = pr.av; if (!c || c.dead) continue; const ay = Math.max(c.pos[1] + 0.2, Math.min(c.pos[1] + 1.7, b.p[1])); if (Math.hypot(b.p[0] - c.pos[0], b.p[1] - ay, b.p[2] - c.pos[2]) < (b.missile ? 0.8 : 0.45)) { hitAv = pr; break; } } if (hitAv) { if (b.missile) this.explode(b.p, b.src); else if (!b.web) this.net.sendHitTo(hitAv.id, b.dmg, { ranged: true, shot: true }, b.src); dead = true; break; } }
         const dy = Math.max(P.pos[1] + 0.2, Math.min(P.pos[1] + 1.7, b.p[1])); const dd = Math.hypot(b.p[0] - P.pos[0], b.p[1] - dy, b.p[2] - P.pos[2]);
-        if (!P.dead && dd < (b.missile ? 0.8 : 0.45)) { if (b.missile) this.explode(b.p, b.src); else if (b.web) { P.webbed = Math.max(P.webbed || 0, 4); this.damage(b.dmg, 'teia da aranha', true); this.audio.play('webHit'); if (!this._webT || this.env.elapsed - this._webT > 3) { this._webT = this.env.elapsed; this.ui.toast('🕸 Você foi atingido por teia! Está mais lento.', 'warn'); } } else { const head = b.p[1] - P.pos[1] > (P.crouch ? 1.05 : 1.5); const hm = head ? (this.equip.hat === 'milhelmet' ? 2 : 5) : 1; if (head && this.equip.hat === 'milhelmet') this.wear('hat', 200); this.playerHit(b.dmg * hm, b.src, { ranged: true }); if (head) this.ui.toast(this.equip.hat === 'milhelmet' ? '⛑️ O capacete segurou o tiro na cabeça!' : '💥 Tiro na cabeça!', 'warn'); } dead = true; break; }
+        if (!P.dead && dd < (b.missile ? 0.8 : 0.45)) { if (b.missile) this.explode(b.p, b.src); else if (b.web) { P.webbed = Math.max(P.webbed || 0, 4); this.damage(b.dmg, 'teia da aranha', true); this.audio.play('webHit'); if (!this._webT || this.env.elapsed - this._webT > 3) { this._webT = this.env.elapsed; this.ui.toast('🕸 Você foi atingido por teia! Está mais lento.', 'warn'); } } else { const head = b.p[1] - P.pos[1] > (P.crouch ? 1.05 : 1.5); const chest = !head && b.p[1] - P.pos[1] > (P.crouch ? 0.7 : 1.0); const hm = head ? (this.equip.hat === 'milhelmet' ? 2 : 5) : 1; if (head && this.equip.hat === 'milhelmet') this.wear('hat', 200); this.playerHit(b.dmg * hm, b.src, { ranged: true, chest, cal: b.dmg }); if (head) this.ui.toast(this.equip.hat === 'milhelmet' ? '⛑️ O capacete segurou o tiro na cabeça!' : '💥 Tiro na cabeça!', 'warn'); } dead = true; break; }
         if (b.p[1] < this.world.height(b.p[0], b.p[2])) { dead = true; if (b.missile) this.explode(b.p, b.src); break; }
         { let wall = null; for (const c of this.physics.query(b.p[0], b.p[2], 0.2)) { if (c.ghost || c.dyn || c.creature || c.player || c.camOnly) continue; if (b.p[1] < c.y0 || b.p[1] > c.y1 || !this.physics.insideXZ(c, b.p[0], b.p[2], 0)) continue; if (c.glass) { this.breakGlass(c.glass, b.p.slice()); continue; } wall = c; break; }
           if (wall) { dead = true; if (b.missile) this.explode(b.p, b.src); else this.fx.burst(b.p.slice(), 6, [1, 0.8, 0.4], 2.5, 0.25, 0.03); break; } }
@@ -1346,7 +1364,7 @@ export class Game {
     if (!this.menuMode) { this._renderExtras(items, eye); this._renderBlood(items); }
     for (const c of this.caveMeshes) items.push({ mesh: c.mesh, sphere: [c.c.x, c.c.y + 3, c.c.z, c.c.R + 8], doubleSided: true });
     this.build.renderItems(items); this.power.render(items); this.grapple.render(items); this.geiger.render(items); this.grenades.render(items); this.fires.render(items); this.smoke.render(items, eye); this.blasts.render(items); this.helis.render(items, eye); this.territory.render(items, eye); this.fishing.render(items); this.struct.render(items, eye); this._renderSheet(items); if (!this._porterMesh) this._porterMesh = this.renderer.createMesh(porterLoadMesh()); this.convoys.render(items, this._porterMesh); this.npcs.render(items, eye, (wid) => { const id = { club: 'scrapaxe', knife: 'scrapknife' }[wid] || wid; return this.tools[id]; });
-    if (P.rig) { if (!this.rigMeshes) this.rigMeshes = { mag: r.createMesh(magMesh()), shell: r.createMesh(MXS.shellMesh()), bolt: this.grapple.boltMesh }; P.rig.render(items, this.rigMeshes); }
+    if (P.rig) { if (!this.rigMeshes) this.rigMeshes = { mag: r.createMesh(magMesh()), shell: r.createMesh(MXS.shellMesh()), bolt: this.grapple.boltMesh, rbolt: this.grapple.spearMesh }; P.rig.render(items, this.rigMeshes); }
     const I = mat4.create();
     for (const f of this.falling) { const t = f.t; const ax = [Math.cos(f.dir), 0, -Math.sin(f.dir)]; const s = Math.sin(f.a / 2); const q = [ax[0] * s, 0, ax[2] * s, Math.cos(f.a / 2)];
       const m = mat4.fromTRS(mat4.create(), [t.x, t.y + 0.5, t.z], q, [1, 1, 1]); mat4.mul(m, m, mat4.compose([0, -0.5, 0], t.rot, t.s)); items.push({ mesh: this.treeMeshes[t.type], model: m, sphere: [t.x, t.y + 4, t.z, 12], wind: true, tex: this.foliageTex, alphaTest: true, doubleSided: true }); }
@@ -1444,7 +1462,8 @@ export class Game {
     // resolução dinâmica: reduz a escala de renderização se o desempenho cair muito
     if (this.state === 'playing' && this.settings.autoRes && !navigator.webdriver) { this._perfT = (this._perfT || 0) + dt; this._perfN = (this._perfN || 0) + 1;
       if (this._perfT > 4) { const avg = this._perfN / this._perfT; this._perfT = 0; this._perfN = 0;
-        if (avg < 24 && this.settings.res > 0.55) { this.settings.res = Math.round((this.settings.res - 0.15) * 100) / 100; this.applySettings(); this.ui.toast(`Desempenho baixo: resolução ajustada para ${Math.round(this.settings.res * 100)}%`, 'info'); } } }
+        if (avg < 24 && this.settings.res > 0.55) { this.settings.res = Math.round((this.settings.res - 0.15) * 100) / 100; this.applySettings(); this.ui.toast(`Desempenho baixo: resolução ajustada para ${Math.round(this.settings.res * 100)}%`, 'info'); }
+        else if (avg < 22) { const S = this.settings; const k = S.shadows ? 'shadows' : S.ssao ? 'ssao' : S.grass > 0 ? 'grass' : S.bloom ? 'bloom' : S.viewDist !== 'curta' ? 'viewDist' : null; if (k) { if (k === 'grass') S.grass = 0; else if (k === 'viewDist') S.viewDist = 'curta'; else S[k] = false; S.quality = 'custom'; this.applySettings(); this.ui.toast(`Desempenho baixo: ${{ shadows: 'sombras', ssao: 'oclusão', grass: 'grama', bloom: 'brilho', viewDist: 'distância de visão' }[k]} desligado(a)`, 'info'); } } } }
   }
   // cachoeiras (lâmina, laguinho, riacho, gotas e névoa), barra/✔ da composteira e visor do coletor de chuva
   _renderExtras(items, eye) {

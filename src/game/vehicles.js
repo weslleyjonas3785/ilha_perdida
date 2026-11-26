@@ -116,17 +116,33 @@ export function gasStationColliders(p) { const c = Math.cos(p.rot), s = Math.sin
   for (const [x, z] of [[-4.5, 3.5], [4.5, 3.5], [-4.5, -1.5], [4.5, -1.5]]) box(x, z, 0.2, 0.2, 4.7); for (const x of [-2, 2]) box(x, 1, 0.36, 0.25, 2.2); box(0, -6.5, 4, 2.5, 3.8); box(5.8, 5.6, 0.2, 0.2, 7); return out; }
 
 // ---------------- sistema ----------------
+// macaco tipo sanfona (do desenho): base em X, braços em losango, fuso rosqueado e berço em cima; h = altura aberta
+export function jackMesh(h = 0.34) { const mb = new MeshBuilder(); const G = hex(0x8c8e92), D = hex(0x5c5e62), MT2 = 0.5; mb.setColor(G, MT2);
+  mb.box(M(0, 0.01, 0), 0.34, 0.02, 0.2, G); mb.box(M(0, 0.01, 0, Math.PI / 4), 0.3, 0.018, 0.06, D); mb.box(M(0, 0.01, 0, -Math.PI / 4), 0.3, 0.018, 0.06, D);
+  const half = 0.19, mid = h / 2, a = Math.atan2(mid - 0.04, half); const arm = Math.hypot(half, mid - 0.04);
+  for (const s of [-1, 1]) for (const up of [0, 1]) { const y0 = up ? mid : 0.04, y1 = up ? h - 0.04 : mid, x0 = up ? s * half : 0, x1 = up ? 0 : s * half; const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2; const ang = Math.atan2(y1 - y0, x1 - x0);
+    for (const sz of [-1, 1]) { mb.setColor(G, MT2); mb.box(mat4.fromTRS(mat4.create(), [cx, cy, sz * 0.05], quat.fromEuler(0, 0, ang), [1, 1, 1]), arm, 0.035, 0.02, G); } }
+  void a; mb.setColor(D, MT2); mb.cylinder(M(-half - 0.06, mid, 0, 0, 1, 0, Math.PI / 2), 0.012, 0.012, half * 2 + 0.12, 8, D); mb.cylinder(M(-half - 0.08, mid, 0, 0, 1, 0, Math.PI / 2), 0.025, 0.025, 0.04, 6, G);
+  for (const s of [-1, 1]) mb.cylinder(M(s * half, mid, 0, 0, 1, Math.PI / 2), 0.03, 0.03, 0.14, 6, G);
+  mb.setColor(G, MT2); mb.box(M(0, h - 0.04, 0), 0.12, 0.04, 0.14, G); mb.box(M(0, h, 0.05), 0.12, 0.02, 0.03, G); mb.box(M(0, h, -0.05), 0.12, 0.02, 0.03, G);
+  return mb.build(); }
 export class VehicleSystem {
   constructor(game) { this.g = game; this.list = []; this.driving = null; this.meshes = {}; this.pumps = []; }
   // estado inicial a partir dos pontos do mundo (carros sem pneus e motor; moto só o chassi)
-  reset() { const w = this.g.world; this._clearCols(); this.list = (w.vehicleSpots || []).map((s) => this._make(s));
+  reset() { const w = this.g.world; this._clearCols(); this.list = (w.vehicleSpots || []).map((s) => this._scramble(this._make(s)));
     this.pumps = (w.pumps || []).map((p) => ({ ...p, fuel: 60 + Math.floor(Math.random() * 240) })); this._addCols(); }
-  _make(s) { const T = VTYPES[s.type]; return { id: s.id, type: s.type, color: s.color, x: s.x, y: s.y, z: s.z, yaw: s.yaw, pitch: 0, roll: 0, wheels: 0, engine: false, gear: !T.moto, fuel: Math.round(T.tank * (Math.random() < 0.6 ? Math.random() * 0.35 : 0)), speed: 0, steer: 0, spin: 0, siph: false }; }
-  serialize() { return { v: this.list.map((v) => [v.id, +v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2), +v.yaw.toFixed(3), v.wheels, v.engine ? 1 : 0, v.gear ? 1 : 0, +v.fuel.toFixed(1)]), p: this.pumps.map((p) => +p.fuel.toFixed(1)) }; }
+  // carros montáveis: alguns encaixes já têm peça (às vezes danificada), sempre falta alguma coisa → fumacinha no capô
+  _scramble(v) { const T = VTYPES[v.type]; let sd = (Math.imul(v.id + 7, 2654435761) ^ 0x5bd1e995) >>> 0; const R = () => { sd = (Math.imul(sd, 1664525) + 1013904223) >>> 0; return sd / 4294967296; }; R(); R();
+    v.wheels = Math.floor(R() * (T.wheels + 1)); v.engine = R() < 0.45; v.gear = T.moto ? true : R() < 0.55; v.bad = { engine: v.engine && R() < 0.55, gear: !T.moto && v.gear && R() < 0.4, flat: v.wheels && R() < 0.35 ? 1 : 0 };
+    if (this.complete(v)) { v.engine = false; v.bad.engine = false; } return v; }
+  _make(s) { const T = VTYPES[s.type]; return { id: s.id, type: s.type, color: s.color, x: s.x, y: s.y, z: s.z, yaw: s.yaw, pitch: 0, roll: 0, wheels: 0, engine: false, gear: !T.moto, bad: { engine: false, gear: false, flat: 0 }, jack: false, lift: 0, fuel: Math.round(T.tank * (Math.random() < 0.6 ? Math.random() * 0.35 : 0)), speed: 0, steer: 0, spin: 0, siph: false }; }
+  serialize() { return { v: this.list.map((v) => [v.id, +v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2), +v.yaw.toFixed(3), v.wheels, v.engine ? 1 : 0, v.gear ? 1 : 0, +v.fuel.toFixed(1), (v.bad.engine ? 1 : 0) | (v.bad.gear ? 2 : 0) | (v.bad.flat << 2), v.jack ? 1 : 0]), p: this.pumps.map((p) => +p.fuel.toFixed(1)) }; }
   load(st) { this.reset(); if (!st) return; const byId = new Map(this.list.map((v) => [v.id, v]));
-    for (const [id, x, y, z, yaw, wh, en, ge, fu] of st.v || []) { const v = byId.get(id); if (!v) continue; Object.assign(v, { x, y, z, yaw, wheels: wh, engine: !!en, gear: !!ge, fuel: fu }); }
+    for (const [id, x, y, z, yaw, wh, en, ge, fu, bd, jk] of st.v || []) { const v = byId.get(id); if (!v) continue; Object.assign(v, { x, y, z, yaw, wheels: wh, engine: !!en, gear: !!ge, fuel: fu, jack: !!jk, lift: jk ? 1 : 0 }); if (bd !== undefined) v.bad = { engine: !!(bd & 1), gear: !!(bd & 2), flat: bd >> 2 }; }
     (st.p || []).forEach((f, i) => { if (this.pumps[i]) this.pumps[i].fuel = f; }); this._clearCols(); this._addCols(); }
   complete(v) { const T = VTYPES[v.type]; return v.wheels >= T.wheels && v.engine && v.gear; }
+  damaged(v) { const b = v.bad || {}; const m = []; if (v.engine && b.engine) m.push(VTYPES[v.type].moto ? 'motor de moto danificado' : 'motor danificado'); if (v.gear && b.gear) m.push('câmbio danificado'); if (b.flat && v.wheels) m.push(`${Math.min(b.flat, v.wheels)} pneu(s) furado(s)`); return m; }
+  usable(v) { return this.complete(v) && !this.damaged(v).length; }
   missing(v) { const T = VTYPES[v.type]; const m = []; if (v.wheels < T.wheels) m.push(`${T.wheels - v.wheels} ${T.moto ? 'pneu(s) de moto' : 'pneu(s)'}`); if (!v.engine) m.push(T.moto ? 'motor de moto' : 'motor'); if (!v.gear) m.push('câmbio'); return m; }
   _col(v) { const T = VTYPES[v.type]; return { type: 'box', x: v.x, z: v.z, hx: T.W / 2 + 0.02, hz: T.L / 2, rot: v.yaw, cos: Math.cos(v.yaw), sin: Math.sin(v.yaw), y0: v.y - 0.3, y1: v.y + (T.roof || 1.2), dyn: true, r: T.L / 2 + 0.3, vehicle: v }; }
   _addCols() { const ph = this.g.physics; for (const v of this.list) { v.col = this._col(v); ph.dynamic.push(v.col); } }
@@ -138,7 +154,7 @@ export class VehicleSystem {
   // ---------- galão ----------
   jerryCap() { return 20 * this.g.countAll('jerrycan'); }
   // ---------- direção ----------
-  enter(v) { const g = this.g, P = g.player, T = VTYPES[v.type]; if (!this.complete(v)) return g.ui.toast(`Faltam peças: ${this.missing(v).join(', ')}`, 'warn');
+  enter(v) { const g = this.g, P = g.player, T = VTYPES[v.type]; if (!this.complete(v)) return g.ui.toast(`Faltam peças: ${this.missing(v).join(', ')}`, 'warn'); if (v.jack) return g.ui.toast('O carro está no macaco — aperte TAB e finalize o serviço (botão direito no macaco)', 'warn'); if (this.damaged(v).length) return g.ui.toast(`Peças danificadas: ${this.damaged(v).join(', ')} — conserte (habilidade Mecânica)`, 'warn');
     if (v.fuel <= 0.05) return g.ui.toast('⛽ Sem combustível — abasteça com o galão (segure o galão e aperte E perto do veículo)', 'warn');
     this.driving = v; v.speed = 0; g.equip.hand = null; P.seat = { v, clip: T.moto ? 'ride' : 'sit', hidden: !T.moto }; g.audio.engineStart(); g.audio.play('engineStart', { at: [v.x, v.y, v.z] });
     g.cam.yaw = v.yaw; this._camDist = g.cam.targetDist; g.cam.targetDist = T.moto ? 5.5 : 7.5; g.ui.toast(`🚗 ${vName(v)} — W/S acelera e freia, A/D vira, Espaço freio de mão, E para sair`, 'info'); }
@@ -146,7 +162,7 @@ export class VehicleSystem {
     const r = [Math.cos(v.yaw), -Math.sin(v.yaw)]; for (const side of [-1, 1, 2]) { const off = side === 2 ? [Math.sin(v.yaw) * -(T.L / 2 + 1), Math.cos(v.yaw) * -(T.L / 2 + 1)] : [r[0] * side * (T.W / 2 + 0.9), r[1] * side * (T.W / 2 + 0.9)];
       const x = v.x + off[0], z = v.z + off[1]; const blocked = g.physics.query(x, z, 0.5).some((c) => !c.dyn && !c.ghost && !c.camOnly && c.y1 > v.y + 0.4 && g.physics.insideXZ(c, x, z, 0.35)); if (!blocked || side === 2) { P.setPosition(x, g.world.height(x, z), z); break; } }
     P.vel = [0, 0, 0]; v.speed = 0; this._syncCol(v); }
-  update(dt, act) { const v = this.driving; if (!v) return; const g = this.g, w = g.world, ph = g.physics, T = VTYPES[v.type], inp = g.input;
+  update(dt, act) { this._dt = dt; const v = this.driving; if (!v) return; const g = this.g, w = g.world, ph = g.physics, T = VTYPES[v.type], inp = g.input;
     if (act.interact) return this.exit();
     let thr = act.mz || 0; if (v.fuel <= 0) { thr = 0; if (!this._noFuelTip) { this._noFuelTip = true; g.ui.toast('⛽ Acabou o combustível!', 'warn'); } } else this._noFuelTip = false;
     const hand = inp.down('Space');
@@ -179,9 +195,20 @@ export class VehicleSystem {
     if (Math.abs(inp.mouse.dx) > 1) this._camHold = 1.5; this._camHold = (this._camHold || 0) - dt; if (this._camHold <= 0 && Math.abs(v.speed) > 1) g.cam.yaw += angleDiff(g.cam.yaw, v.yaw + (v.speed < 0 ? Math.PI : 0)) * Math.min(1, dt * 2.2);
     g.audio.engineSet(Math.abs(v.speed) / T.max, thr !== 0 ? 1 : 0.3); g.ui.driveHud && g.ui.driveHud(v, T); }
   // ---------- desenho ----------
+  // fumacinha saindo do capô: sinal de que o carro pode ser montado/consertado
+  _smoke(v, T) { const r = this.g.renderer, t = (this.g.env.elapsed || 0); const f = [Math.sin(v.yaw), Math.cos(v.yaw)]; const hz = T.moto ? 0.1 : (T.hood ? (T.hood[0] + T.hood[1]) / 2 : 1.4); const by = v.y + (T.moto ? 0.7 : T.belt || 1);
+    for (let k = 0; k < 6; k++) { const ph = (t * 0.32 + k / 6 + (v.id % 7) * 0.13) % 1; const sz = 0.18 + ph * 0.9, a = 0.32 * Math.sin(Math.PI * ph) * (v.bad && v.bad.engine ? 1.4 : 1); const dr = ph * 1.4, sw = Math.sin(k * 2.1 + t * 0.7) * 0.25 * ph;
+      r.particle(v.x + f[0] * hz + f[1] * sw + dr * 0.4, by + ph * 2.4, v.z + f[1] * hz - f[0] * sw + dr * 0.2, sz, 0.42, 0.42, 0.44, Math.min(0.5, a)); } }
   _mesh(key, fn) { if (!this.meshes[key]) this.meshes[key] = this.g.renderer.createMesh(fn()); return this.meshes[key]; }
   render(items, eye) { for (const v of this.list) { if (Math.abs(v.x - eye[0]) > 160 || Math.abs(v.z - eye[2]) > 160) continue; const T = VTYPES[v.type];
-      const sink = v.wheels < T.wheels && !T.moto ? -0.18 : 0; const m = mat4.compose([v.x, v.y + sink, v.z], v.yaw, 1, v.pitch, v.roll); const sph = [v.x, v.y + 1, v.z, T.L / 2 + 0.6];
+      v.lift = (v.lift || 0) + ((v.jack ? 1 : 0) - (v.lift || 0)) * Math.min(1, (this._dt || 1 / 60) * 3); const lift = v.lift * (T.moto ? 0.12 : 0.3);
+      const sink = (v.wheels < T.wheels && !T.moto ? -0.18 : 0) * (1 - v.lift) + lift; const m = mat4.compose([v.x, v.y + sink, v.z], v.yaw, 1, v.pitch, v.roll); const sph = [v.x, v.y + 1, v.z, T.L / 2 + 0.6];
+      if (v.lift > 0.02) { // macaco embaixo da lateral + brilho azulado em volta do carro enquanto está no serviço
+        const jh = 0.14 + lift + (T.moto ? 0.12 : 0.18); const side = T.moto ? 0.25 : T.W / 2 - 0.25; const jm = mat4.mul(mat4.create(), mat4.compose([v.x, v.y - 0.02, v.z], v.yaw), mat4.compose([side, 0, 0], Math.PI / 2));
+        items.push({ mesh: this._mesh('jack' + jh.toFixed(2), () => jackMesh(jh)), model: jm, sphere: sph });
+        const pulse = 0.26 + 0.08 * Math.sin((this.g.env.elapsed || 0) * 3); const gm = mat4.mul(mat4.create(), m, mat4.fromTRS(mat4.create(), [0, -0.02, 0], [0, 0, 0, 1], [1.05, 1.04, 1.03]));
+        items.push({ mesh: T.moto ? this._mesh('moto' + v.color, () => motoBodyMesh(v.color)) : this._mesh(v.type + v.color, () => carBodyMesh(v.type, v.color)), model: gm, sphere: sph, alpha: pulse * v.lift, tint: [0.3, 0.75, 1.9, 1], emissive: 2.2, fogMul: 0.5, shadow: false, cull: false }); }
+      if (!this.usable(v) && !this.driving && Math.abs(v.x - eye[0]) < 70 && Math.abs(v.z - eye[2]) < 70) this._smoke(v, T);
       if (T.moto) { items.push({ mesh: this._mesh('moto' + v.color, () => motoBodyMesh(v.color)), model: m, sphere: sph }); if (v.engine) items.push({ mesh: this._mesh('motoeng', motoEngineMesh), model: m, sphere: sph }); }
       else { items.push({ mesh: this._mesh(v.type + v.color, () => carBodyMesh(v.type, v.color)), model: m, sphere: sph }); if (v.engine) items.push({ mesh: this._mesh('hood' + v.type + v.color, () => carHoodMesh(v.type, v.color)), model: m, sphere: sph }); }
       const wm = this._mesh('wheel' + T.wr, () => wheelMesh(T.wr, T.moto ? 0.12 : 0.24)); const pos = T.moto ? [[0, T.wf], [0, T.wb]] : [[T.W / 2 - 0.12, T.wf], [-(T.W / 2 - 0.12), T.wf], [T.W / 2 - 0.12, T.wb], [-(T.W / 2 - 0.12), T.wb]];

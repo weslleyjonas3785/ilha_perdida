@@ -7,45 +7,53 @@ const MET = 0.5, WOOD = 0.63, POLY = 0.86, RUB = 0.7, GLOW = 0.02;
 const RX = Math.PI / 2;
 const BLUE = hex(0x2f62b8), ORANGE = hex(0xd4703a), GRAY = hex(0x5c6068), DARK = hex(0x2a2c31), ROPE = hex(0xd9b23e), STEEL = hex(0x8c9097);
 
-// ---------- arpão-gancho (eixo da arma: +Z para frente, empunhadura na origem) ----------
+// ---------- gancho (pistola de corda, tamanho de pistola; eixo +Z para frente, empunhadura na origem) ----------
+const GMET = hex(0x8d8e90), GDARK = hex(0x55575b), BRASS = hex(0xb79a5a);
 export function harpoonGunMesh() {
   const mb = new MeshBuilder(); const C = (c, f) => mb.setColor(c, f);
-  // empunhadura azul com placa cinza facetada
-  C(BLUE, POLY); mb.roundBox(M(0, -0.07, -0.02, 0, 1, -0.2), 0.045, 0.13, 0.06, BLUE, 0.01, 1);
-  C(GRAY, MET); for (const sx of [-1, 1]) mb.box(M(sx * 0.024, -0.07, -0.02, 0, 1, -0.2), 0.004, 0.1, 0.045, GRAY);
-  C(DARK, MET); mb.box(M(0, -0.14, -0.035, 0, 1, -0.2), 0.05, 0.02, 0.07, DARK);
-  // guarda-mato e gatilho
-  C(GRAY, MET); mb.box(M(0, -0.025, 0.06), 0.012, 0.012, 0.09, GRAY); mb.box(M(0, -0.005, 0.105), 0.012, 0.04, 0.012, GRAY); C(DARK, MET); mb.box(M(0, -0.002, 0.045), 0.008, 0.03, 0.01, DARK);
-  // corpo azul
-  C(BLUE, POLY); mb.roundBox(M(0, 0.04, 0.08), 0.07, 0.075, 0.3, BLUE, 0.012, 1);
-  C(DARK, MET); mb.box(M(0, 0.0, 0.08), 0.072, 0.012, 0.3, DARK); // trilho inferior
-  for (let i = 0; i < 3; i++) mb.box(M(0.037, 0.04, 0.0 + i * 0.02), 0.004, 0.03, 0.008, DARK); // aletas laterais
-  for (let i = 0; i < 3; i++) mb.box(M(-0.037, 0.04, 0.0 + i * 0.02), 0.004, 0.03, 0.008, DARK);
-  // luva laranja e placa lateral
-  C(ORANGE, POLY); mb.roundBox(M(0, 0.04, 0.215), 0.08, 0.085, 0.06, ORANGE, 0.008, 1); mb.box(M(0.04, 0.03, 0.15), 0.01, 0.055, 0.05, ORANGE);
-  C(DARK, MET); mb.box(M(0.046, 0.035, 0.15, 0, 1, 0, 0.5), 0.004, 0.03, 0.008, DARK);
-  // boca octogonal cinza
-  C(GRAY, MET); mb.cylinder(M(0, 0.04, 0.245, 0, 1, RX), 0.05, 0.05, 0.06, 8, GRAY); C(DARK, MET); mb.cylinder(M(0, 0.04, 0.3, 0, 1, RX), 0.028, 0.028, 0.004, 8, DARK);
-  // mira traseira
-  C(DARK, MET); mb.box(M(0, 0.088, 0.17), 0.01, 0.02, 0.012, DARK); mb.box(M(-0.008, 0.1, 0.17), 0.004, 0.014, 0.012, DARK); mb.box(M(0.008, 0.1, 0.17), 0.004, 0.014, 0.012, DARK);
-  // carretel de corda com manivela
-  C(GRAY, MET); for (const sx of [-1, 1]) mb.cylinder(M(sx * 0.03, 0.115, -0.03, 0, 1, 0, RX * sx), 0.05, 0.05, 0.012, 8, GRAY);
-  C(ROPE, POLY); mb.cylinder(M(-0.026, 0.115, -0.03, 0, 1, 0, -RX), 0.035, 0.035, 0.052, 10, ROPE);
-  C(DARK, MET); mb.box(M(0, 0.075, -0.03), 0.02, 0.03, 0.03, DARK); mb.cylinder(M(0.04, 0.115, -0.03, 0, 1, 0, -RX), 0.008, 0.008, 0.04, 6, DARK); mb.box(M(0.08, 0.14, -0.03), 0.01, 0.06, 0.012, DARK); mb.box(M(0.08, 0.17, -0.015), 0.012, 0.012, 0.035, GRAY);
-  // corda do carretel até a frente
-  C(ROPE, POLY); mb.box(M(0, 0.098, 0.1, 0, 1, 0.12), 0.008, 0.008, 0.26, ROPE);
+  // cabo de revólver facetado
+  C(GDARK, POLY); mb.roundBox(M(0, -0.062, -0.034, 0, 1, -0.32), 0.036, 0.105, 0.05, GDARK, 0.012, 1); mb.box(M(0, -0.118, -0.05, 0, 1, -0.32), 0.04, 0.02, 0.056, GDARK);
+  // armação, guarda-mato e gatilho
+  C(GMET, MET); mb.box(M(0, 0.008, 0.02), 0.036, 0.045, 0.1, GMET); mb.box(M(0, -0.03, 0.04), 0.01, 0.008, 0.06, GMET); mb.box(M(0, -0.018, 0.072), 0.01, 0.03, 0.008, GMET);
+  C(GDARK, MET); mb.box(M(0, -0.012, 0.03, 0, 1, 0.3), 0.007, 0.028, 0.008, GDARK);
+  // cão (martelo) atrás
+  C(GDARK, MET); mb.box(M(0, 0.04, -0.03, 0, 1, -0.5), 0.012, 0.03, 0.012, GDARK);
+  // mola/bobina da corda no lugar do tambor + tampas de latão
+  C(GDARK, MET); mb.cylinder(M(0, 0.016, 0.006, 0, 1, RX), 0.018, 0.018, 0.07, 8, GDARK);
+  C(GMET, MET); for (let i = 0; i < 7; i++) mb.cylinder(M(0, 0.016, 0.01 + i * 0.009, 0, 1, RX), 0.026, 0.026, 0.005, 8, GMET);
+  C(BRASS, MET); mb.cylinder(M(0, 0.016, -0.002, 0, 1, RX), 0.012, 0.012, 0.012, 6, BRASS);
+  // cano octogonal + bloco de latão embaixo
+  C(GMET, MET); mb.cylinder(M(0, 0.016, 0.07, 0, 1, RX), 0.02, 0.02, 0.13, 8, GMET); C(GDARK, MET); mb.cylinder(M(0, 0.016, 0.2, 0, 1, RX), 0.012, 0.012, 0.003, 8, GDARK);
+  C(BRASS, MET); mb.box(M(0, -0.012, 0.11), 0.026, 0.018, 0.05, BRASS); C(GMET, MET); mb.box(M(0, -0.012, 0.075), 0.03, 0.022, 0.02, GMET);
+  // cabo de aço torcido na lateral
+  C(GDARK, MET); for (let i = 0; i < 6; i++) mb.box(M(0.022, -0.004, 0.03 + i * 0.012, 0, 1, 0, i % 2 ? 0.5 : -0.5), 0.004, 0.004, 0.012, GDARK);
+  // carcaça do lançador em cima, com parafusos e roldana lateral
+  C(GMET, MET); mb.roundBox(M(0, 0.06, 0.04), 0.04, 0.035, 0.1, GMET, 0.006, 1); mb.box(M(0, 0.042, 0.1), 0.034, 0.012, 0.03, GMET);
+  C(GDARK, MET); for (const z of [0.0, 0.07]) for (const sx of [-1, 1]) mb.cylinder(M(sx * 0.021, 0.06, z, 0, 1, 0, sx * RX), 0.004, 0.004, 0.004, 6, GDARK);
+  C(GMET, MET); mb.cylinder(M(0.02, 0.066, -0.004, 0, 1, 0, -RX), 0.022, 0.022, 0.01, 8, GMET); C(GDARK, MET); mb.cylinder(M(0.03, 0.066, -0.004, 0, 1, 0, -RX), 0.008, 0.008, 0.004, 6, GDARK);
+  C(BRASS, MET); mb.box(M(0, 0.06, 0.1), 0.012, 0.012, 0.02, BRASS);
   return mb.build();
 }
-// arpão carregado / disparado: haste de -0 a +L em Z com ponta farpada; origem na base
+// gancho de 3 garras na ponta de uma haste (origem na base, ao longo de +Z) — carregado em cima do cano ou voando com a corda
 export function harpoonBoltMesh() {
   const mb = new MeshBuilder(); const C = (c, f) => mb.setColor(c, f);
-  C(STEEL, MET); mb.cylinder(M(0, 0, 0, 0, 1, RX), 0.011, 0.011, 0.36, 6, STEEL);
-  // ponta: cone + duas farpas
-  mb.cylinder(M(0, 0, 0.36, 0, 1, RX), 0.022, 0.0, 0.07, 4, STEEL);
-  for (const sx of [-1, 1]) mb.box(M(sx * 0.03, 0, 0.385, sx * 0.7), 0.008, 0.012, 0.07, STEEL);
-  C(ROPE, POLY); for (let i = 0; i < 3; i++) mb.cylinder(M(0, 0, 0.24 + i * 0.016, 0, 1, RX), 0.016, 0.016, 0.01, 8, ROPE);
+  C(GMET, MET); mb.cylinder(M(0, 0, 0, 0, 1, RX), 0.006, 0.006, 0.12, 6, GMET); C(BRASS, MET); mb.cylinder(M(0, 0, 0.0, 0, 1, RX), 0.009, 0.009, 0.02, 6, BRASS);
+  C(GMET, MET); mb.cylinder(M(0, 0, 0.12, 0, 1, RX), 0.012, 0.0, 0.02, 6, GMET);
+  for (let k = 0; k < 3; k++) { const a = k * Math.PI * 2 / 3, cs = Math.cos(a), sn = Math.sin(a);
+    // braço da garra que abre para fora e volta para trás, com farpa
+    const P = (r, z) => [cs * r, sn * r, z]; const seg = (p0, p1, w) => { const d = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]], L = Math.hypot(...d); const ry = Math.atan2(d[0], d[2]), rx = -Math.atan2(d[1], Math.hypot(d[0], d[2]));
+      mb.box(mat4c([(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2, (p0[2] + p1[2]) / 2], ry, rx), w, w, L, GMET); };
+    seg(P(0, 0.125), P(0.035, 0.112), 0.008); seg(P(0.035, 0.112), P(0.05, 0.08), 0.007); seg(P(0.05, 0.08), P(0.042, 0.05), 0.006); seg(P(0.042, 0.05), P(0.03, 0.062), 0.005); }
   return mb.build();
 }
+// arpão antigo (haste com ponta farpada) — usado no recarregar do lança-foguetes
+export function spearBoltMesh() {
+  const mb = new MeshBuilder(); const C = (c, f) => mb.setColor(c, f);
+  C(STEEL, MET); mb.cylinder(M(0, 0, 0, 0, 1, RX), 0.011, 0.011, 0.36, 6, STEEL); mb.cylinder(M(0, 0, 0.36, 0, 1, RX), 0.022, 0.0, 0.07, 4, STEEL);
+  for (const sx of [-1, 1]) mb.box(M(sx * 0.03, 0, 0.385, sx * 0.7), 0.008, 0.012, 0.07, STEEL);
+  return mb.build();
+}
+function mat4c(t, ry, rx) { return MAT4B.compose(t, ry, 1, rx, 0); }
 // segmento genérico (corda/fio): cilindro de raio 1 e comprimento 1 ao longo de +Z
 export function segMesh(color = ROPE) { const mb = new MeshBuilder(); mb.setColor(color, POLY); mb.cylinder(M(0, 0, 0, 0, 1, RX), 1, 1, 1, 6, color, false); return mb.build(); }
 

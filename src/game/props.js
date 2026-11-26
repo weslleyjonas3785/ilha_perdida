@@ -139,7 +139,7 @@ export function crateMesh() {
 // ---------- Ruínas ----------
 export function buildingMesh(b) {
   if (b.style === 'suburb') return suburbHouseMesh(b); if (b.style === 'hospital2') return hospitalMesh(b);
-  const mb = new MeshBuilder(); const r = rng(b.seed); const colliders = []; const glass = [];
+  const mb = new MeshBuilder(); const r = rng(b.seed); const colliders = []; const glass = []; const wins = [];
   const STY = { house: [hex(0xc9b896), hex(0xd2c3a3), hex(0xb9a888), hex(0xcfc0a0), hex(0xa8b4a0), hex(0xc8a890), hex(0xb0b8c0), hex(0xe0d8c8)], apartment: [hex(0xa8a296), hex(0xb89a82), hex(0x9aa0a4), hex(0xc0b4a0)], warehouse: [hex(0x7f8a90), hex(0x8a8f86)], barracks: [hex(0x6b6a50), hex(0x75735a)], bunker: [hex(0x8a8a86)], office: [hex(0xa29c90)], hospital: [hex(0xe8e6e0), hex(0xdcdad4)], pharmacy: [hex(0xe4e2da), hex(0xd8dcd0)], lab: [hex(0xd0d2d4), hex(0xc4c8cc)], hangar: [hex(0x5d6248), hex(0x6a6e54)], shop: [hex(0xd8c9a8), hex(0xcdbb98), hex(0xe2d6bc)], garage: [hex(0xc8ccd0), hex(0xb8bec4)], church: [hex(0xeeebe4), hex(0xe6e2d8)] };
   if (b.style === 'apartment') STY.apartment.push(hex(0xa8402e), hex(0x9a3a2a), hex(0x4a5e8a), hex(0x52668e));
   const pal = STY[b.style] || [hex(0x9a958a), hex(0xa89a80), hex(0x8a8a88), hex(0x9a8a78)]; const base = pal[Math.floor(r() * pal.length)];
@@ -178,6 +178,7 @@ export function buildingMesh(b) {
           const pw = (bl - winW) / 2, po = (bl - pw) / 2;
           for (const d of [po, -po]) { const ox = wl.axis === 'x' ? d : 0, oz = wl.axis === 'x' ? 0 : d; const s0 = y0 + 0.95, s1 = Math.min(yTop, y0 + 2.3);
             if (s1 > s0) mb.box(M(lx + ox, (s0 + s1) / 2, lz + oz), wl.axis === 'x' ? pw : T, s1 - s0, wl.axis === 'x' ? T : pw, c); }
+          if (yTop > y0 + 2.3) { const ax = wl.axis === 'x'; const p0 = toW(lx, lz), sg = ax ? Math.sign(wl.cz) || 1 : Math.sign(wl.cx) || 1; const p1 = toW(lx + (ax ? 0 : sg), lz + (ax ? sg : 0)); wins.push({ x: p0[0], z: p0[1], nx: p1[0] - p0[0], nz: p1[1] - p0[1], y0: b.y + y0 + 0.95, y1: b.y + y0 + 2.3, w: winW }); }
           if (yTop > y0 + 2.3 && b.decay < 0.3) { // batente, verga e peitoril
             const ax = wl.axis === 'x'; const nz = (ax ? Math.sign(wl.cz) : Math.sign(wl.cx)) * (T / 2 + 0.03); const ox2 = ax ? 0 : nz, oz2 = ax ? nz : 0;
             mb.box(M(lx + ox2, y0 + 0.92, lz + oz2), ax ? winW + 0.2 : 0.1, 0.07, ax ? 0.1 : winW + 0.2, trimC);
@@ -265,7 +266,7 @@ export function buildingMesh(b) {
   const pos = data.pos, nrm = data.nrm;
   for (let i = 0; i < pos.length; i += 3) { const p = mat4.transformPoint(m, [pos[i], pos[i + 1], pos[i + 2]]); pos[i] = p[0]; pos[i + 1] = p[1]; pos[i + 2] = p[2];
     const n = mat4.transformDir(m, [nrm[i], nrm[i + 1], nrm[i + 2]]); nrm[i] = n[0]; nrm[i + 1] = n[1]; nrm[i + 2] = n[2]; }
-  return { data, colliders, glass };
+  return { data, colliders, glass, wins };
 }
 // ---------- objetos dos sítios (vilarejo, indústria, base militar) ----------
 export function siteMesh(kind, o) {

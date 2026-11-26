@@ -143,7 +143,7 @@ export class WorldStream {
   _loadBucket(key, site) {
     const g = this.g, ph = g.physics, r = g.renderer; const src = this.byBucket.get(key); if (!src) { this.buckets.set(key, { mesh: null, colliders: [] }); return; }
     const mb = new MeshBuilder(); const cols = []; const add = (c) => { cols.push(ph.add(c)); };
-    const glass = [], doors = []; for (const b of src.buildings) { const { data, colliders, glass: gl, doors: dl } = P.buildingMesh(b); appendRaw(mb, data); for (const c of colliders) add(c);
+    const glass = [], doors = [], wins = []; for (const b of src.buildings) { const { data, colliders, glass: gl, doors: dl, wins: wl } = P.buildingMesh(b); appendRaw(mb, data); for (const c of colliders) add(c); if (wl) wins.push(...wl);
       for (const d of dl || []) { d.id = `${key}:d${doors.length}`; d.open = g.openDoors.has(d.id); const cc = (yaw) => ({ type: 'box', x: d.x + Math.cos(yaw) * d.w / 2, z: d.z - Math.sin(yaw) * d.w / 2, hx: d.w / 2, hz: 0.05, rot: yaw, y0: d.y, y1: d.y + d.h, hdoor: d });
         d.colC = ph.add({ ...cc(d.yawC), ghost: d.open }); d.colO = ph.add({ ...cc(d.yawO), ghost: !d.open }); cols.push(d.colC, d.colO); d.ang = d.open ? 1 : 0; doors.push(d); }
       for (const gp of gl || []) { gp.id = `${key}:${glass.length}`; gp.broken = g.brokenGlass.has(gp.id); if (!gp.broken) { gp.col = ph.add({ type: 'box', x: gp.x, z: gp.z, hx: gp.w / 2, hz: 0.04, rot: gp.rot, y0: gp.y - gp.h / 2, y1: gp.y + gp.h / 2, glass: gp }); cols.push(gp.col); } glass.push(gp); } }
@@ -179,7 +179,7 @@ export class WorldStream {
     }
     let sphere; if (site) sphere = [site.x, site.y + 6, site.z, site.r + 12];
     else { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9, y = 0; for (const p of src.props) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); y = p.y; } sphere = [(x0 + x1) / 2, y, (z0 + z1) / 2, Math.hypot(x1 - x0, z1 - z0) / 2 + 30]; }
-    this.buckets.set(key, { mesh: mb.idx.length ? r.createMesh(mb.build()) : null, colliders: cols, sphere, glass, doors });
+    this.buckets.set(key, { mesh: mb.idx.length ? r.createMesh(mb.build()) : null, colliders: cols, sphere, glass, doors, wins });
   }
   _unloadBucket(key) { const b = this.buckets.get(key); if (!b) return; if (b.mesh) this.g.renderer.disposeMesh(b.mesh); for (const c of b.colliders) this.g.physics.remove(c); this.buckets.delete(key); }
   siteItems(items) { for (const b of this.buckets.values()) if (b.mesh) items.push({ mesh: b.mesh, sphere: b.sphere }); }

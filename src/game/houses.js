@@ -86,7 +86,7 @@ export function hospitalPlan(b) {
 
 // ---------------- utilitários de malha ----------------
 function makeKit(b) {
-  const mb = new MeshBuilder(); const colliders = [], glass = [], doors = []; const cr = Math.cos(b.rot), sr = Math.sin(b.rot);
+  const mb = new MeshBuilder(); const colliders = [], glass = [], doors = [], wins = []; const cr = Math.cos(b.rot), sr = Math.sin(b.rot);
   const toW = (lx, lz) => [b.x + lx * cr + lz * sr, b.z - lx * sr + lz * cr];
   const box = (x, y, z, sx, sy, sz, c, f = STONE) => { mb.setColor(c, f); mb.box(M(x, y + sy / 2, z), sx, sy, sz, c); };
   const col = (x, z, y0, y1, hx, hz, extra = {}) => { const [wx, wz] = toW(x, z); colliders.push({ type: 'box', x: wx, z: wz, y0: b.y + y0, y1: b.y + y1, hx, hz, rot: b.rot, ...extra }); };
@@ -105,7 +105,7 @@ function makeKit(b) {
     piece(S(at), S(L), 0, h);
     return hs.map((q) => ({ ...q, c: S((q.a + q.b) / 2), ax, fixed }));
   };
-  return { mb, colliders, glass, doors, toW, box, col, wall };
+  return { mb, colliders, glass, doors, wins, toW, box, col, wall };
 }
 function finish(kit, b) {
   const data = kit.mb.build(); const m = mat4.compose([b.x, b.y, b.z], b.rot); const pos = data.pos, nrm = data.nrm;
@@ -113,7 +113,7 @@ function finish(kit, b) {
     const n = mat4.transformDir(m, [nrm[i], nrm[i + 1], nrm[i + 2]]); nrm[i] = n[0]; nrm[i + 1] = n[1]; nrm[i + 2] = n[2]; }
   // portas que abrem: dobradiça no mundo, giro fechado/aberto no mundo
   const doors = kit.doors.map((d) => { const [x, z] = kit.toW(d.lx, d.lz); return { x, z, y: b.y + d.y, w: d.w, h: d.h, yawC: b.rot + d.yawC, yawO: b.rot + d.yawO, color: d.color }; });
-  return { data, colliders: kit.colliders, glass: kit.glass, doors };
+  return { data, colliders: kit.colliders, glass: kit.glass, doors, wins: kit.wins };
 }
 // folha de porta (para a malha dinâmica): origem na dobradiça, estende +x
 export function doorLeafMesh(color) { const mb = new MeshBuilder(); mb.setColor(color, WOOD); mb.box(M(0.5, 1.075, 0), 1.0, 2.15, 0.05, color); mb.setColor(shade(color, 0.8), WOOD);
@@ -123,6 +123,8 @@ function hingeDoor(kit, q, yb, into, color) { const ax = q.ax; const s0 = q.c - 
   const yawC = ax ? 0 : -Math.PI / 2; const yawO = ax ? (into > 0 ? -Math.PI / 2 : Math.PI / 2) : (into > 0 ? 0 : Math.PI);
   kit.doors.push({ lx, lz, y: yb, w: q.w - 0.04, h: 2.15, yawC, yawO, color }); }
 // moldura branca + vidro (+ venezianas) de uma janela numa parede externa
+// vão de janela (para pular por ela com Espaço): centro, normal, peitoril e topo no mundo
+function addWin(kit, b, ax, c, fixed, y0, y1, w) { const p0 = kit.toW(...(ax ? [c, fixed] : [fixed, c])), p1 = kit.toW(...(ax ? [c, fixed + 1] : [fixed + 1, c])); kit.wins.push({ x: p0[0], z: p0[1], nx: p1[0] - p0[0], nz: p1[1] - p0[1], y0: b.y + y0, y1: b.y + y1, w }); }
 function windowTrim(kit, q, yb, outN, trim, shutter, b, glassOk) {
   const { box } = kit; const ax = q.ax, o = outN * 0.13; const y0 = yb + q.y0, y1 = yb + q.y1, h = y1 - y0, w = q.w;
   const at = (a, d = 0) => (ax ? [q.c + a, q.fixed + o + d] : [q.fixed + o + d, q.c + a]);
@@ -130,6 +132,7 @@ function windowTrim(kit, q, yb, outN, trim, shutter, b, glassOk) {
   bx(0, y1, w + 0.24, 0.12, 0.08, trim); bx(0, y0 - 0.1, w + 0.3, 0.1, 0.14, trim); for (const s of [-1, 1]) bx(s * (w / 2 + 0.05), y0, 0.1, h, 0.08, trim);
   if (!q.door) { bx(0, y0, 0.05, h, 0.05, trim, STONE, -outN * 0.05); if (h > 0.9) bx(0, y0 + h * 0.5, w, 0.05, 0.05, trim, STONE, -outN * 0.05);
     if (shutter) for (const s of [-1, 1]) { bx(s * (w / 2 + 0.32), y0, 0.42, h, 0.05, shutter, WOOD, 0.02); for (let k = 1; k < 5; k++) bx(s * (w / 2 + 0.32), y0 + h * k / 5, 0.36, 0.025, 0.06, shade(shutter, 0.7), WOOD, 0.03); }
+    addWin(kit, b, ax, q.c, q.fixed, y0, y1, w);
     if (glassOk) { const [gx, gz] = kit.toW(...(ax ? [q.c, q.fixed] : [q.fixed, q.c])); kit.glass.push({ x: gx, z: gz, y: b.y + (y0 + y1) / 2, w, h, rot: b.rot + (ax ? 0 : Math.PI / 2) }); }
     else { const [x, z] = at(0, -outN * 0.09); box(x, y0, z, ax ? w : 0.02, h, ax ? 0.02 : w, hex(0x1a2026), MET); } }
 }
@@ -284,6 +287,7 @@ export function hospitalMesh(b) {
     for (let fl = 0; fl < 2; fl++) { const hs = []; for (const c of ws) hs.push({ c, w: 1.6, y0: 1.0, y1: 2.6 }); if (k === 'F' && fl === 0) hs.push({ c: 0, w: 2.6, y0: 0, y1: 2.8, door: true });
       const q = wall(u0, z0, u1, z1, FL + fl * FH, FH, hs, white, inner, 0.3, { outN: n }); for (const h of q) if (!h.door) { const y0 = FL + fl * FH; const at = ax ? [h.c, h.fixed + n * 0.16] : [h.fixed + n * 0.16, h.c];
         box(at[0], y0 + h.y0, at[1], ax ? h.w : 0.04, h.y1 - h.y0, ax ? 0.04 : h.w, hex(0x14181c), MET); box(at[0], y0 + h.y0 + 0.75, at[1], ax ? h.w : 0.06, 0.05, ax ? 0.06 : h.w, hex(0xd0d4d6), MET);
+        addWin(kit, b, ax, h.c, h.fixed, y0 + h.y0, y0 + h.y1, h.w);
         if (glassOk) { const [gx, gz] = kit.toW(ax ? h.c : h.fixed, ax ? h.fixed : h.c); kit.glass.push({ x: gx, z: gz, y: b.y + y0 + (h.y0 + h.y1) / 2, w: h.w, h: h.y1 - h.y0, rot: b.rot + (ax ? 0 : Math.PI / 2) }); } } }
     void holes; }
   // faixas verde-petróleo nos andares e no topo; platibanda

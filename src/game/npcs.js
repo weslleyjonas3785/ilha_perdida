@@ -146,6 +146,18 @@ export class NPCManager {
     c._rig.set({ active: true, model: RIG_MODEL[c.weapon], aimT: c._aimT, pitch, recoil: c._recoil, sprint: (c.speed || 0) > 3.5 && !aim, reload: null });
     c._rigOn = c._rig.apply(dt);
   }
+  // androides com arma (caçador: fuzil, soldado: submetralhadora) seguram com as duas mãos, igual aos NPCs: a arma está presa na mão direita,
+  // a IK leva a mão direita ao punho e a esquerda ao guarda-mão, e o corpo aponta para o alvo
+  robotRig(c, dt) {
+    const g = this.g; if (c.dead || c.fainted > 0 || !c.skel || c.skel.index.upperArmL === undefined) { c._rigOn = false; return; }
+    const e = g.cam && g.cam.eye; if (e && Math.hypot(c.pos[0] - e[0], c.pos[2] - e[2]) > 90) { c._rigOn = false; return; }
+    if (!c._rig) { const prx = { assets: { skel: c.skel }, toolModel: mat4.create(), game: g }; Object.defineProperties(prx, { anim: { get: () => c.anim }, model: { get: () => c.model }, pos: { get: () => c.pos } }); c._rigP = prx; c._rig = new GunRig(prx); }
+    const P = g.player; const eng = !P.dead && (c.state === 'chase' || c.state === 'attack' || c.state === 'shoot' || c.state === 'cover' || c.state === 'alarm' || (c.alerted || 0) > 0) && Math.hypot(P.pos[0] - c.pos[0], P.pos[2] - c.pos[2]) < 45;
+    c._aimT = clamp((c._aimT || 0) + (eng ? dt / 0.3 : -dt / 0.5), 0, 1); c._recoil = Math.max(0, (c._recoil || 0) - dt * 6);
+    let pitch = 0.15; if (eng) { const d = Math.hypot(P.pos[0] - c.pos[0], P.pos[2] - c.pos[2]) || 1; pitch = clamp(Math.atan2(c.pos[1] + 1.45 * (c.def.scale || 1) - (P.pos[1] + 1.1), d), -1, 1.1); }
+    c._rig.set({ active: true, model: 'rifle', aimT: c._aimT, pitch, recoil: c._recoil, sprint: (c.speed || 0) > 3.5 && !eng, reload: null });
+    c._rigOn = c._rig.apply(dt);
+  }
   muzzle(c) { if (c._rigOn && c._rigP && GUNS[c.weapon]) return mat4.transformPoint(c._rigP.toolModel, GUNS[c.weapon].muzzle); const I = c.skel.index; const m = mat4.mul(mat4.create(), c.model, c.anim.world[I.handR]); const h = mat4.transformPoint(m, [0, -0.1, 0]); return [h[0] + Math.sin(c.yaw) * 0.6, h[1] + 0.05, h[2] + Math.cos(c.yaw) * 0.6]; }
   hitRobot(r, dmg, src) { const CM = this.g.creatures, st = r.state, ls = r.lastSeen; CM.damage(r, dmg, Math.atan2(r.pos[0] - src.pos[0], r.pos[2] - src.pos[2]), 'npc'); if (!r.dead) { r.state = st === 'wander' || st === 'return' ? 'wander' : st; r.lastSeen = ls; r.npcFoe = src; } }
   // movimento com desvio de obstáculos (mesma lógica das criaturas) e animação de andar/correr

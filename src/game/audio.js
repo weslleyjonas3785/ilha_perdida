@@ -189,6 +189,7 @@ export class GameAudio {
       case 'glass': for (let i = 0; i < 9; i++) { const d = Math.random() * 0.25; this._tone(t + d, 'triangle', 2500 + Math.random() * 3500, 1800 + Math.random() * 2000, 0.06 + Math.random() * 0.12, 0.08 * v); } this._noise(t, 0.25, 'highpass', 3000, 0.8, 0.45 * v); break;
       case 'thunder': { const d = o.delay || 0; this._noise(t + d, 3.5, 'lowpass', 180, 0.5, 0.8 * v, this.ambG, 0.05); this._noise(t + d, 0.4, 'lowpass', 1200, 0.5, 0.4 * v, this.ambG, 0.01); break; }
       case 'ui': this._tone(t, 'sine', 900, 1200, 0.04, 0.06); break;
+      case 'ping': this._tone(t, 'sine', 1320, 1320, 0.06, 0.09 * v); this._tone(t + 0.07, 'sine', 1760, 1760, 0.09, 0.08 * v); break;
       case 'error': this._tone(t, 'square', 220, 180, 0.12, 0.05); break;
       case 'door': this._noise(t, 0.35, 'bandpass', 400, 6, 0.2); this._tone(t, 'sawtooth', 120, 180, 0.3, 0.03); break;
       case 'fireLight': this._noise(t, 0.6, 'lowpass', 900, 0.5, 0.3, this.sfx, 0.2); break;

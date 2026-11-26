@@ -123,3 +123,28 @@ export function ringMesh(hf, x0, y0, z0, R, w, col) {
     prev = pts; }
   return mb.build();
 }
+
+// ---------- cama de casal de madeira (do desenho): cabeceira com emblema, colchão, travesseiros azuis, criado-mudo com abajur ----------
+// local: largura em X (1,7 m), comprimento em Z (2,2 m); cabeceira em −Z, pés em +Z; origem no chão, no centro
+export function bedMesh() {
+  const mb = new MeshBuilder(); const W = hex(0x9a6436), WD = hex(0x7c4e2a), WL = hex(0xb07844), IRON = hex(0x5f6166), GOLD = hex(0xc9a24a), MAT = hex(0xe9e1cc), SHEET = hex(0xf1ebdc), BLUE = hex(0x4f7f95);
+  const hx = 0.82, hz = 1.08; const C = (c, f) => mb.setColor(c, f);
+  // estrado e laterais
+  C(W, WOOD); for (const s of [-1, 1]) mb.roundBox(M(s * hx, 0.24, 0), 0.08, 0.2, hz * 2 - 0.1, W, 0.02, 1); mb.roundBox(M(0, 0.18, 0), hx * 2, 0.08, hz * 2 - 0.1, WD, 0.01, 1);
+  // pés (postes grossos com ponteira de ferro embaixo)
+  for (const [x, z, h] of [[-hx, -hz, 1.28], [hx, -hz, 1.28], [-hx, hz, 0.76], [hx, hz, 0.76]]) { C(W, WOOD); mb.roundBox(M(x, 0.1, z), 0.14, h - 0.1, 0.14, W, 0.025, 1); mb.roundBox(M(x, h - 0.02, z), 0.17, 0.06, 0.17, WL, 0.02, 1); C(IRON, MET); mb.roundBox(M(x, 0, z), 0.16, 0.11, 0.16, IRON, 0.02, 1); }
+  // cabeceira: dois painéis + emblema de ferro com pedra dourada
+  C(W, WOOD); mb.roundBox(M(0, 0.42, -hz), hx * 2 - 0.1, 0.72, 0.07, W, 0.02, 1); mb.roundBox(M(0, 1.14, -hz), hx * 2 - 0.06, 0.1, 0.1, WL, 0.02, 1);
+  C(WL, WOOD); for (const s of [-1, 1]) mb.roundBox(M(s * 0.38, 0.52, -hz + 0.04), 0.66, 0.5, 0.03, WL, 0.015, 1);
+  C(IRON, MET); mb.cylinder(M(0, 1.02, -hz + 0.02, 0, 1, Math.PI / 2), 0.11, 0.11, 0.05, 6, IRON); C(GOLD, MET); mb.cylinder(M(0, 1.02, -hz + 0.05, 0, 1, Math.PI / 2), 0.05, 0.05, 0.03, 6, GOLD);
+  // peseira com dois painéis
+  C(W, WOOD); mb.roundBox(M(0, 0.3, hz), hx * 2 - 0.1, 0.42, 0.07, W, 0.02, 1); C(WL, WOOD); for (const s of [-1, 1]) mb.roundBox(M(s * 0.38, 0.34, hz + 0.04), 0.66, 0.3, 0.03, WL, 0.015, 1);
+  // colchão, lençol dobrado e travesseiros azuis
+  C(MAT, POLY); mb.roundBox(M(0, 0.32, 0.02), hx * 2 - 0.12, 0.16, hz * 2 - 0.16, MAT, 0.05, 2); C(SHEET, POLY); mb.roundBox(M(0, 0.45, 0.25), hx * 2 - 0.1, 0.05, hz * 2 - 0.62, SHEET, 0.02, 1); mb.roundBox(M(0, 0.47, -0.18), hx * 2 - 0.08, 0.06, 0.16, SHEET, 0.03, 1);
+  C(BLUE, POLY); for (const s of [-1, 1]) mb.roundBox(M(s * 0.38, 0.5, -hz + 0.28, 0, 1, -0.25), 0.6, 0.13, 0.3, BLUE, 0.06, 2);
+  // criado-mudo com abajur ao lado da cabeceira
+  const nx = hx + 0.42, nz = -hz + 0.18; C(W, WOOD); mb.roundBox(M(nx, 0, nz), 0.5, 0.5, 0.42, W, 0.02, 1); C(WL, WOOD); mb.box(M(nx, 0.2, nz + 0.21), 0.42, 0.18, 0.02, WL); C(IRON, MET); mb.box(M(nx, 0.29, nz + 0.225), 0.08, 0.02, 0.02, IRON);
+  C(hex(0x46484c), MET); mb.cylinder(M(nx, 0.5, nz), 0.07, 0.08, 0.03, 8, hex(0x46484c)); mb.cylinder(M(nx, 0.53, nz), 0.012, 0.012, 0.22, 6, hex(0x46484c));
+  C(hex(0xe8dcc0), GLOW); mb.cylinder(M(nx, 0.72, nz), 0.13, 0.07, 0.15, 8, hex(0xe8dcc0));
+  return mb.build();
+}

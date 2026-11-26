@@ -10,7 +10,7 @@ const TOOL_INV = mat4.invert(mat4.create(), TOOL_OFF);
 // pontos de apoio de cada modelo (espaço da arma)
 export const GRIPS = {
   pistol: { cls: 'pistol', cup: true, mag: [0, -0.115, -0.025], slide: [0, 0.066, -0.005] },
-  harpoon: { cls: 'pistol', rail: [0.11, 0.2], railY: -0.005, load: [0, 0.04, 0.3] },
+  harpoon: { cls: 'pistol', cup: true, load: [0, 0.06, 0.09] },
   rifle: { cls: 'rifle', rail: [0.2, 0.42], railY: 0.0, mag: [0, -0.1, 0.13], bolt: [0.032, 0.05, 0.02], butt: 0.3 },
   shotgun: { cls: 'rifle', rail: [0.3, 0.44], railY: -0.006, port: [0, -0.005, 0.13], butt: 0.32, pump: true },
   gl: { cls: 'rifle', rail: [0.3, 0.5], railY: -0.06, butt: 0.3, load: [0, 0.02, 0.12], launcher: 'shell' },
@@ -153,7 +153,7 @@ export class GunRig {
     } else if (gp.launcher) { // lança-granadas: granada do cinto na culatra; lança-foguetes: foguete das costas pela boca do tubo
       const ld = gp.load, src = gp.launcher === 'shell' ? POUCH : QUIVER; keys = [[0, homeG, 'g'], [0.3, src, 'c'], [0.55, add(ld, [0, 0.06, 0.2]), 'g'], [0.72, add(ld, [0, 0, 0.04]), 'g'], [1, homeG, 'g']]; carryIv = [0.3, 0.72]; carryKind = gp.launcher;
     } else if (R.kind === 'harpoon') { // arpão: puxa um arpão das costas e encaixa pela frente
-      const ld = gp.load; keys = [[0, homeG, 'g'], [0.3, QUIVER, 'c'], [0.55, add(ld, [0, 0, 0.32]), 'g'], [0.7, add(ld, [0, 0, 0.06]), 'g'], [1, homeG, 'g']]; carryIv = [0.3, 0.7]; carryKind = 'bolt';
+      const ld = gp.load; keys = [[0, homeG, 'g'], [0.3, QUIVER, 'c'], [0.55, add(ld, [0, 0, 0.2]), 'g'], [0.7, add(ld, [0, 0, 0.04]), 'g'], [1, homeG, 'g']]; carryIv = [0.3, 0.7]; carryKind = 'bolt';
     } else if (gp.cup) { // pistola: solta o carregador, pega outro no cinto, insere no punho e puxa o ferrolho
       const mg = gp.mag, sl = gp.slide; keys = [[0, homeG, 'g'], [0.18, add(mg, [0.05, -0.04, 0]), 'g'], [0.44, POUCH, 'c'], [0.62, add(mg, [0, -0.1, 0]), 'g'], [0.7, mg, 'g'], [0.76, add(sl, [0.04, 0.03, 0.01]), 'g'], [0.8, add(sl, [0.02, 0.02, 0.0]), 'g'], [0.86, add(sl, [0.02, 0.02, -0.07]), 'g'], [1, homeG, 'g']]; carryIv = [0.44, 0.7]; carryKind = 'mag';
     } else { // fuzis: tira o carregador, pega outro no cinto, insere e puxa a alavanca/ferrolho
@@ -170,7 +170,7 @@ export class GunRig {
     const g = this.P.game, gy = g.physics.ground(d.m[12], d.m[14], 0.05, d.m[13] + 0.3, 0.3)[0]; if (d.m[13] < gy + 0.03) { d.m[13] = gy + 0.03; d.rest = true; if (!d.sounded) { d.sounded = true; g.audio.play('magOut', { vol: 0.35 }); } } }
   render(items, M) {
     const P = this.P; const sph = [P.pos[0], P.pos[1] + 1, P.pos[2], 2];
-    if (this.carry && this.carry.world && this.w > 0.5) { const mesh = this.carry.kind === 'mag' ? M.mag : this.carry.kind === 'shell' ? M.shell : M.bolt; if (mesh) { const sc = this.carry.kind === 'mag' && this.carry.small ? mat4.fromTRS(mat4.create(), [0, 0, 0], [0, 0, 0, 1], [0.8, 0.65, 0.7]) : mat4.create(); items.push({ smooth: true, mesh, model: mat4.mul(mat4.create(), this.carry.world, sc), sphere: sph }); } }
+    if (this.carry && this.carry.world && this.w > 0.5) { const mesh = this.carry.kind === 'mag' ? M.mag : this.carry.kind === 'shell' ? M.shell : (this.st && this.st.model === 'rpg' && M.rbolt) || M.bolt; if (mesh) { const sc = this.carry.kind === 'mag' && this.carry.small ? mat4.fromTRS(mat4.create(), [0, 0, 0], [0, 0, 0, 1], [0.8, 0.65, 0.7]) : mat4.create(); items.push({ smooth: true, mesh, model: mat4.mul(mat4.create(), this.carry.world, sc), sphere: sph }); } }
     for (const d of this.drops) { const sc = d.small ? mat4.fromTRS(mat4.create(), [0, 0, 0], [0, 0, 0, 1], [0.8, 0.65, 0.7]) : mat4.create(); const m = d.rest ? mat4.mul(mat4.create(), d.m, mat4.fromTRS(mat4.create(), [0, 0, 0], quat.fromEuler(0, 0, Math.PI / 2), [1, 1, 1])) : d.m; items.push({ mesh: M.mag, model: mat4.mul(mat4.create(), m, sc), sphere: [d.m[12], d.m[13], d.m[14], 0.5] }); }
   }
 }

@@ -69,3 +69,9 @@ export function interiorLoot(b) {
   for (const p of P) { if (!p.loot && p.k !== 'ratsuit') continue; const [lx, lz] = F.L(p.u, p.v); const x = b.x + lx * cr + lz * sr, z = b.z - lx * sr + lz * cr; out.push({ kind: p.loot, special: p.k === 'ratsuit' ? 'ratsuit' : null, x, z, y: b.y + (p.y0 || 0) + (p.onTable ? 0.98 : 0.12), rot: b.rot + F.yaw + p.f }); }
   return out;
 }
+// camas dos interiores (casas, apartamentos, hospitais) em coordenadas de mundo — dá para dormir nelas depois das 20:00
+export function interiorBeds(b) {
+  const lay = interiorLayout(b); if (!lay) return []; const { F, P } = lay; const cr = Math.cos(b.rot), sr = Math.sin(b.rot); const out = [];
+  for (const p of P) { if (p.k !== 'bed' && p.k !== 'dbed' && p.k !== 'hbed') continue; const [lx, lz] = F.L(p.u, p.v); out.push({ x: b.x + lx * cr + lz * sr, z: b.z - lx * sr + lz * cr, y: b.y + (p.y0 || 0) + 0.03, rot: b.rot + (F.yaw || 0) + (p.f || 0), house: true }); }
+  return out;
+}

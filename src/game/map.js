@@ -101,7 +101,8 @@ export class WorldMap {
       else { c.fillStyle = col + '55'; c.strokeStyle = col; c.lineWidth = 2; c.beginPath(); if (s.kind === 'military') c.rect(a - r, b - r, r * 2, r * 2); else c.arc(a, b, r, 0, 6.29); c.fill(); c.stroke(); }
       if (s.kind === 'city' || v.s > 0.12) { c.font = s.kind === 'city' ? '700 15px Barlow, sans-serif' : '600 12px Barlow, sans-serif'; c.lineWidth = 3; c.strokeStyle = 'rgba(0,0,0,0.75)'; c.strokeText(s.name, a, b - (r0 || r) - 6); c.fillStyle = '#fff'; c.fillText(s.name, a, b - (r0 || r) - 6); } }
     const g = this.g, P = g.player.pos;
-    if (g.home) { const [a, b] = this.toScreen(g.home[0], g.home[2]); c.font = '700 16px sans-serif'; c.fillStyle = '#ffd36b'; c.fillText('⌂', a, b + 5); }
+    if (g.home) { const [a, b] = this.toScreen(g.home[0], g.home[2]); c.font = '700 16px sans-serif'; c.fillStyle = '#ffd36b'; c.fillText(g.homeBed ? '🛏' : '⌂', a, b + 5); }
+    if (g.markers) g.markers.drawMap(c, (x, z) => this.toScreen(x, z));
     this.marks.forEach((m, i) => { const [a, b] = this.toScreen(m.x, m.z); c.fillStyle = COLORS[m.c]; c.strokeStyle = '#000'; c.lineWidth = 2; c.beginPath(); c.moveTo(a, b); c.lineTo(a - 7, b - 16); c.arc(a, b - 18, 7, Math.PI * 0.85, Math.PI * 0.15); c.closePath(); c.fill(); c.stroke();
       c.fillStyle = '#000'; c.font = '700 10px sans-serif'; c.fillText(String(i + 1), a, b - 14.5);
       c.font = '600 12px Barlow, sans-serif'; c.lineWidth = 3; c.strokeStyle = 'rgba(0,0,0,0.8)'; const t = fmtD(Math.hypot(m.x - P[0], m.z - P[2])); c.strokeText(t, a, b + 14); c.fillStyle = '#fff'; c.fillText(t, a, b + 14); });

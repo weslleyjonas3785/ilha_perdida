@@ -572,3 +572,54 @@ body.mobile [data-id=slide] i { color: #7fe3ff; }
 @keyframes fishBlink { from { opacity: 1; } to { opacity: 0.55; } }
 #fishUi .fb { display: flex; align-items: center; gap: 8px; margin-top: 5px; font-size: 11px; } #fishUi .fb span { width: 46px; text-align: left; opacity: 0.85; }
 #fishUi .bar { flex: 1; height: 8px; background: #2a2f36; border-radius: 4px; overflow: hidden; } #fishUi .bar i { display: block; height: 100%; }
+
+/* ---------- celular: inventário/mochila colados no topo, sem vazio do lado ---------- */
+body.mobile .panel { top: 0; left: 0; transform: none; width: 100vw; max-height: 100vh; height: 100vh; border-radius: 0; border: 0; }
+body.mobile .panel .phead { padding: 4px 8px; min-height: 0; }
+body.mobile .panel .tabs button { padding: 5px 10px; font-size: 13px; }
+body.mobile .panel .pbody { padding: 6px 8px; overflow-y: auto; }
+body.mobile .invwrap3 { display: flex; flex-direction: column; gap: 8px; }
+body.mobile .invwrap3 > div:nth-child(2) { order: -1; }
+body.mobile #invDetail { display: none; }
+body.mobile .invwrap3 .hbtitle { margin: 2px 0 4px; font-size: 11px; }
+body.mobile #equipCol { order: 2; }
+
+/* menu de opções do item: fica preso ao lado do item (PC e celular) */
+.imenu { position: fixed; z-index: 320; background: #1c2026; border: 1px solid #5a6474; border-radius: 9px; padding: 4px; display: flex; flex-direction: column; min-width: 170px; max-width: 240px; box-shadow: 0 10px 28px rgba(0,0,0,.55); }
+.imenu .imt { font-size: 12px; color: #aab4c0; padding: 5px 9px 6px; border-bottom: 1px solid #333b46; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.imenu button { background: none; border: 0; color: #e8ecf0; text-align: left; padding: 8px 10px; border-radius: 6px; cursor: pointer; font: inherit; font-size: 14px; }
+.imenu button:hover, .imenu button:active { background: #2f3742; }
+body.mobile .imenu button { padding: 10px 12px; font-size: 15px; }
+.menuOn { outline: 2px solid #f0c36a !important; outline-offset: 1px; }
+.askbox.exam .exico { width: 96px; height: 96px; margin: 0 auto 6px; display: grid; place-items: center; font-size: 56px; }
+.askbox.exam .exico img { width: 96px; height: 96px; object-fit: contain; }
+.askbox .qrow { display: flex; gap: 10px; align-items: center; margin: 8px 0; } .askbox .qrow input[type=range] { flex: 1; } .askbox .qrow .codeIn { width: 70px; }
+.nearItem.jackOn { outline: 2px solid #59a8ff; background: rgba(60,130,230,.18); } .nearItem .jk { position: absolute; right: 2px; top: 1px; font-style: normal; font-size: 11px; }
+.vslot.dmg { border-color: #e2683c !important; background: rgba(226,104,60,.14); } .vslot .vfix { margin-top: 3px; font-size: 11px; padding: 2px 6px; }
+.lk.bad { color: #ffb08a; }
+/* pings do botão do meio e marcador da base */
+.wmark.pingmk i { background: #ffd23a; } .wmark.pingmk b { color: #000; }
+.wmark.basemk i { width: 0; height: 0; border: 0; background: none; }
+.wmark.basemk b { position: static; background: #2f7bff; color: #fff; font-size: 11px; letter-spacing: 1px; padding: 2px 7px; border-radius: 4px; line-height: 14px; box-shadow: 0 0 10px rgba(60,140,255,.9); }
+.wmark.basemk span { color: #bcd6ff; }
+#compassStrip span.cping { color: #ffd23a; } #compassStrip span.cbase { color: #5aa0ff; font-weight: 700; font-size: 11px; top: 8px; }
+/* dormir: contador do multiplayer */
+#sleepHud { position: absolute; left: 50%; top: 16%; transform: translateX(-50%); background: rgba(10,14,22,.82); border: 1px solid #3b4a66; color: #dfe8ff; padding: 10px 18px; border-radius: 10px; font-size: 20px; text-align: center; z-index: 60; }
+#sleepHud b { color: #9cc4ff; font-size: 24px; } #sleepHud small { display: block; font-size: 12px; color: #9aa6b8; margin-top: 4px; } #sleepHud.hidden { display: none; }
+/* desmaio por choque: tela toda preta; "Você foi finalizado" */
+#fade.ko { opacity: 1 !important; background: #000 !important; transition: opacity .2s; }
+#finText { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 400; color: #e8e8e8; font-family: 'Barlow Condensed', sans-serif; font-size: 44px; letter-spacing: 2px; opacity: 0; pointer-events: none; transition: opacity .8s; text-shadow: 0 0 18px rgba(200,20,20,.6); }
+#finText.show { opacity: 1; }
+/* olhos abrindo ao acordar */
+#eyelids { position: fixed; inset: 0; pointer-events: none; z-index: 390; display: none; }
+#eyelids.open { display: block; }
+#eyelids i { position: absolute; left: -5%; width: 110%; height: 52%; background: #000; border-radius: 0 0 50% 50% / 0 0 30% 30%; }
+#eyelids i:first-child { top: 0; } #eyelids i:last-child { bottom: 0; border-radius: 50% 50% 0 0 / 30% 30% 0 0; }
+#eyelids.open i:first-child { animation: lidUp 2.4s ease-out forwards; } #eyelids.open i:last-child { animation: lidDown 2.4s ease-out forwards; }
+@keyframes lidUp { 0% { transform: translateY(0); } 25% { transform: translateY(-30%); } 40% { transform: translateY(-10%); } 100% { transform: translateY(-105%); } }
+@keyframes lidDown { 0% { transform: translateY(0); } 25% { transform: translateY(30%); } 40% { transform: translateY(10%); } 100% { transform: translateY(105%); } }
+/* morte: mapa para escolher onde renascer */
+#mapPanel.spawnMode #mapClose { display: none; }
+#spawnBar { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); background: rgba(16,10,12,.92); border: 1px solid #6a2a2a; border-radius: 12px; padding: 10px 18px 12px; text-align: center; z-index: 5; min-width: 300px; }
+#spawnBar h3 { margin: 0 0 2px; color: #ff8a7a; font-size: 24px; } #spawnBar p { margin: 2px 0 6px; } #spawnBar .acts { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+#spawnBar button { padding: 8px 14px; font-size: 15px; }

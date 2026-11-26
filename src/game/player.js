@@ -11,7 +11,7 @@ export class Player {
     this.game = game; this.assets = assets; this.rig = null;
     this.anim = new Animator(assets.skel); this.clips = assets.clips; this.anim.play(this.clips.idle, 0);
     this.pos = [0, 0, 0]; this.vel = [0, 0, 0]; this.yaw = 0; this.onGround = true; this.crouch = false; this.swimming = false;
-    this.airTime = 0; this.jumpTime = 0; this.climb = null; this.ladder = null; this.dead = false; this.sleeping = false; this.locked = 0; this.moveSlow = 1;
+    this.airTime = 0; this.jumpTime = 0; this.climb = null; this.ladder = null; this.hang = null; this.leanX = 0; this.dead = false; this.sleeping = false; this.locked = 0; this.moveSlow = 1;
     this.stats = { hp: 100, hunger: 100, thirst: 100, energy: 100, stamina: 100 }; this.staminaLock = false; this.staminaDelay = 0;
     this.blocking = false; this.attackCd = 0; this.punchAlt = false; this.speed = 0; this.lastYaw = 0; this.turnTimer = 0; this.hurtFlash = 0;
     this.model = mat4.create(); this.toolModel = mat4.create(); this.dust = []; this.alpha = 1; this.inCave = null; this.lastGroundY = 0; this.footPhase = 0;
@@ -35,7 +35,7 @@ export class Player {
     if (this.climb) {
       const c = this.climb; c.t += dt / c.dur; const t = Math.min(1, c.t);
       const up = clamp(t / 0.55, 0, 1), fw = clamp((t - 0.35) / 0.65, 0, 1);
-      this.pos[1] = c.from[1] + (c.to[1] - c.from[1]) * (1 - (1 - up) * (1 - up));
+      this.pos[1] = c.from[1] + (c.to[1] - c.from[1]) * (1 - (1 - up) * (1 - up)) + (c.arc ? Math.sin(Math.PI * t) * c.arc : 0);
       this.pos[0] = c.from[0] + (c.to[0] - c.from[0]) * fw; this.pos[2] = c.from[2] + (c.to[2] - c.from[2]) * fw;
       if (t >= 1) { this.climb = null; this.vel = [0, 0, 0]; this.onGround = true; }
       this.anim.update(dt); this._matrices(); return;
@@ -43,7 +43,9 @@ export class Player {
 
     // ----- escada vertical -----
     if (this.ladder) return this._ladderStep(dt, act);
-    // ----- puxado pelo arpão-gancho -----
+    // ----- pendurado na beirada (gancho): E sobe, Espaço solta -----
+    if (this.hang) { this._hangStep(dt, act); this._lean(dt, 0); this.anim.update(dt); this._matrices(); return; }
+    // ----- puxado pelo gancho (deitado, voando na direção da corda) -----
     if (this.grapple) { this._grappleStep(dt, act); this.anim.update(dt); this._matrices(); return; }
     // ----- entrada de movimento relativa à câmera -----
     const fx = Math.sin(camYaw), fz = Math.cos(camYaw); const rx = -fz, rz = fx;
@@ -84,7 +86,7 @@ export class Player {
     // pulo / escalada
     if (act.jump && this.onGround && !this.swimming && !this.anim.busy && this.locked <= 0) {
       if (this.crouch) { if (this._canStand()) this.crouch = false; }
-      else if (!this._tryClimb()) {
+      else if (!this._tryVault() && !this._tryClimb()) {
         if (st.stamina >= 8) { this.vel[1] = 7.4; this.onGround = false; this.jumpTime = 0.32; st.stamina -= 8; this.staminaDelay = 0.9; this.anim.play(this.clips.jump, 0.08, 1, true); g.audio.play('jump'); }
       }
       if (this.climb) { this.anim.update(dt); this._matrices(); return; }
@@ -141,6 +143,21 @@ export class Player {
   }
   _canStand() { const p = this.pos; for (const c of this.game.physics.query(p[0], p[2], 1)) { if (c.ghost || c.camOnly) continue; if (c.y0 > p[1] + H_CROUCH && c.y0 < p[1] + H_STAND && this.game.physics.insideXZ(c, p[0], p[2], RAD)) return false; } return true; }
 
+  // janela perto e de frente: Espaço pula por ela (passa por cima do peitoril; vidro inteiro quebra)
+  windowNear() { const g = this.game, p = this.pos; const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw); let best = null;
+    for (const b of g.stream.buckets.values()) if (b.wins) for (const W of b.wins) { if (Math.abs(W.x - p[0]) > 3 || Math.abs(W.z - p[2]) > 3) continue;
+      const nl = Math.hypot(W.nx, W.nz) || 1, nx = W.nx / nl, nz = W.nz / nl; const dx = p[0] - W.x, dz = p[2] - W.z; const dn = dx * nx + dz * nz, dt = -dx * nz + dz * nx;
+      if (Math.abs(dn) > 1.25 || Math.abs(dn) < 0.12 || Math.abs(dt) > W.w / 2 - 0.12) continue; const side = Math.sign(dn); if (-(fx * nx + fz * nz) * side < 0.45) continue; // de frente para a janela
+      const sill = W.y0 - p[1]; if (sill < 0.25 || sill > 1.45 || W.y1 - W.y0 < 0.9 || W.y1 - p[1] < 1.2) continue;
+      const d = Math.abs(dn) + Math.abs(dt) * 0.5; if (!best || d < best.d) best = { W, nx, nz, side, d, dt }; }
+    return best; }
+  _tryVault() { const g = this.game, ph = g.physics, b = this.windowNear(); if (!b) return false; const W = b.W, p = this.pos;
+    const tx = W.x - b.nx * b.side * 0.75 + (-b.nz) * 0 , tz = W.z - b.nz * b.side * 0.75; const [gy] = ph.ground(tx, tz, RAD, W.y0 + 0.3, 1.5); const ty = Math.max(gy, W.y0 - 1.6);
+    const t = [tx, ty + 0.02, tz]; ph.resolve(t, RAD, H_STAND, 0.05); if (Math.hypot(t[0] - tx, t[2] - tz) > 0.2) return false;
+    // vidro inteiro no caminho: quebra ao atravessar
+    for (const bk of g.stream.buckets.values()) if (bk.glass) for (const gp of bk.glass) if (!gp.broken && Math.hypot(gp.x - W.x, gp.z - W.z) < 0.3 && Math.abs(gp.y - (W.y0 + W.y1) / 2) < 0.6) { g.breakGlass(gp); }
+    this.yaw = Math.atan2(-b.nx * b.side, -b.nz * b.side); this.climb = { from: p.slice(), to: [t[0], ty, t[2]], t: 0, dur: 0.7, arc: Math.max(0.25, W.y0 + 0.35 - Math.max(p[1], ty)) * 0.9 };
+    this.anim.playAction(this.clips.climb, { fadeIn: 0.06, fadeOut: 0.15, speed: 1.3 }); this.fullBodyAction = true; g.audio.play('climb'); g.noise && g.noise(p, 8, 'janela'); return true; }
   _tryClimb() {
     const g = this.game, ph = g.physics; const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw); const p = this.pos;
     for (const d of [0.55, 0.85]) {
@@ -159,13 +176,54 @@ export class Player {
     return false;
   }
 
+  // procura onde se agarrar no ponto do gancho: topo de construção/casa/muro perto acima, ou paredão de montanha
+  findLedge(hp, dir, col) {
+    const g = this.game, ph = g.physics, w = g.world; const hl = Math.hypot(dir[0], dir[2]) || 1; let fx = dir[0] / hl, fz = dir[2] / hl; if (hl < 0.25) return null; // mirando reto para cima/baixo: não agarra
+    const free = (x, y, z) => { const t = [x, y, z]; ph.resolve(t, RAD, H_STAND, 0.05); return Math.hypot(t[0] - x, t[2] - z) < 0.06; };
+    let top = null;
+    if (col && !col.tree && col.y1 - hp[1] < 2.3 && col.y1 - hp[1] > -0.25) top = col.y1; // beirada de casa, prédio, muro, construção
+    if (top === null && !col) { // terreno: paredão íngreme (montanha / barranco)
+      const n = w.normal(hp[0], hp[2]); if (n[1] > 0.8) return null;
+      let best = -1e9; for (let k = 0.3; k <= 1.6; k += 0.2) best = Math.max(best, w.height(hp[0] + fx * k, hp[2] + fz * k)); top = best - hp[1] < 2.4 ? best : null;
+      if (top === null) { const nh = Math.hypot(n[0], n[2]) || 1; fx = -n[0] / nh; fz = -n[2] / nh; return { face: true, top: hp[1], fx, fz, hangAt: [hp[0] - fx * 0.38, hp[1] - 1.95, hp[2] - fz * 0.38], hook: hp.slice() }; }
+    }
+    if (top === null) return null;
+    // ponto em cima da beirada, um pouco para dentro, e precisa caber em pé
+    let stand = null; for (const k of [0.5, 0.8, 1.1]) { const x = hp[0] + fx * k, z = hp[2] + fz * k; const [gy] = ph.ground(x, z, RAD, top + 0.15, 0.3); const ty = Math.max(gy, col ? -1e9 : w.height(x, z)); if (Math.abs(ty - top) < 0.4 && free(x, ty + 0.02, z)) { stand = [x, ty, z]; break; } }
+    const auto = !!stand && hp[1] > top - 0.35; // sem lugar para ficar em pé em cima (telhado, beiral): só se pendura // o gancho cravou em cima da beirada: já sobe de uma vez
+    return { top, fx, fz, stand, auto, hangAt: [hp[0] - fx * 0.38, top - 1.95, hp[2] - fz * 0.38], hook: hp.slice() };
+  }
+  startHang(L) { this.hang = { ...L, t: 0 }; this.yaw = Math.atan2(L.fx, L.fz); this.vel = [0, 0, 0]; this.onGround = false; this.crouch = false; this.slide = null; this.anim.play(this.clips.ladder, 0.15, 0); this.game.audio.play('climb', { vol: 0.6 });
+    this.game.ui.toast(L.face ? 'Agarrado no paredão — E escala, Espaço solta' : 'Pendurado na beirada — E sobe, Espaço solta', 'info'); }
+  _ledgeClimb(L) { this.hang = null; const p = this.pos; this.yaw = Math.atan2(L.fx, L.fz); this.climb = { from: p.slice(), to: L.stand.slice(), t: 0, dur: Math.max(0.75, Math.min(1.2, (L.stand[1] - p[1]) * 0.45)) };
+    this.anim.playAction(this.clips.climb, { fadeIn: 0.08, fadeOut: 0.15 }); this.fullBodyAction = true; this.game.audio.play('climb'); return true; }
+  _hangStep(dt, act) {
+    const H = this.hang, g = this.game, p = this.pos; H.t += dt; this.onGround = false; this.sprinting = false; this.airTime = 0; this.lastGroundY = p[1]; this.vel = [0, 0, 0];
+    p[0] = H.hangAt[0]; p[1] = H.hangAt[1]; p[2] = H.hangAt[2]; this.yaw = Math.atan2(H.fx, H.fz);
+    if (act.jump && H.t > 0.25) { this.hang = null; this.vel = [-H.fx * 1.5, 0, -H.fz * 1.5]; this.anim.play(this.clips.fall || this.clips.idle, 0.2); return; }
+    if ((act.interact || (act.mz > 0.5 && H.t > 0.4)) && H.t > 0.2) {
+      if (H.face) { // paredão: escala um pedaço por vez seguindo o terreno
+        const w = g.world, x = H.hook[0] + H.fx * 0.6, z = H.hook[2] + H.fz * 0.6, th = w.height(x, z);
+        if (th - H.hook[1] < 1.9 && th >= H.hook[1] - 0.3) { const tgt = [x + H.fx * 0.4, w.height(x + H.fx * 0.4, z + H.fz * 0.4), z + H.fz * 0.4]; return this._ledgeClimb({ ...H, stand: tgt }); }
+        const n = w.normal(H.hook[0], H.hook[2]); const ny = H.hook[1] + 1.4, nx = H.hook[0] + H.fx * 0.25, nz = H.hook[2] + H.fz * 0.25; // sobe 1,4 m pela parede
+        const L = this.findLedge([nx, Math.min(ny, w.height(nx, nz)), nz], [H.fx, 0, H.fz], null);
+        if (L) { if (L.face) { this.hang = { ...L, t: 0.15 }; g.audio.play('climb', { vol: 0.5 }); this.anim.play(this.clips.ladder, 0.1, 1); } else this._ledgeClimb(L); } else { this.hang = null; this.vel = [0, 0, 0]; }
+        void n; return; }
+      if (!H.stand) { if (!H._warn) { H._warn = true; g.ui.toast('Não tem como subir aqui — Espaço solta', 'info'); } return; }
+      return this._ledgeClimb(H);
+    }
+    this.anim.play(this.clips.ladder, 0.2, 0);
+  }
   startGrapple() { this.crouch = false; this.slide = null; this.onGround = false; this.anim.play(this.clips.fall || this.clips.jump, 0.1); this.grapple.moved = []; }
   endGrapple() { const v = this.vel; v[1] = Math.max(-3, Math.min(5, v[1] + 2.5)); v[0] *= 0.35; v[2] *= 0.35; this.airTime = 0; this.lastGroundY = this.pos[1]; }
   _grappleStep(dt, act) {
     const g = this.game, ph = g.physics, p = this.pos, v = this.vel, G = this.grapple; G.t += dt;
-    const tgt = [G.p[0], G.p[1] - 1.0, G.p[2]]; const d = [tgt[0] - p[0], tgt[1] - p[1], tgt[2] - p[2]]; const L = Math.hypot(...d);
+    const Lg = G.ledge; const tgt = Lg ? Lg.hangAt : [G.p[0], G.p[1] - 1.0, G.p[2]]; const d = [tgt[0] - p[0], tgt[1] - p[1], tgt[2] - p[2]]; const L = Math.hypot(...d);
     const done = (why) => { this.grapple = null; g.grapple.hook = null; this.endGrapple(); if (why) g.ui.toast(why, 'info'); };
-    if (L < 1.3 || G.t > 5 || act.jump) { if (L < 1.3) { v[1] = 4.5; } return done(); }
+    // deitado: o corpo acompanha a corda (cabeça na frente), voando como se estivesse sendo arrastado
+    { const hz = Math.hypot(d[0], d[2]); const el = Math.atan2(d[1], hz); this._lean(dt, clamp(Math.PI / 2 - el, 0.35, 1.45)); }
+    if (Lg && L < 0.55) { this.grapple = null; g.grapple.hook = null; v[0] = v[1] = v[2] = 0; p[0] = tgt[0]; p[1] = tgt[1]; p[2] = tgt[2]; return Lg.auto ? this._ledgeClimb(Lg) : this.startHang(Lg); }
+    if ((!Lg && L < 1.3) || G.t > 5 || act.jump) { if (!Lg && L < 1.3) { v[1] = 4.5; } return done(); }
     const sp = Math.min(21, 8 + G.t * 30); const k = sp / L; v[0] = d[0] * k; v[1] = d[1] * k; v[2] = d[2] * k;
     this.yaw = Math.atan2(d[0], d[2]);
     const before = p.slice(); p[0] += v[0] * dt; p[2] += v[2] * dt; ph.resolve(p, 0.36, this.height, 0.3); p[1] += v[1] * dt;
@@ -289,10 +347,13 @@ export class Player {
   hitReact() { if (!this.anim.busy) this.anim.playAction(this.clips.hit, { mask: this.clips.masks.upper, fadeIn: 0.04, fadeOut: 0.15 }); this.hurtFlash = 0.35; }
   die(finished) { this.dead = true; this.blocking = false; this.anim.action = null; this.anim.play(finished && this.clips.finish ? this.clips.finish : this.clips.die, finished ? 0.05 : 0.15); this.vel[0] = this.vel[2] = 0; this.fainted = 0; }
   // desmaio: cai de peito no chão e fica desacordado t segundos
-  faint(t) { this.fainted = t; this.blocking = false; this.anim.action = null; this.prop = null; this.anim.play(this.clips.faint, 0.1); this.vel[0] = this.vel[2] = 0; this.grapple = null; this.climb = null; }
+  faint(t) { this.fainted = t; this.blocking = false; this.anim.action = null; this.prop = null; this.anim.play(this.clips.faint, 0.1); this.vel[0] = this.vel[2] = 0; this.grapple = null; this.hang = null; this.climb = null; }
   revive() { this.dead = false; this.fainted = 0; this.anim.play(this.clips.idle, 0); this.anim.action = null; }
+  _lean(dt, target) { this.leanX = (this.leanX || 0) + (target - (this.leanX || 0)) * Math.min(1, dt * 9); if (Math.abs(this.leanX) < 1e-3 && !target) this.leanX = 0; }
   _matrices() {
-    mat4.fromTRS(this.model, this.pos, quat.fromEuler(0, this.yaw, 0), [1, 1, 1]);
+    if (!this.grapple && !this.hang && this.leanX) this._lean(this._dt || 1 / 60, 0);
+    if (this.leanX) { const c = 0.95; mat4.fromTRS(this.model, [this.pos[0], this.pos[1] + c, this.pos[2]], quat.fromEuler(0, this.yaw, 0), [1, 1, 1]); mat4.mul(this.model, this.model, mat4.fromTRS(mat4.create(), [0, 0, 0], quat.fromEuler(this.leanX, 0, 0), [1, 1, 1])); mat4.mul(this.model, this.model, mat4.fromTRS(mat4.create(), [0, -c, 0], [0, 0, 0, 1], [1, 1, 1])); }
+    else mat4.fromTRS(this.model, this.pos, quat.fromEuler(0, this.yaw, 0), [1, 1, 1]);
     if (this.assets.offset) mat4.mul(this.model, this.model, this.assets.offset);
     if (!this.rig && this.assets.skel.index.upperArmL !== undefined) this.rig = new GunRig(this);
     if (this.rig && this.rig.apply(this._dt || 1 / 60)) return; // empunhadura de arma por IK
