@@ -1443,7 +1443,7 @@ export class Game {
         else if (d.dirt || d.food) { f = (d.dirt + d.food) / 20; col = [1.1, 0.7, 0.3, 1]; }
         if (f >= 1) { const yaw = Math.atan2(eye[0] - p.x, eye[2] - p.z); items.push({ mesh: X.check, model: mat4.compose([p.x, y + 0.2 + Math.sin(t * 2.2) * 0.07, p.z], yaw, 1.7), emissive: 0.9, shadow: false, sphere: [p.x, y, p.z, 1.5] }); }
         else if (f >= 0 && dd < 25) { const yaw = bb(p.x, y, p.z, 1.3, 0.22, 0.03, [0.1, 0.1, 0.1, 1]); const cx = (-0.5 + f / 2) * 1.22; bb(p.x + Math.cos(yaw) * cx + Math.sin(yaw) * 0.025, y, p.z - Math.sin(yaw) * cx + Math.cos(yaw) * 0.025, Math.max(0.01, f * 1.22), 0.15, 0.03, col, 0.6); } }
-      if (p.type === 'collector' && (d.water || 0) > 0.02) { const f = Math.min(1, d.water / 10); items.push({ mesh: X.box, model: mat4.mul(mat4.create(), p.model, mat4.compose([0, 0.1 + 0.4 * f, 0.47], 0, [0.06, 0.8 * f, 0.015])), tint: [0.3, 0.7, 1.4, 1], emissive: 0.3, shadow: false, sphere: [p.x, p.y + 0.5, p.z, 1] }); }
+      if (p.type === 'collector' && (d.water || 0) > 0.02) { const f = Math.min(1, d.water / 10); items.push({ mesh: X.box, model: mat4.mul(mat4.create(), p.model, mat4.compose([0.25, 0.16 + 0.47 * f, 0.468], 0, [0.05, 0.92 * f, 0.012])), tint: [0.3, 0.7, 1.4, 1], emissive: 0.3, shadow: false, sphere: [p.x, p.y + 0.5, p.z, 1] }); }
     }
   }
   _waterNear(p) { this._wnT = (this._wnT || 0) - 1; if (this._wnT > 0) return this._wn || 0; this._wnT = 20; let m = 0; for (let a = 0; a < 8; a++) for (const d of [4, 10]) { const x = p[0] + Math.cos(a * 0.785) * d, z = p[2] + Math.sin(a * 0.785) * d; if (this.world.height(x, z) < WATER - 0.5) m = Math.max(m, 1 - d / 14); } this._wn = m; return m; }

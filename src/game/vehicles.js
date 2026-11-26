@@ -8,10 +8,10 @@ import { WATER } from './world.js';
 export const VCOLORS = [0x2a90d8, 0x4caf3a, 0xf0b820, 0xe0302a];
 export const VCOLOR_NAMES = ['azul', 'verde', 'amarela', 'vermelha'];
 export const VTYPES = {
-  pickup: { name: 'Picape', L: 5.2, W: 1.86, wr: 0.4, clear: 0.42, belt: 1.14, roof: 1.86, cab: [-1.0, 1.0], hood: [1.05, 2.5], bed: [-2.5, -1.05], wf: 1.7, wb: -1.62, max: 24, acc: 6.5, tank: 65, km: 380, wheels: 4, tire: 'tire', engine: 'engine' },
-  sedan: { name: 'Sedã', L: 4.4, W: 1.76, wr: 0.34, clear: 0.32, belt: 0.98, roof: 1.44, cab: [-1.3, 0.68], hood: [0.72, 2.14], trunk: true, wf: 1.38, wb: -1.34, max: 27, acc: 7.5, tank: 45, km: 430, wheels: 4, tire: 'tire', engine: 'engine' },
-  hatch: { name: 'Hatch', L: 3.95, W: 1.72, wr: 0.33, clear: 0.32, belt: 0.98, roof: 1.5, cab: [-1.8, 0.56], hood: [0.62, 1.92], wf: 1.24, wb: -1.24, max: 26, acc: 7.8, tank: 40, km: 460, wheels: 4, tire: 'tire', engine: 'engine' },
-  suv: { name: 'SUV', L: 4.6, W: 1.88, wr: 0.4, clear: 0.42, belt: 1.14, roof: 1.88, cab: [-2.22, 0.56], hood: [0.62, 2.24], rack: true, wf: 1.45, wb: -1.45, max: 24, acc: 6.8, tank: 60, km: 360, wheels: 4, tire: 'tire', engine: 'engine' },
+  pickup: { name: 'Picape', L: 5.2, W: 1.86, wr: 0.4, clear: 0.42, belt: 1.14, roof: 1.86, cab: [-1.0, 1.0], hood: [1.05, 2.5], bed: [-2.5, -1.05], wf: 1.7, wb: -1.62, max: 24, acc: 6.5, tank: 65, km: 380, wheels: 4, tire: 'tire_pickup', engine: 'engine' },
+  sedan: { name: 'Sedã', L: 4.4, W: 1.76, wr: 0.34, clear: 0.32, belt: 0.98, roof: 1.44, cab: [-1.3, 0.68], hood: [0.72, 2.14], trunk: true, wf: 1.38, wb: -1.34, max: 27, acc: 7.5, tank: 45, km: 430, wheels: 4, tire: 'tire_sedan', engine: 'engine' },
+  hatch: { name: 'Hatch', L: 3.95, W: 1.72, wr: 0.33, clear: 0.32, belt: 0.98, roof: 1.5, cab: [-1.8, 0.56], hood: [0.62, 1.92], wf: 1.24, wb: -1.24, max: 26, acc: 7.8, tank: 40, km: 460, wheels: 4, tire: 'tire_hatch', engine: 'engine' },
+  suv: { name: 'SUV', L: 4.6, W: 1.88, wr: 0.4, clear: 0.42, belt: 1.14, roof: 1.88, cab: [-2.22, 0.56], hood: [0.62, 2.24], rack: true, wf: 1.45, wb: -1.45, max: 24, acc: 6.8, tank: 60, km: 360, wheels: 4, tire: 'tire_suv', engine: 'engine' },
   moto: { name: 'Moto', L: 2.1, W: 0.7, wr: 0.31, clear: 0.3, wf: 0.72, wb: -0.72, max: 30, acc: 9, tank: 12, km: 700, wheels: 2, tire: 'mototire', engine: 'motoengine', moto: true },
 };
 export const vName = (v) => `${VTYPES[v.type].name} ${VCOLOR_NAMES[v.color] || ''}`.trim();
@@ -190,5 +190,5 @@ export class VehicleSystem {
     // galão na mão durante o abastecimento/enchimento já vem do sistema de ferramentas
   }
 }
-export function partIsFor(id, v) { const T = VTYPES[v.type]; return id === T.tire ? 'wheels' : id === T.engine ? 'engine' : id === 'gearbox' ? 'gear' : null; }
+export function partIsFor(id, v) { const T = VTYPES[v.type]; return id === T.tire || (id === 'tire' && !T.moto) ? 'wheels' : id === T.engine ? 'engine' : id === 'gearbox' ? 'gear' : null; }
 export { ITEMS };

@@ -276,6 +276,12 @@ Todos entram na mesma VPN (Radmin VPN, Hamachi, ZeroTier…) ou na mesma rede de
 - Bateria: clicar pergunta se quer equipar e mostra onde colocar (óculos de visão noturna na cabeça ou na mochila; se ele já tiver bateria, oferece trocar).
 - Roupa: clicar pergunta o que fazer — **Vestir** (mostra o lugar e o que vai trocar) ou **Cortar em retalhos** (vira Pano) com um objeto cortante (faca, machado ou lança) no inventário, nas costas ou na mão.
 
+## Imagens dos itens
+- Recursos, comida, bebidas, remédios, munições, roupas, peças de veículo, ferramentas e máquinas têm imagem própria no inventário (recortadas das folhas enviadas, fundo removido, 160 px). Carne crua/assada usam as imagens de carne já existentes.
+- Pneus por carro: Pneu de SUV, de sedã, de hatch e de picape (cada carro pede o seu; o antigo "Pneu de carro" vira universal e serve em qualquer carro).
+- Placa solar (construção): poste de madeira remendado com asas de borboleta solar formando os painéis, cabos até a caixa de munição do controlador, bateria e inversor com tomada.
+- Coletor de chuva: lona furada esticada em 4 varas escorrendo para 2 barris enferrujados, calha, torneira, balde, pedras e capim; o visor de nível fica no barril alto.
+
 ## Voz por proximidade
 - **CAPS LOCK** liga o microfone e ele fica aberto até apertar de novo. Quem estiver perto (até ~45 m) ouve, com volume pela distância e lado pelo estéreo.
 - No PC aparece o desenho do microfone no alto da tela, embaixo da bússola; ele acende e apaga enquanto você fala e some ao desligar.

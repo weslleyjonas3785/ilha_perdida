@@ -16,7 +16,7 @@ export const PRINTS = [
 ];
 const MAXLINK = { printer: 2, panel: 10, solar: 3, wind: 3, waterwheel: 3, battery: 4 };
 // ponto onde o fio encosta em cada aparelho (coordenadas locais)
-const ANCHOR = { printer: [0.42, 0.18, -0.32], panel: [0, 0.95, 0], solar: [0, 0.35, 0.34], wind: [0, 0.25, 0.4], waterwheel: [0.98, 1.4, 0.18], battery: [0.15, 0.62, 0] };
+const ANCHOR = { printer: [0.42, 0.18, -0.32], panel: [0, 0.95, 0], solar: [0.2, 0.4, 0.24], wind: [0, 0.25, 0.4], waterwheel: [0.98, 1.4, 0.18], battery: [0.15, 0.62, 0] };
 let UID = 1;
 
 export class PowerSystem {

@@ -99,11 +99,11 @@ export class BuildSystem {
       case 'gtrap': return [box(0, 0, 1.2, 0.1, -0.05, 0.3, { ghost: true, noClimb: true })];
       case 'bench': return [box(0, 0, 0.95, 0.48, -0.05, 1.0)];
       case 'planter': return [box(0, 0, 0.95, 0.6, -0.05, 0.45)];
-      case 'collector': return [{ type: 'cyl', x, z, r: 0.5, y0: y - 0.1, y1: y + 1.0 }];
+      case 'collector': return [box(-0.02, 0.06, 0.62, 0.42, -0.1, 1.24)];
       case 'composter': return [box(0, 0, 0.77, 0.57, -0.05, 1.0)];
       case 'printer': return [box(0, 0, 0.48, 0.38, -0.05, 1.05)];
       case 'panel': return [box(0, 0, 0.32, 0.18, -0.05, 1.7)];
-      case 'solar': return [box(0, 0, 0.7, 0.5, -0.05, 1.3)];
+      case 'solar': return [box(-0.85, -0.1, 0.14, 0.14, -0.05, 2.25), box(0.2, 0.05, 0.28, 0.2, -0.05, 0.55), box(1.05, 0.05, 0.4, 0.18, -0.05, 0.42)];
       case 'wind': return [{ type: 'cyl', x, z, r: 0.35, y0: y - 0.1, y1: y + 6.2 }];
       case 'waterwheel': return [box(0, 0, 0.85, 1.45, -0.05, 2.9)];
       case 'battery': return [box(0, 0, 0.3, 0.22, -0.05, 0.6)];

@@ -503,11 +503,33 @@ export function pieceMesh(type) {
     case 'chest':
       mb.box(M(0, 0.32, 0), 1.0, 0.55, 0.6, wood); mb.box(M(0, 0.66, 0), 1.04, 0.14, 0.64, shade(wood, 0.9));
       for (const x of [-0.42, 0.42]) mb.box(M(x, 0.4, 0), 0.06, 0.74, 0.66, hex(0x3a3a3a)); mb.box(M(0, 0.55, 0.32), 0.12, 0.14, 0.03, hex(0xb59a3a)); break;
-    case 'collector': { // coletor de chuva: barril azul, funil de lona preso em 4 varas, visor de nível na lateral
-      const blue = hex(0x2a5a9a); mb.flex = 0.86; mb.cylinder(M(0, 0, 0), 0.45, 0.45, 1.0, 14, blue); for (const y of [0.2, 0.8]) mb.cylinder(M(0, y, 0), 0.465, 0.465, 0.05, 14, shade(blue, 0.8));
-      mb.flex = 0.63; for (const [x, z] of [[0.62, 0.62], [-0.62, 0.62], [0.62, -0.62], [-0.62, -0.62]]) mb.cylinder(M(x, 0, z), 0.04, 0.035, 1.45, 5, woodD);
-      mb.flex = 0.83; mb.cylinder(M(0, 1.0, 0), 0.22, 0.88, 0.38, 12, hex(0x4a6a8a), false);
-      mb.flex = 0.5; mb.box(M(0, 0.5, 0.465), 0.09, 0.82, 0.02, hex(0x1a1e22)); break; }
+    case 'collector': { // coletor de chuva: lona esticada em 4 varas (furada) escorrendo para 2 barris enferrujados, calha, torneira, balde, pedras
+      const seg = (a2, b2, w, col) => { const dx = b2[0] - a2[0], dy = b2[1] - a2[1], dz = b2[2] - a2[2], L = Math.hypot(dx, dy, dz); mb.box(M((a2[0] + b2[0]) / 2, (a2[1] + b2[1]) / 2, (a2[2] + b2[2]) / 2, Math.atan2(dx, dz), 1, -Math.atan2(dy, Math.hypot(dx, dz))), w, w, L, col); };
+      const bl = hex(0x56708a), blD = hex(0x445a70), rust = hex(0x8a5a36), pole = hex(0x9a9690), tarp = hex(0x4c7c84), dirt = hex(0x7a6a56), rope = hex(0xb89a6a);
+      mb.flex = 0.86; mb.cylinder(M(0, 0, 0.05), 0.95, 0.95, 0.04, 8, dirt);
+      // barris: o baixo com peneira e o alto que recebe a água (com visor de nível e torneira)
+      for (const [x, z, r, h, k] of [[-0.3, 0.0, 0.3, 0.85, 0], [0.25, 0.12, 0.33, 1.2, 1]]) { mb.flex = 0.6; mb.cylinder(M(x, 0.04, z), r, r, h, 10, bl);
+        for (const y of [0.22, 0.5, 0.82, 1.1].filter((y) => y < h)) mb.cylinder(M(x, 0.04 + y, z), r * 1.04, r * 1.04, 0.04, 10, blD);
+        mb.flex = 0.8; for (let i = 0; i < 5; i++) { const a2 = i * 1.3 + k, yy = 0.15 + ((i * 0.37) % 1) * (h - 0.25); mb.box(M(x + Math.sin(a2) * r * 1.01, yy, z + Math.cos(a2) * r * 1.01, a2), 0.12, 0.08, 0.01, shade(rust, 0.9 + i * 0.05)); }
+        mb.flex = 0.5; mb.cylinder(M(x, 0.04 + h - 0.02, z), r * 0.92, r * 0.92, 0.03, 10, hex(0x2a3a48)); }
+      mb.flex = 0.5; for (let i = -3; i <= 3; i++) mb.box(M(-0.3 + i * 0.05, 0.92, 0.0), 0.01, 0.01, 0.44, hex(0x8a8a86)); mb.cylinder(M(-0.3, 0.9, 0.0), 0.24, 0.26, 0.04, 10, hex(0x7a7a76), false);
+      mb.flex = 0.5; mb.box(M(0.25, 0.62, 0.455), 0.07, 0.95, 0.02, hex(0x1a1e22)); // visor de nível
+      mb.flex = 0.55; mb.box(M(0.42, 0.22, 0.42), 0.05, 0.05, 0.14, rust); mb.box(M(0.42, 0.17, 0.48), 0.04, 0.08, 0.04, rust); mb.box(M(0.42, 0.27, 0.42), 0.1, 0.02, 0.02, rust); // torneira
+      mb.flex = 0.5; mb.cylinder(M(0.42, 0.04, 0.68), 0.11, 0.13, 0.2, 10, hex(0x9a9ea2), false); mb.box(M(0.42, 0.25, 0.68, 0, 1, 0.3), 0.26, 0.012, 0.012, hex(0x7a7e82)); // balde
+      // varas com amarração e X na esquerda
+      const P4 = [[-0.85, 0.55], [0.85, 0.55], [-0.85, -0.5], [0.85, -0.5]]; mb.flex = 0.55; for (const [x, z] of P4) { mb.cylinder(M(x, 0.0, z), 0.04, 0.035, 2.15, 6, pole); mb.flex = 0.8; mb.cylinder(M(x, 1.98, z), 0.05, 0.05, 0.06, 6, rope); mb.flex = 0.55; }
+      mb.flex = 0.63; seg([-0.85, 0.05, 0.55], [-0.85, 1.0, -0.5], 0.06, woodD); seg([-0.85, 0.05, -0.5], [-0.85, 1.0, 0.55], 0.06, woodD); seg([-0.85, 0.95, 0.0], [0.25, 0.95, 0.05], 0.04, pole);
+      // lona em funil (dos 4 cantos até a boca sobre o barril alto), com bordas caídas e furos
+      const corner = P4.map(([x, z]) => [x * 0.98, 2.0, z * 0.98]); const mid = (i, j, sag) => [(corner[i][0] + corner[j][0]) / 2, 2.0 - sag, (corner[i][2] + corner[j][2]) / 2]; const C0 = [0.25, 1.35, 0.12];
+      const rim = [corner[0], mid(0, 1, 0.12), corner[1], mid(1, 3, 0.15), corner[3], mid(3, 2, 0.1), corner[2], mid(2, 0, 0.14)];
+      mb.flex = 0.88; for (const fs of [1, -1]) for (let i = 0; i < rim.length; i++) { const a2 = rim[i], b2 = rim[(i + 1) % rim.length]; if (i === 3 && fs) {} const n2 = [0, fs, 0]; const ia = mb.vert(a2, n2, tarp), ib = mb.vert(b2, n2, shade(tarp, 0.9)), ic = mb.vert(C0, n2, shade(tarp, 0.75)); if (fs > 0) mb.tri(ia, ic, ib); else mb.tri(ia, ib, ic); }
+      mb.flex = 0.5; for (const [x, z] of [[-0.35, 0.22], [0.05, -0.25], [-0.45, -0.2]]) mb.box(M(x, 1.78 + Math.abs(x) * 0.15, z, x * 3), 0.1, 0.012, 0.06, hex(0xdcdcd4)); // furos (mostram o céu)
+      // calha do canto direito até o barril
+      mb.flex = 0.55; seg([0.95, 1.95, -0.45], [0.32, 1.3, 0.1], 0.08, pole); mb.flex = 0.4; mb.cylinder(M(0.28, 1.04, 0.12), 0.05, 0.05, 0.3, 8, hex(0x9ac0d8));
+      // pedras e capim
+      mb.flex = 0.86; for (const [x, z, r] of [[-0.62, 0.42, 0.14], [0.7, 0.1, 0.12], [-0.1, 0.55, 0.06], [0.05, 0.62, 0.05], [-0.5, -0.4, 0.08]]) mb.roundBox(M(x, 0.04 + r * 0.6, z, x * 4), r * 2, r * 1.4, r * 1.7, hex(0x9a9a7a), r * 0.4, 1);
+      for (const [x, z] of [[-0.62, 0.15], [0.62, 0.42], [-0.05, 0.5], [0.78, -0.2]]) for (let i = 0; i < 3; i++) mb.box(M(x + i * 0.03, 0.15, z, i, 1, 0.25 * (i - 1)), 0.015, 0.25, 0.015, hex(0x6a8a48));
+      break; }
     case 'composter': { // composteira: caixa de ripas com o composto escuro dentro
       mb.flex = 0.63; for (let k = 0; k < 5; k++) { const y = 0.12 + k * 0.2; for (const z of [-0.52, 0.52]) mb.box(M(0, y, z), 1.5, 0.14, 0.06, k % 2 ? wood : woodD); for (const x of [-0.72, 0.72]) mb.box(M(x, y, 0), 0.06, 0.14, 1.08, k % 2 ? woodD : wood); }
       for (const [x, z] of [[0.72, 0.52], [-0.72, 0.52], [0.72, -0.52], [-0.72, -0.52]]) mb.box(M(x, 0.5, z), 0.1, 1.05, 0.1, woodD);

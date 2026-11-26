@@ -89,13 +89,54 @@ export function panelMesh() {
   return mb.build();
 }
 // ---------- placa solar ----------
+// projeto solar improvisado: poste de madeira remendado com as asas das borboletas solares como painéis (formando uma
+// borboleta), cabos vermelho/preto até uma caixa de munição com o controlador, bateria e inversor com tomada, sobre terra e entulho
+const WING_A = [[0.05, 0.0], [0.28, 0.42], [0.62, 0.62], [0.98, 0.66], [1.0, 0.34], [0.72, 0.02], [0.32, -0.12]];
+const WING_B = [[0.05, -0.02], [0.4, 0.0], [0.72, -0.18], [0.72, -0.5], [0.42, -0.62], [0.16, -0.36]];
 export function solarMesh() {
   const mb = new MeshBuilder(); const C = (c, f) => mb.setColor(c, f);
-  C(GRAY, MET); for (const sx of [-1, 1]) { mb.box(M(sx * 0.55, 0.45, 0.25), 0.05, 0.9, 0.05, GRAY); mb.box(M(sx * 0.55, 0.75, -0.25), 0.05, 1.5, 0.05, GRAY); }
-  const tilt = 0.55; C(GRAY, MET); mb.box(M(0, 1.05, 0, 0, 1, -tilt), 1.4, 0.04, 1.0, GRAY);
-  C(hex(0x1c2c58), 0.45); mb.box(M(0, 1.075, 0, 0, 1, -tilt), 1.32, 0.02, 0.92, hex(0x1c2c58));
-  C(hex(0x8aa0c8), MET); for (let i = -2; i <= 2; i++) mb.box(M(i * 0.26, 1.088, 0, 0, 1, -tilt), 0.01, 0.006, 0.92, hex(0x8aa0c8)); for (let j = -1; j <= 1; j++) mb.box(M(0, 1.088 + Math.sin(tilt) * j * 0.3, j * 0.3 * Math.cos(tilt), 0, 1, -tilt), 1.32, 0.006, 0.01, hex(0x8aa0c8));
-  C(DARK, MET); mb.box(M(0, 0.35, 0.3), 0.18, 0.14, 0.08, DARK);
+  const wood = hex(0x7a5a3a), woodD = hex(0x5a4028), dirt = hex(0x6a5440), rock = hex(0x7e7a72), olive = hex(0x4e5634), oliveD = hex(0x3c4428), red = hex(0xb02a22), blk = hex(0x1c1d1f), tape = hex(0x9a9a92), rust = hex(0x8a5a36);
+  const cell = hex(0x2c4f9a), cellD = hex(0x223c78), frame = hex(0x9a9ea6), grid = hex(0xb8c8e0), crack = hex(0x1a2440);
+  // segmento entre dois pontos (caixa alongada)
+  const seg = (a, b2, w, col) => { const dx = b2[0] - a[0], dy = b2[1] - a[1], dz = b2[2] - a[2], L = Math.hypot(dx, dy, dz); mb.box(M((a[0] + b2[0]) / 2, (a[1] + b2[1]) / 2, (a[2] + b2[2]) / 2, Math.atan2(dx, dz), 1, -Math.atan2(dy, Math.hypot(dx, dz))), w, w, L, col); };
+  // base: terra, pedrinhas e chapas jogadas
+  C(dirt, POLY); mb.roundBox(M(0, 0.02, 0), 2.9, 0.05, 1.15, dirt, 0.04, 1);
+  let sd = 7; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  C(rock, POLY); for (let i = 0; i < 26; i++) { const x = -1.35 + rnd() * 2.7, z = -0.5 + rnd() * 1.0, r = 0.02 + rnd() * 0.04; mb.box(M(x, 0.05 + r * 0.4, z, rnd() * 3, 1, rnd() * 0.6), r * 2, r * 1.2, r * 1.6, shade(rock, 0.8 + rnd() * 0.4)); }
+  C(rust, MET); for (const [x, z, r, t] of [[-1.15, 0.3, 0.4, 0.3], [-0.55, -0.35, 1.2, 0.8], [-1.25, -0.3, 2.2, 1.3], [0.45, 0.42, 0.6, 0.2]]) mb.box(M(x, 0.12, z, r, 1, t), 0.3, 0.01, 0.24, shade(rust, 0.85 + (x + 2) * 0.05));
+  // poste remendado (tábuas, fita e arame) com braços em Y
+  const px = -0.85, pz = -0.1; C(wood, WOOD); mb.box(M(px, 1.1, pz), 0.16, 2.2, 0.16, wood); C(woodD, WOOD); mb.box(M(px, 0.22, pz), 0.24, 0.4, 0.24, woodD);
+  for (const s2 of [-1, 1]) { C(wood, WOOD); seg([px, 1.5, pz], [px + s2 * 0.45, 2.05, pz], 0.1, wood); } mb.box(M(px, 1.95, pz), 1.3, 0.08, 0.08, woodD);
+  C(tape, POLY); for (const y of [0.75, 1.05, 1.42]) mb.box(M(px, y, pz), 0.19, 0.07, 0.19, tape); C(blk, MET); for (const y of [0.55, 1.25, 1.7]) mb.box(M(px, y, pz), 0.2, 0.015, 0.2, blk);
+  C(rust, MET); mb.box(M(px + 0.09, 0.95, pz), 0.02, 0.25, 0.14, rust); mb.box(M(px - 0.09, 1.32, pz + 0.02), 0.02, 0.18, 0.12, shade(rust, 1.2));
+  // asas (painéis) de borboleta: plano inclinado para cima/frente
+  const wing = (rx, ry, rz, side, shape, L, Wd, tilt) => { const up = [0, Math.cos(tilt), -Math.sin(tilt)], nrm = [0, Math.sin(tilt), Math.cos(tilt)]; const P = (u, v, off = 0) => [rx + side * u * L, ry + up[1] * v * Wd + nrm[1] * off, rz + up[2] * v * Wd + nrm[2] * off];
+    const pts = shape.map(([u, v]) => P(u, v)); const c = pts.reduce((a2, q) => [a2[0] + q[0] / pts.length, a2[1] + q[1] / pts.length, a2[2] + q[2] / pts.length], [0, 0, 0]);
+    mb.flex = 0.875; for (const fs of [1, -1]) { const nn = nrm.map((x) => x * fs); const ctr = mb.vert([c[0] + nn[0] * 0.006, c[1] + nn[1] * 0.006, c[2] + nn[2] * 0.006], nn, cell);
+      const ids = pts.map((q, i) => mb.vert([q[0] + nn[0] * 0.006, q[1] + nn[1] * 0.006, q[2] + nn[2] * 0.006], nn, i % 2 ? cell : cellD)); for (let i = 0; i < ids.length; i++) { const a2 = ids[i], b3 = ids[(i + 1) % ids.length]; if ((fs > 0) === (side > 0)) mb.tri(ctr, a2, b3); else mb.tri(ctr, b3, a2); } }
+    C(grid, 0.5); const root = shape[0]; for (let i = 1; i < shape.length - 1; i++) seg(P(root[0], root[1], 0.012), P(shape[i][0], shape[i][1], 0.012), 0.008, grid);
+    for (const f of [0.4, 0.72]) for (let i = 1; i < shape.length - 1; i++) { const a2 = shape[i], b3 = shape[i + 1]; seg(P(root[0] + (a2[0] - root[0]) * f, root[1] + (a2[1] - root[1]) * f, 0.012), P(root[0] + (b3[0] - root[0]) * f, root[1] + (b3[1] - root[1]) * f, 0.012), 0.007, grid); }
+    C(crack, 0.5); seg(P(0.45, 0.3, 0.014), P(0.62, 0.05, 0.014), 0.006, crack); seg(P(0.62, 0.05, 0.014), P(0.8, 0.12, 0.014), 0.006, crack);
+    C(frame, MET); for (let i = 0; i < shape.length; i++) seg(P(shape[i][0], shape[i][1], 0.004), P(shape[(i + 1) % shape.length][0], shape[(i + 1) % shape.length][1], 0.004), 0.035, frame);
+    C(rust, MET); for (const i of [1, 3]) { const q = P(shape[i][0], shape[i][1], 0.01); mb.box(M(q[0], q[1], q[2]), 0.05, 0.05, 0.05, rust); }
+    C(tape, POLY); seg(P(0.02, 0, 0), [px, ry - 0.05, pz], 0.05, tape); };
+  for (const sd2 of [1, -1]) { wing(px + sd2 * 0.1, 2.05, pz + 0.05, sd2, WING_A, 0.85, 0.7, 0.55); wing(px + sd2 * 0.1, 1.72, pz + 0.12, sd2, WING_B, 0.7, 0.6, 0.55); }
+  // cabos vermelho e preto descendo do poste até a caixa
+  const box0 = [0.2, 0, 0.05]; const cable = (col, dx) => { C(col, RUB); const pts = [[px + 0.1, 1.75, pz + dx], [px + 0.14, 1.2, pz + dx], [px + 0.35, 0.45, pz + 0.1 + dx], [px + 0.65, 0.14, 0.15 + dx], [box0[0] - 0.25, 0.32, box0[2] + dx]]; for (let i = 0; i < pts.length - 1; i++) seg(pts[i], pts[i + 1], 0.025, col); };
+  cable(red, 0.03); cable(blk, -0.03);
+  // caixa de munição (controlador): aberta, com bornes coloridos e um medidor
+  C(olive, MET); mb.box(M(box0[0], 0.27, box0[2]), 0.52, 0.48, 0.34, olive); C(oliveD, MET); mb.box(M(box0[0], 0.53, box0[2]), 0.54, 0.04, 0.36, oliveD); mb.box(M(box0[0], 0.75, box0[2] - 0.2, 0, 1, -1.35), 0.54, 0.44, 0.03, olive);
+  C(blk, POLY); mb.box(M(box0[0], 0.5, box0[2]), 0.46, 0.02, 0.28, blk); C(hex(0xd8d4c8), POLY); mb.box(M(box0[0] + 0.12, 0.53, box0[2]), 0.14, 0.03, 0.1, hex(0xd8d4c8));
+  for (const [dx, col] of [[-0.16, 0x3060e0], [-0.1, 0xe8e8e8], [-0.04, 0xe04040], [0.02, 0x40c060]]) { C(hex(col), 0.3); mb.box(M(box0[0] + dx, 0.55, box0[2] + 0.06), 0.03, 0.05, 0.03, hex(col)); }
+  C(blk, MET); for (const sx of [-1, 1]) mb.box(M(box0[0] + sx * 0.27, 0.27, box0[2]), 0.02, 0.5, 0.05, blk);
+  // bateria e inversor com tomada
+  const bx = 0.85; C(hex(0x3a3c40), POLY); mb.box(M(bx, 0.2, 0.05), 0.42, 0.34, 0.3, hex(0x3a3c40)); C(hex(0x26282b), POLY); mb.box(M(bx, 0.38, 0.05), 0.44, 0.04, 0.32, hex(0x26282b));
+  C(hex(0xd0d0c8), 0.3); seg([bx - 0.03, 0.3, 0.205], [bx + 0.02, 0.22, 0.205], 0.025, hex(0xd0d0c8)); seg([bx + 0.02, 0.22, 0.205], [bx - 0.02, 0.2, 0.205], 0.025, hex(0xd0d0c8)); seg([bx - 0.02, 0.2, 0.205], [bx + 0.03, 0.11, 0.205], 0.025, hex(0xd0d0c8));
+  C(red, RUB); mb.box(M(bx + 0.13, 0.42, 0.05), 0.05, 0.05, 0.05, red); C(blk, RUB); mb.box(M(bx - 0.13, 0.42, 0.05), 0.05, 0.05, 0.05, blk);
+  seg([box0[0] + 0.26, 0.4, box0[2]], [bx - 0.13, 0.45, 0.05], 0.025, blk); C(red, RUB); seg([box0[0] + 0.26, 0.45, box0[2] + 0.04], [bx + 0.13, 0.46, 0.05], 0.025, red);
+  const ix = 1.25; C(hex(0xa8acb2), MET); mb.box(M(ix, 0.17, 0.05), 0.3, 0.3, 0.3, hex(0xa8acb2)); C(hex(0x7a7e84), MET); for (let i = 0; i < 4; i++) mb.box(M(ix, 0.32, -0.06 + i * 0.06), 0.3, 0.01, 0.02, hex(0x7a7e84));
+  C(hex(0xeeeee6), POLY); mb.box(M(ix, 0.17, 0.205), 0.16, 0.16, 0.01, hex(0xeeeee6)); C(blk, POLY); for (const dx of [-0.03, 0.03]) mb.box(M(ix + dx, 0.19, 0.212), 0.012, 0.04, 0.005, blk); mb.box(M(ix, 0.14, 0.212), 0.02, 0.02, 0.005, blk);
+  C(red, RUB); seg([bx + 0.18, 0.4, 0.05], [ix - 0.15, 0.25, 0.05], 0.025, red);
   return mb.build();
 }
 // ---------- turbina eólica: torre + rotor (rotor separado gira em Z) ----------
