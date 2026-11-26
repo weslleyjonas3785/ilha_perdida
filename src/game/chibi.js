@@ -162,7 +162,7 @@ function packMesh(mb, I, id) {
   S(K, RUB); for (const sx of [-0.25, 0.25]) { mb.box(M(sx * w, yc + h * 0.1, zc - d / 2 - 0.006), 0.025, h * 0.7, 0.012, K); S(Kg, MET); mb.box(M(sx * w, yc + h * 0.32, zc - d / 2 - 0.012), 0.035, 0.03, 0.01, Kg); S(K, RUB); }
   if (id === 'pack_large' || id === 'pack_climb') for (const sx of [-1, 1]) { S(id === 'pack_climb' ? hex(0xf8c020) : shade(c, 0.9), FAB); mb.roundBox(M(sx * (w / 2 + 0.035), yc - h * 0.05, zc), 0.07, h * 0.5, d * 0.7, id === 'pack_climb' ? hex(0xf8c020) : shade(c, 0.9), 0.025, 1); }
   if (id === 'pack_climb') { const rope = hex(0xf2c018); S(rope, FAB); for (let k = 0; k < 5; k++) mb.cylinder(M(w / 2 + 0.07, yc + 0.02 - 0.18 + k * 0.08, zc, 0, 1, Math.PI / 2), 0.1 - k * 0.004, 0.1 - k * 0.004, 0.03, 12, k % 2 ? rope : shade(rope, 0.85));
-    S(hex(0xf06a10), FAB); mb.cylinder(M(-w / 2 - 0.02, yc - h / 2 - 0.04, zc, 0, 1, 0, Math.PI / 2), 0.08, 0.08, w + 0.08, 12, hex(0xe25a0a)); S(K, RUB); for (const sx of [-0.3, 0.3]) mb.cylinder(M(sx * w - 0.015, yc - h / 2 - 0.04, zc, 0, 1, 0, Math.PI / 2), 0.083, 0.083, 0.03, 12, K);
+    S(hex(0xf06a10), FAB); mb.cylinder(M(w / 2 + 0.04, yc - h / 2 - 0.06, zc + 0.01, 0, 1, 0, Math.PI / 2), 0.08, 0.08, w + 0.08, 12, hex(0xe25a0a)); S(K, RUB); for (const sx of [-0.3, 0.3]) { mb.cylinder(M(sx * w + 0.015, yc - h / 2 - 0.06, zc + 0.01, 0, 1, 0, Math.PI / 2), 0.083, 0.083, 0.03, 12, K); mb.box(M(sx * w, yc - h / 2 + 0.01, zc - d / 2 + 0.02), 0.025, 0.1, 0.01, K); }
     S(hex(0xc8ccd0), MET); mb.roundBox(M(w * 0.15, yc + h * 0.15, zc - d / 2 - 0.02), 0.03, 0.08, 0.012, hex(0xc8ccd0), 0.006, 1); }
   straps();
 }
