@@ -125,7 +125,7 @@ export class Player {
     const moved = Math.hypot(p[0] - before[0], p[2] - before[1]) / Math.max(dt, 1e-4); if (moved < S.s * 0.5 && S.t > 0.05) S.s = moved; // bateu em algo
     S.air = this.onGround ? 0 : S.air + dt;
     const sprintTap = !!act.sprint && !S.lastSprint && S.t > 0.1; S.lastSprint = !!act.sprint; const toRun = sprintTap && this._canStand();
-    const end = S.s < 2.6 || S.air > 0.35 || this.swimming || (act.jump && S.t > 0.15) || S.t > 12 || toRun;
+    const end = S.s < 2.6 || S.air > 0.35 || this.swimming || (act.jump && S.t > 0.15) || S.t > (S.maxT || 12) || toRun;
     if (toRun) { this.slide = null; this.crouch = false; this.sprinting = true; const sp = Math.max(S.s, 6); this.vel[0] = S.dir[0] * sp; this.vel[2] = S.dir[1] * sp; this.anim.play(this.clips.run || this.clips.walk, 0.12); return; }
     if (end) { this.slide = null; if (this._canStand()) this.crouch = false; if (act.jump && this.onGround && this.crouch === false) { this.vel[1] = 6.5; this.onGround = false; this.jumpTime = 0.3; } }
     if (this.slide) { const sp = Math.min(1, S.s / 9); this._dustAcc = (this._dustAcc || 0) + dt * 14 * sp;
@@ -223,7 +223,7 @@ export class Player {
     // perto do chão: SHIFT + C (ou DESLIZAR no celular) solta a corda e escorrega aproveitando o embalo do gancho (mais rápido que o escorregão normal)
     if ((act.crouch || act.slide) && (act.sprint || act.slide) && G.t > 0.15 && !this.swimming) { const hv = Math.hypot(v[0], v[2]); const [gy] = ph.ground(p[0], p[2], RAD, p[1] + 0.3, 0.6); const hgt = p[1] - Math.max(gy, g.world.height(p[0], p[2]));
       if (hgt < 1.7 && hv > 3) { this.grapple = null; g.grapple.hook = null; p[1] = p[1] - hgt; v[1] = 0; this.onGround = true; this.airTime = 0; this.lastGroundY = p[1]; this.leanX = Math.min(this.leanX || 0, 0.5);
-        this.slide = { dir: [v[0] / hv, v[2] / hv], s: Math.min(30, Math.max(14, hv * 1.35)), cap: 30, drag: 3.2, t: 0, air: 0, lastSprint: true, boost: true }; this.crouch = true; this.stats.stamina = Math.max(0, this.stats.stamina - 8);
+        this.slide = { dir: [v[0] / hv, v[2] / hv], s: Math.min(30, Math.max(14, hv * 1.35)), cap: 30, drag: 3.2, maxT: 3, t: 0, air: 0, lastSprint: true, boost: true }; this.crouch = true; this.stats.stamina = Math.max(0, this.stats.stamina - 8);
         g.audio.play('land', { vol: 0.7 }); g.cam.shake = Math.max(g.cam.shake || 0, 0.25); return; } }
     // deitado: o corpo acompanha a corda (cabeça na frente), voando como se estivesse sendo arrastado
     { const hz = Math.hypot(d[0], d[2]); const el = Math.atan2(d[1], hz); this._lean(dt, clamp(Math.PI / 2 - el, 0.35, 1.45)); }
